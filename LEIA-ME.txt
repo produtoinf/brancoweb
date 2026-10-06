@@ -1,0 +1,9 @@
+BRANCO — SITE ATUALIZADO
+
+Extraia todos os arquivos do ZIP antes de abrir index.html.
+Mantenha index.html, style.css, app.js e a pasta assets juntos.
+Para substituir o site no GitHub Pages ou no Netlify, envie esse conjunto completo à pasta principal do site.
+
+As fontes (Archivo e JetBrains Mono) vêm do Google Fonts; sem internet o site usa fontes do sistema.
+O formulário prepara uma mensagem para você conferir e enviar pelo WhatsApp.
+Esta versão está só em português do Brasil.
