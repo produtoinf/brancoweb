@@ -1,7 +1,7 @@
 /* BRANCO — contador do painel admin
    Troque o endereço abaixo pelo link do seu Worker na Cloudflare. */
 (() => {
-  const API = 'https://branco-admin.SEU-USUARIO.workers.dev';
+  const API = 'https://branco-admin.brancowebs.workers.dev';
 
   // identifica o visitante (anônimo) para contar pessoas diferentes
   let v; try { v = localStorage.getItem('bv') || (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)); localStorage.setItem('bv', v); } catch (e) { v = null; }
