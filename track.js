@@ -40,7 +40,7 @@
     (document.body || document.documentElement).appendChild(box);
   }
   // teste: abra o site com ?manutencao no final do link
-  if (q.has('manutencao')) telaAtualizacao();
+  if  telaAtualizacao();
   else fetch(API + '/status', { cache: 'no-store' }).then(r => r.ok ? r.json() : null)
     .then(s => { if (s && s.manutencao) telaAtualizacao(s.mensagem); }).catch(() => {});
 
