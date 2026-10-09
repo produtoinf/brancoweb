@@ -20,6 +20,30 @@
   };
   const evento = tipo => envia('/t', { tipo, p: location.pathname, o: origem, d: disp });
 
+  /* ---------- aviso "Site em atualização" (ligado/desligado no painel) ---------- */
+  function telaAtualizacao(msg) {
+    if (document.getElementById('manut')) return;
+    const st = document.createElement('style');
+    st.textContent =
+      '#manut{position:fixed;inset:0;z-index:99999;display:grid;place-items:center;text-align:center;padding:24px;background:var(--bg,#0a0a0b);color:var(--fg,#ececee);font-family:Archivo,"Helvetica Neue",Arial,sans-serif}' +
+      '#manut .m-logo{width:min(140px,36vw);aspect-ratio:1;margin:0 auto 28px;background:currentColor;-webkit-mask:var(--logo) center/contain no-repeat;mask:var(--logo) center/contain no-repeat;animation:mPulse 2.4s ease-in-out infinite}' +
+      '#manut h1{font-size:clamp(26px,5vw,44px);margin:0 0 12px;letter-spacing:-.02em}' +
+      '#manut p{margin:0;opacity:.65;font-size:clamp(15px,2.4vw,18px);max-width:440px}' +
+      '@keyframes mPulse{50%{opacity:.45;transform:scale(.96)}}' +
+      'html.manut-on,html.manut-on body{overflow:hidden!important}';
+    document.head.appendChild(st);
+    const box = document.createElement('div');
+    box.id = 'manut'; box.setAttribute('role', 'alert');
+    box.innerHTML = '<div><div class="m-logo" aria-hidden="true"></div><h1>Site em atualização</h1><p></p></div>';
+    box.querySelector('p').textContent = msg || 'Estamos deixando tudo ainda melhor. Volte em instantes!';
+    document.documentElement.classList.add('manut-on');
+    (document.body || document.documentElement).appendChild(box);
+  }
+  // teste: abra o site com ?manutencao no final do link
+  if (q.has('manutencao')) telaAtualizacao();
+  else fetch(API + '/status', { cache: 'no-store' }).then(r => r.ok ? r.json() : null)
+    .then(s => { if (s && s.manutencao) telaAtualizacao(s.mensagem); }).catch(() => {});
+
   // 1) visita (1 por aba aberta)
   try { if (!sessionStorage.getItem('bvis')) { sessionStorage.setItem('bvis', '1'); evento('visita'); } } catch (e) { evento('visita'); }
 
