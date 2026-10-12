@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Branco — Seu projeto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0a0b;--fg:#ececee;--mute:#8e8e96;--line:#242427;--card:#111113;--soft:#18181b;--ok:#5fd38d;--mono:"JetBrains Mono",monospace;color-scheme:dark}
+@media(prefers-color-scheme:light){:root{--bg:#f4f4f1;--fg:#0e0e10;--mute:#6c6c74;--line:#dddde0;--card:#fff;--soft:#efefec;--ok:#1f9d57;color-scheme:light}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font-family:Archivo,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:40px 16px 70px}
+.label{font:500 .72rem/1.4 var(--mono);letter-spacing:.08em;color:var(--mute);margin:0}
+h1{font:800 clamp(2.2rem,7vw,3.6rem)/1 Archivo;letter-spacing:-.045em;text-transform:uppercase;margin:8px 0 0}h1 span{color:var(--mute)}
+h2{font:700 1rem Archivo;margin:0 0 14px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;margin-top:14px}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.steps div{border-top:3px solid var(--line);padding-top:12px;color:var(--mute);font:600 .85rem/1.25 Archivo}
+.steps i{display:block;font:500 .65rem var(--mono);font-style:normal;margin-bottom:6px}
+.steps .feito{border-color:var(--fg);color:var(--fg)}.steps .atual{border-color:var(--ok);color:var(--fg)}.steps .atual i{color:var(--ok)}
+@media(max-width:600px){.steps{grid-template-columns:1fr}.steps div{border-top:0;border-left:3px solid var(--line);padding:6px 0 6px 12px}}
+.recado{white-space:pre-line;font-size:1.05rem;line-height:1.6;margin:0}
+.lk{display:flex;justify-content:space-between;gap:10px;border:1px solid var(--line);border-radius:12px;padding:13px 15px;text-decoration:none;color:inherit;margin-top:8px}
+.lk:hover{border-color:var(--mute)}
+.num{display:flex;gap:30px;flex-wrap:wrap;margin-bottom:16px}.num b{display:block;font:800 2.2rem Archivo;letter-spacing:-.04em}
+.bars{display:flex;align-items:flex-end;gap:3px;height:120px}.bars i{flex:1;background:var(--fg);border-radius:3px 3px 0 0;min-height:2px;opacity:.85}
+.vazio{color:var(--mute);font:500 .78rem var(--mono);margin:0}
+a.site{display:inline-block;margin-top:16px;padding:12px 20px;border-radius:999px;background:var(--fg);color:var(--bg);text-decoration:none;font:600 .8rem var(--mono)}
+</style></head><body>
+<main class="wrap" id="app"><p class="label">carregando…</p></main>
+<script>
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ETAPAS=['Conversa','Conteúdo e direção','Criação e produção','Revisão','No ar'];
+const token=location.pathname.split('/').filter(Boolean)[1]||'';
+fetch('/api/cliente/'+encodeURIComponent(token)).then(r=>r.ok?r.json():Promise.reject()).then(c=>{
+  const dias=[];for(let i=29;i>=0;i--){const k=new Date(Date.now()-i*864e5).toISOString().slice(0,10),d=c.porDia.find(x=>x.dia===k);dias.push(d?d.visitas:0)}
+  const max=Math.max(1,...dias);
+  document.getElementById('app').innerHTML='<p class="label">( área do cliente · branco )</p><h1>'+esc(c.nome)+'<br><span>'+esc(c.projeto||'seu projeto')+'.</span></h1>'+
+    (c.site_url?'<a class="site" href="'+esc(c.site_url)+'" target="_blank" rel="noopener noreferrer">Ver o site ↗</a>':'')+
+    '<section class="box"><h2>Andamento</h2><div class="steps">'+ETAPAS.map((e,i)=>'<div class="'+(i+1<c.etapa?'feito':i+1===c.etapa?'atual':'')+'"><i>0'+(i+1)+(i+1===c.etapa?' · agora':'')+'</i>'+e+'</div>').join('')+'</div></section>'+
+    (c.recado?'<section class="box"><h2>Recado da Branco</h2><p class="recado">'+esc(c.recado)+'</p></section>':'')+
+    '<section class="box"><h2>Links e arquivos</h2>'+(c.links.length?c.links.map(l=>'<a class="lk" href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer"><span>'+esc(l.titulo)+'</span><span>↗</span></a>').join(''):'<p class="vazio">Nada por aqui ainda.</p>')+'</section>'+
+    '<section class="box"><h2>Visitas no seu site · 30 dias</h2><div class="num"><div><b>'+c.visitas30.toLocaleString('pt-BR')+'</b><span class="label">visitas</span></div></div>'+
+    (c.visitas30?'<div class="bars">'+dias.map(v=>'<i style="height:'+(v/max*100)+'%" title="'+v+' visitas"></i>').join('')+'</div>':'<p class="vazio">As visitas aparecem aqui quando o contador estiver no seu site.</p>')+'</section>';
+}).catch(()=>{document.getElementById('app').innerHTML='<p class="label">( área do cliente )</p><h1>Link<br><span>inválido.</span></h1><p class="vazio" style="margin-top:16px">Peça um novo link para a Branco.</p>'});
+</script>
+</body></html>

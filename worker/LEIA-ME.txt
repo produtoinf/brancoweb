@@ -1,0 +1,43 @@
+BRANCO — PAINEL (WORKER COMPLETO)
+
+Arquivo para subir:  worker.js   (servidor + banco de dados + painel, tudo num arquivo só)
+
+COMO COLOCAR NO AR (pelo site da Cloudflare, sem instalar nada)
+
+1) Criar o Worker
+   Cloudflare > Workers & Pages > Create > Worker
+   Nome: branco-admin  >  Deploy  >  "Edit code"
+   Apague todo o código que aparece, cole o conteúdo do worker.js e clique em Deploy.
+
+2) Criar o banco de dados
+   Cloudflare > Storage & Databases > D1 > Create database
+   Nome: branco
+
+3) Ligar o banco no Worker
+   Worker branco-admin > Settings > Bindings > Add > D1 database
+   Variable name: DB      Database: branco      > Save
+
+4) Criar a senha do painel
+   Worker branco-admin > Settings > Variables and Secrets > Add
+   Type: Secret     Name: ADMIN_SENHA     Value: (sua senha)   > Save
+
+5) Abrir o painel
+   https://branco-admin.SEU-USUARIO.workers.dev/admin
+   (as tabelas do banco são criadas sozinhas no primeiro acesso)
+
+6) Ligar o site ao painel novo
+   No arquivo track.js do site, troque o endereço da linha
+     const API = 'https://branco-admin.brancowebs.workers.dev';
+   pelo endereço do seu Worker novo.
+
+O QUE O WORKER FAZ
+- Conta visitas, cliques no WhatsApp, formulário aberto e cadastros do site (track.js)
+- Painel /admin: visão geral com gráficos, follow-up, financeiro, clientes
+- Aviso "site em atualização" (liga/desliga no painel)
+- Área do cliente: cada cliente ganha um link secreto /cliente/... para acompanhar o projeto
+- Contador de visitas para sites de clientes (/c.js)
+
+OBSERVAÇÕES
+- Começa zerado: os dados do painel antigo continuam no Worker antigo.
+- O assistente de IA do site (chat.js) não vem nesta versão.
+- Para editar: mexa em admin/painel.html e worker/src/, depois rode  node worker/build.mjs

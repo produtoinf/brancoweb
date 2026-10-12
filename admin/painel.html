@@ -242,6 +242,10 @@ html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-convers
       <section class="box mt"><div class="hd"><div><h2>Cadastros do formulário</h2><p class="label" id="cadsTxt"></p></div>
         <div class="busca"><input id="qCad" placeholder="Buscar nome, projeto…" type="search"><div class="seg" id="fCad"></div><button class="ghost" id="csvCad">Exportar CSV</button></div></div>
         <div class="tbl"><table><thead><tr><th>Data</th><th>Nome</th><th>WhatsApp</th><th>Projeto</th><th>Mensagem</th><th>Situação</th></tr></thead><tbody id="cads"></tbody></table></div></section>
+      <section class="box mt"><div class="hd"><div><h2>Aviso de “site em atualização”</h2><p class="dica">quando ligado, quem abrir o site vê uma tela de manutenção no lugar das páginas.</p></div></div>
+        <form class="form" id="fConfig"><label class="chk full"><input type="checkbox" name="manutencao"> mostrar o aviso no site agora</label>
+          <input name="mensagem" class="full" maxlength="300" placeholder="Mensagem (opcional) · Ex: Voltamos em 1 hora!">
+          <div class="full acts"><button class="solid">Salvar</button><span class="dica" id="cfgTxt"></span></div></form></section>
     </div>
 
     <!-- FOLLOW-UP -->
@@ -509,6 +513,10 @@ function csv(nome,cab,linhas){const s=[cab,...linhas].map(r=>r.map(v=>'"'+String
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['﻿'+s],{type:'text/csv;charset=utf-8'}));a.download=nome;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 $('#csvCad').onclick=()=>csv('cadastros-branco.csv',['Data','Nome','Empresa','WhatsApp','Projeto','Mensagem','Situação'],cadsFiltrados().map(c=>[fmt(c.criado_em),c.nome,c.empresa,c.telefone,c.projeto,c.mensagem,c.status==='parcial'?'parou no meio':'enviou']));
 
+/* ---------- aviso de manutenção ---------- */
+async function carregaConfig(){try{const c=await api('/api/config');const f=$('#fConfig');f.manutencao.checked=!!c.manutencao;f.mensagem.value=c.mensagem||'';$('#cfgTxt').textContent=c.manutencao?'● aviso ligado':'aviso desligado'}catch(e){}}
+$('#fConfig').onsubmit=async e=>{e.preventDefault();const f=e.target;try{await api('/api/config',{method:'PUT',body:{manutencao:f.manutencao.checked,mensagem:f.mensagem.value}});toast(f.manutencao.checked?'Aviso ligado no site':'Aviso desligado ✓');carregaConfig()}catch(x){toast(x.erro||'Erro')}};
+
 /* ---------- CLIENTES ---------- */
 let clientes=[],aberto=null;
 async function carregaClientes(){
@@ -527,7 +535,7 @@ function abre(id){
   D.innerHTML='<button class="back" id="voltar">← Todos os clientes</button>'+
   '<section class="box"><div class="hd"><h2>'+esc(c.nome)+'</h2></div><form class="form" id="fEd">'+
     '<label class="fl"><span>Nome</span><input name="nome" value="'+esc(c.nome)+'"></label>'+
-    '<label class="fl"><span>E-mail de login</span><input name="email" type="email" value="'+esc(c.email)+'"></label>'+
+    '<label class="fl"><span>E-mail</span><input name="email" type="email" value="'+esc(c.email)+'"></label>'+
     '<label class="fl"><span>Projeto</span><input name="projeto" value="'+esc(c.projeto||'')+'"></label>'+
     '<label class="fl"><span>Link do site</span><input name="site_url" value="'+esc(c.site_url||'')+'" placeholder="https://..."></label>'+
     '<div class="full acts"><button class="solid">Salvar dados</button><span class="msg-err" id="eEd"></span></div></form></section>'+
@@ -536,6 +544,7 @@ function abre(id){
   '<section class="box mt"><div class="hd"><h2>Recado para o cliente</h2></div><textarea id="recado" rows="4" maxlength="3000" placeholder="Ex: Oi! Já subimos a primeira versão do site, dá uma olhada no link de prévia.">'+esc(c.recado||'')+'</textarea><div class="acts mt"><button class="solid" id="sRecado">Salvar recado</button></div></section>'+
   '<section class="box mt"><div class="hd"><h2>Links e arquivos</h2></div><div class="lks">'+(c.links.length?c.links.map(l=>'<div class="lk"><a href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer"><span>'+esc(l.titulo)+'</span> <small>↗</small></a><button class="danger" data-rm="'+l.id+'">Remover</button></div>').join(''):'<p class="vazio">Nenhum link ainda.</p>')+'</div>'+
     '<form class="form mt" id="fLink"><input name="titulo" placeholder="Título (ex: Prévia do site)" maxlength="100"><input name="url" placeholder="https://..."><div class="full acts"><button class="solid">Adicionar link</button><span class="msg-err" id="eLink"></span></div></form></section>'+
+  '<section class="box mt"><div class="hd"><div><h2>Área do cliente</h2><p class="label">envie este link para o cliente acompanhar o projeto (sem senha).</p></div></div><code class="code">'+esc(location.origin+'/cliente/'+(c.token||''))+'</code><div class="acts mt"><button class="ghost" id="copiarArea">Copiar link</button><a class="pill on" href="/cliente/'+esc(c.token||'')+'" target="_blank" rel="noopener">Abrir ↗</a></div></section>'+
   '<section class="box mt"><div class="hd"><div><h2>Contador de visitas</h2><p class="label">cole no site do cliente, antes de &lt;/head&gt;. Ele vê as visitas na área dele.</p></div></div><code class="code" id="tag">'+esc(tag)+'</code><div class="acts mt"><button class="ghost" id="copiar">Copiar código</button><span class="pill">'+num(c.visitas30)+' visitas nos últimos 30 dias</span></div></section>'+
   '<section class="box mt"><button class="danger" id="excluir">Excluir cliente</button></section>';
   $('#voltar').onclick=fecha;
@@ -545,6 +554,7 @@ function abre(id){
   $('#sRecado').onclick=()=>patch({recado:$('#recado').value},'Recado salvo ✓');
   $('#fLink').onsubmit=async e=>{e.preventDefault();try{await api('/api/clientes/'+id+'/links',{method:'POST',body:Object.fromEntries(new FormData(e.target))});toast('Link adicionado ✓');carregaClientes()}catch(x){$('#eLink').textContent=x.erro||'Erro'}};
   $$('[data-rm]').forEach(b=>b.onclick=async()=>{await api('/api/links/'+b.dataset.rm,{method:'DELETE'});toast('Link removido');carregaClientes()});
+  $('#copiarArea').onclick=()=>{navigator.clipboard.writeText(location.origin+'/cliente/'+c.token).then(()=>toast('Link copiado ✓'),()=>toast('Selecione e copie o link'))};
   $('#copiar').onclick=()=>{navigator.clipboard.writeText(tag).then(()=>toast('Código copiado ✓'),()=>toast('Selecione e copie o código'))};
   $('#excluir').onclick=async()=>{if(!confirm('Excluir '+c.nome+'? Ele perde o acesso. Isso não pode ser desfeito.'))return;await api('/api/clientes/'+id,{method:'DELETE'});toast('Cliente excluído');fecha();carregaClientes()};
 }
@@ -563,6 +573,7 @@ function telaAdmin(){
     $('#aSub').textContent=TITULOS[t][0];$('#aTitulo').innerHTML=TITULOS[t][1];scrollTo({top:0});
     if(t==='site')carregaSite();if(t==='clientes')carregaClientes();if(t==='follow')carregaFollow();if(t==='financeiro')carregaFin()};
   window.irPara=tab;
+  carregaConfig();
   $$('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
   $('#recarregar').onclick=()=>tab(telaAtual);
   $('#fNovo').onsubmit=async e=>{e.preventDefault();$('#eNovo').textContent='';try{await api('/api/clientes',{method:'POST',body:Object.fromEntries(new FormData(e.target))});e.target.reset();toast('Cliente cadastrado ✓');carregaClientes()}catch(x){$('#eNovo').textContent=x.erro||'Erro'}};
@@ -711,7 +722,7 @@ function demoApi(p,o){
     modelos:[{id:1,titulo:'Primeiro contato',texto:'Oi, {nome}! Aqui é da Branco. Vi que você se interessou por {projeto}. Vamos conversar?'},{id:2,titulo:'Lembrete',texto:'Oi, {nome}! Passando para saber se ficou alguma dúvida sobre {projeto} 😊'}],
     vendas:[['Studio RS','Site + vídeo',380000,0,40],['Clínica Bella','Site institucional',250000,60000,120],['Alves Fit','Gestão de tráfego pago',0,80000,200],['JP Burger','Loja virtual',420000,0,250],['Doceria da Ana','Landing page',150000,0,10],['FD Arquitetura','Vídeo de divulgação',90000,0,75]]
       .map((v,i)=>({id:i+1,cliente:v[0],servico:v[1],valor:v[2],mensal:v[3],data:dia(v[4]),fim:null,pago:i!==4,notas:''})),
-    clientes:[{id:1,nome:'Clínica Bella',email:'contato@bella.com',projeto:'Site institucional',etapa:5,visitas30:1240,site:'a1',links:[],recado:''},{id:2,nome:'JP Burger',email:'jp@burger.com',projeto:'Loja virtual',etapa:3,visitas30:310,site:'b2',links:[],recado:''},{id:3,nome:'Studio RS',email:'rs@studio.com',projeto:'Site + vídeo',etapa:4,visitas30:520,site:'c3',links:[],recado:''}]};
+    clientes:[{id:1,nome:'Clínica Bella',email:'contato@bella.com',projeto:'Site institucional',etapa:5,visitas30:1240,site:'a1',token:'demo1',links:[],recado:''},{id:2,nome:'JP Burger',email:'jp@burger.com',projeto:'Loja virtual',etapa:3,visitas30:310,site:'b2',links:[],recado:''},{id:3,nome:'Studio RS',email:'rs@studio.com',projeto:'Site + vídeo',etapa:4,visitas30:520,site:'c3',links:[],recado:''}]};
   const D=window._demo;
   if(p==='/api/sessao')return Promise.resolve({papel:'admin'});
   if(p.startsWith('/api/dados')){const n=+p.split('=')[1],k=n>60?1:1;const porDia=[];let V=0,W=0;
@@ -724,6 +735,7 @@ function demoApi(p,o){
   if(p==='/api/followup')return Promise.resolve({contatos:D.contatos,modelos:D.modelos});
   if(p==='/api/vendas')return Promise.resolve({vendas:D.vendas,negociacao:{qtd:D.contatos.filter(c=>c.venda==='proposta').length,total:D.contatos.filter(c=>c.venda==='proposta').reduce((a,c)=>a+c.proposta,0)}});
   if(p==='/api/clientes')return Promise.resolve(D.clientes);
+  if(p==='/api/config')return Promise.resolve({manutencao:false,mensagem:''});
   return Promise.resolve({});
 }
 if(DEMO){const b=document.createElement('div');b.className='demo';b.textContent='modo demonstração · dados de exemplo';document.body.appendChild(b)}
