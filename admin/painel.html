@@ -328,7 +328,7 @@ tr.ign td{opacity:.45}
           <label class="fl"><span>País</span><input name="pais" value="Brasil" maxlength="60"></label>
           <label class="fl"><span>Estado</span><select id="pUf"></select><input id="pEstadoTxt" placeholder="Estado / província" maxlength="60" hidden></label>
           <label class="fl"><span>Cidade</span><input name="cidade" id="pCidade" list="pCidades" placeholder="Escolha o estado primeiro" maxlength="80" autocomplete="off"><datalist id="pCidades"></datalist></label>
-          <div class="ops"><label class="fl" style="min-width:200px"><span>Fonte dos dados</span><select name="fonte" id="pFonte"><option value="osm">OpenStreetMap (grátis)</option><option value="google">Google Maps</option></select></label>
+          <div class="ops"><label class="fl" style="min-width:200px"><span>Fonte dos dados</span><select name="fonte" id="pFonte"><option value="tomtom">TomTom</option><option value="here">HERE</option><option value="google">Google Maps</option><option value="osm">OpenStreetMap (grátis, poucos dados)</option></select></label>
             <label class="chk"><input type="checkbox" id="pCel"> só com celular/WhatsApp</label><label class="chk"><input type="checkbox" id="pSem"> só sem site próprio</label>
             <button class="solid" id="bBusca" style="margin-left:auto">Buscar estabelecimentos</button></div>
         </form>
@@ -650,14 +650,16 @@ async function carregaProspec(){
     $('#pNicho').innerHTML='<option value="">— escolha —</option>'+Object.entries(g).map(([k,v])=>'<optgroup label="'+esc(k)+'">'+v.map(n=>'<option value="'+n.id+'">'+esc(n.nome)+'</option>').join('')+'</optgroup>').join('')}
   pCfg=await api('/api/config').catch(()=>({}));
   $('#msgSem').value=pCfg.msg_semsite||MSG_SEM;$('#msgCom').value=pCfg.msg_comsite||MSG_COM;
-  const og=$('#pFonte').querySelector('[value=google]');og.disabled=!pCfg.google;og.textContent=pCfg.google?'Google Maps (mais completo)':'Google Maps (precisa da chave GOOGLE_PLACES_KEY)';
-  if(pCfg.google&&!$('#pFonte').dataset.ok){$('#pFonte').value='google';$('#pFonte').dataset.ok=1}
+  const FONTES=[['google','Google Maps','GOOGLE_PLACES_KEY'],['tomtom','TomTom (grátis, 2.500/dia)','TOMTOM_KEY'],['here','HERE (grátis, 1.000/dia)','HERE_KEY']];
+  FONTES.forEach(([id,nome,chave])=>{const o=$('#pFonte').querySelector('[value='+id+']');o.disabled=!pCfg[id];o.textContent=pCfg[id]?nome:nome+' · falta a chave '+chave});
+  if(!$('#pFonte').dataset.ok){const melhor=FONTES.map(x=>x[0]).find(id=>pCfg[id])||'osm';$('#pFonte').value=melhor;$('#pFonte').dataset.ok=1}
   try{const f=await api('/api/followup');fu=f;pJaSalvos=new Map();f.contatos.forEach(c=>{if(c.telefone)pJaSalvos.set('t'+c.telefone,c.id);pJaSalvos.set('n'+semAcento(c.nome)+'|'+semAcento(c.cidade||''),c.id)})}catch(e){}
   desenhaPros();
 }
 $('#sMsgs').onclick=async()=>{await api('/api/config',{method:'PUT',body:{msg_semsite:$('#msgSem').value,msg_comsite:$('#msgCom').value}});toast('Mensagens salvas ✓')};
 const jaSalvo=x=>pJaSalvos.get('t'+x.telefone)||pJaSalvos.get('n'+semAcento(x.nome)+'|'+semAcento(x.cidade||''));
 const msgPara=x=>($('#'+(x.site?'msgCom':'msgSem')).value||'').replace(/\{nome\}/g,x.nome).replace(/\{nicho\}/g,(pros.nicho||'negócios').toLowerCase()).replace(/\{cidade\}/g,x.cidade||'sua cidade').replace(/\{site\}/g,x.site||'');
+const NOME_FONTE=f=>({google:'Google Maps',tomtom:'TomTom',here:'HERE',osm:'OpenStreetMap'})[f]||f;
 const proFiltrados=()=>pros.itens.filter(x=>(!$('#pCel').checked||x.celular||x.whatsapp)&&(!$('#pSem').checked||!x.site));
 function desenhaPros(){
   const L=proFiltrados(),T=pros.itens;
@@ -665,7 +667,7 @@ function desenhaPros(){
     {l:'celular / whatsapp',v:T.filter(x=>x.celular||x.whatsapp).length,s:'chamar direto no WhatsApp',meter:pct(T.filter(x=>x.celular||x.whatsapp).length,T.length)},
     {l:'sem site próprio',v:T.filter(x=>!x.site).length,s:'oportunidade de venda 🔥',meter:pct(T.filter(x=>!x.site).length,T.length)}].map(kpi).join(''):'';
   $('#pResBox').hidden=!T.length;if(!T.length)return;
-  $('#pResT').textContent=(pros.nicho||'Resultados')+' · '+L.length;$('#pResS').textContent='fonte: '+(pros.fonte==='google'?'Google Maps':'OpenStreetMap')+' · '+pros.sel.size+' selecionado'+(pros.sel.size===1?'':'s');
+  $('#pResT').textContent=(pros.nicho||'Resultados')+' · '+L.length;$('#pResS').textContent='fonte: '+NOME_FONTE(pros.fonte)+' · '+pros.sel.size+' selecionado'+(pros.sel.size===1?'':'s');
   if(!L.length&&T.length)$('#pRes').innerHTML='<tr><td colspan="7" class="vazio">'+T.length+' resultado(s) escondido(s) pelos filtros acima.</td></tr>';
   else $('#pRes').innerHTML=L.length?L.map(x=>{const j=jaSalvo(x);return '<tr><td><input type="checkbox" class="pchk" data-pid="'+esc(x.id)+'"'+(pros.sel.has(x.id)?' checked':'')+'></td>'+
     '<td><b>'+esc(x.nome)+'</b><small>'+esc(x.categoria||'')+(x.avaliacao?' · ★ '+x.avaliacao+' ('+x.avaliacoes+')':'')+'</small>'+(j?'<span class="tag ok">no follow-up</span>':'')+'</td>'+
@@ -675,7 +677,7 @@ function desenhaPros(){
     '<td><small style="margin:0">'+esc(x.endereco||'—')+'</small></td>'+
     '<td style="white-space:nowrap">'+(x.maps?'<a class="pill" href="'+esc(x.maps)+'" target="_blank" rel="noopener noreferrer">mapa ↗</a> ':'')+(x.telefone?'<button class="ghost" data-pwa="'+esc(x.id)+'">WhatsApp</button>':'')+'</td></tr>'}).join('')
     :'<tr><td colspan="7" class="vazio">Nenhum resultado com esses filtros.</td></tr>';
-  $$('[data-pid]').forEach(c=>c.onchange=()=>{c.checked?pros.sel.add(c.dataset.pid):pros.sel.delete(c.dataset.pid);$('#pResS').textContent='fonte: '+(pros.fonte==='google'?'Google Maps':'OpenStreetMap')+' · '+pros.sel.size+' selecionados'});
+  $$('[data-pid]').forEach(c=>c.onchange=()=>{c.checked?pros.sel.add(c.dataset.pid):pros.sel.delete(c.dataset.pid);$('#pResS').textContent='fonte: '+NOME_FONTE(pros.fonte)+' · '+pros.sel.size+' selecionados'});
   $$('[data-pwa]').forEach(b=>b.onclick=()=>{const x=pros.itens.find(i=>i.id===b.dataset.pwa);abrirWa(x,msgPara(x))});
 }
 ['pCel','pSem'].forEach(id=>$('#'+id).onchange=desenhaPros);
@@ -703,11 +705,11 @@ $('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca
   if(!f.cidade.value.trim()&&!estado){b.disabled=false;b.textContent='Buscar estabelecimentos';return pStatus('Escolha o estado e a cidade.',true)}
   pStatus('Buscando '+esc(f.nicho.selectedOptions[0]?.value?f.nicho.selectedOptions[0].textContent:f.termo.value||'')+' em '+esc(f.cidade.value||estado)+'… (pode levar até 30 segundos)');
   try{const q=new URLSearchParams({nicho:f.nicho.value,termo:f.termo.value,pais:f.pais.value,estado,cidade:f.cidade.value,fonte:f.fonte.value});
-    const r=await api('/api/prospeccao?'+q);r.itens.forEach(x=>x.cidade=f.cidade.value||null);pros={...r,sel:new Set()};desenhaPros();
+    const r=await api('/api/prospeccao?'+q);r.itens.forEach(x=>x.cidade=x.cidade||f.cidade.value||null);pros={...r,sel:new Set()};desenhaPros();
     const osm=r.fonte==='osm',vis=proFiltrados().length;
-    if(!r.total)pStatus('Nenhum estabelecimento encontrado em '+esc(r.lugar||'')+'.'+(osm?'<br>O OpenStreetMap tem poucos dados em muitas cidades. Com o <b>Google Maps</b> (chave GOOGLE_PLACES_KEY no Worker) a lista fica bem mais completa.':' Tente outra palavra ou um nicho parecido.'),false);
+    if(!r.total)pStatus('Nenhum estabelecimento encontrado em '+esc(r.lugar||'')+'.'+(osm?'<br>O OpenStreetMap tem poucos dados em muitas cidades. Use <b>TomTom</b>, <b>HERE</b> ou <b>Google Maps</b> (chaves no Worker) para listas bem mais completas.':' Tente outra palavra, um nicho parecido ou outra fonte.'),false);
     else if(!vis)pStatus(r.total+' encontrados, mas <b>todos foram escondidos pelos filtros</b> (“só com WhatsApp” / “só sem site”). Desmarque um filtro para ver.');
-    else pStatus(r.total+' encontrados'+(vis<r.total?' · '+vis+' aparecendo com os filtros':'')+(osm?' · fonte OpenStreetMap (dados limitados; o Google Maps traz bem mais)':' · fonte Google Maps'));
+    else pStatus(r.total+' encontrados'+(vis<r.total?' · '+vis+' aparecendo com os filtros':'')+' · fonte '+NOME_FONTE(r.fonte)+(osm?' (dados limitados)':''));
   }catch(x){pStatus(esc(x.erro||'Erro na busca. Tente de novo.'),true)}finally{b.disabled=false;b.textContent='Buscar estabelecimentos'}};
 $('#pTodos').onclick=()=>{const L=proFiltrados(),todos=L.every(x=>pros.sel.has(x.id));L.forEach(x=>todos?pros.sel.delete(x.id):pros.sel.add(x.id));desenhaPros()};
 const selecionados=()=>{const L=proFiltrados().filter(x=>pros.sel.has(x.id));return L.length?L:[]};
@@ -940,7 +942,7 @@ function demoApi(p,o){
   if(p==='/api/followup')return Promise.resolve({contatos:D.contatos,modelos:D.modelos});
   if(p==='/api/vendas')return Promise.resolve({vendas:D.vendas,negociacao:{qtd:D.contatos.filter(c=>c.venda==='proposta').length,total:D.contatos.filter(c=>c.venda==='proposta').reduce((a,c)=>a+c.proposta,0)}});
   if(p==='/api/clientes')return Promise.resolve(D.clientes);
-  if(p==='/api/config')return Promise.resolve({manutencao:false,mensagem:'',google:true});
+  if(p==='/api/config')return Promise.resolve({manutencao:false,mensagem:'',google:false,tomtom:true,here:true});
   if(p.startsWith('/api/cidades'))return Promise.resolve(['Almirante Tamandaré','Araucária','Campo Largo','Colombo','Curitiba','Londrina','Maringá','Ponta Grossa','São José dos Pinhais']);
   if(p==='/api/prospeccao/nichos')return Promise.resolve([{id:'dentista',nome:'Dentista',grupo:'Saúde'},{id:'salao',nome:'Salão de beleza',grupo:'Beleza'},{id:'restaurante',nome:'Restaurante',grupo:'Alimentação'}]);
   if(p.startsWith('/api/prospeccao/salvar'))return Promise.resolve({novos:(o.body?.itens||[]).length,repetidos:0,ids:(o.body?.itens||[]).map((_,i)=>100+i)});

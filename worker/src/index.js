@@ -227,7 +227,7 @@ async function api(req, db, env, caminho) {
       if (novos.length) await db.batch(novos.map(x => db.prepare('INSERT INTO config (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor').bind(...x)));
     }
     const c = Object.fromEntries((await db.prepare('SELECT chave, valor FROM config').all()).results.map(x => [x.chave, x.valor]));
-    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: c.msg_semsite || '', msg_comsite: c.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY });
+    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: c.msg_semsite || '', msg_comsite: c.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY, tomtom: !!env.TOMTOM_KEY, here: !!env.HERE_KEY });
   }
 
   // cidades de um estado (IBGE), guardadas em cache por 30 dias
@@ -476,9 +476,59 @@ async function buscaGoogle(env, { nicho, termo, cidade, estado, pais }) {
   }
   return { fonte: 'google', lugar: [cidade, estado, pais].filter(Boolean).join(', '), itens };
 }
+const PAISES = { brasil: ['BR', 'BRA'], brazil: ['BR', 'BRA'], portugal: ['PT', 'PRT'], argentina: ['AR', 'ARG'], paraguai: ['PY', 'PRY'], uruguai: ['UY', 'URY'], chile: ['CL', 'CHL'],
+  'estados unidos': ['US', 'USA'], eua: ['US', 'USA'], espanha: ['ES', 'ESP'], mexico: ['MX', 'MEX'], colombia: ['CO', 'COL'] };
+const codPais = p => PAISES[String(p || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()] || [];
+const raioBusca = f => f.cidade ? 15000 : 60000; // só estado → raio maior em volta da capital/centro
+const oQue = f => { const n = NICHOS.find(x => x.id === f.nicho); const q = f.termo || n?.nome?.split(' / ')[0]; if (!q) throw new Error('Escolha um nicho ou digite uma palavra.'); return { q, n }; };
+const mapaLink = (nome, lat, lon) => lat != null ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nome)}%20${lat},${lon}` : null;
+
+// TomTom: 2.500 buscas grátis por dia, sem cartão (chave em TOMTOM_KEY)
+async function buscaTomTom(env, f) {
+  const { q, n } = oQue(f), [cc] = codPais(f.pais), lugar = [f.cidade, f.estado, f.pais].filter(Boolean).join(', '), k = encodeURIComponent(env.TOMTOM_KEY);
+  const pega = async u => { const r = await fetch(u, { signal: AbortSignal.timeout(15000) }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(r.status === 403 ? 'TomTom: chave inválida ou limite diário atingido.' : 'TomTom: ' + (d.errorText || d.detailedError?.message || 'erro na busca')); return d; };
+  const g = await pega(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(lugar)}.json?key=${k}&limit=1&language=pt-BR${cc ? '&countrySet=' + cc : ''}`);
+  const pos = g.results?.[0]?.position; if (!pos) throw new Error('Não encontrei essa cidade. Confira o nome, o estado e o país.');
+  const itens = [];
+  for (const ofs of [0, 100]) { // até 200 resultados
+    const d = await pega(`https://api.tomtom.com/search/2/search/${encodeURIComponent(q)}.json?key=${k}&lat=${pos.lat}&lon=${pos.lon}&radius=${raioBusca(f)}&limit=100&ofs=${ofs}&idxSet=POI&language=pt-BR${cc ? '&countrySet=' + cc : ''}`);
+    for (const x of d.results || []) {
+      const p = x.poi || {}, a = x.address || {}, tel = telefone(p.phone, f.pais);
+      itens.push({ id: 't:' + x.id, nome: p.name, categoria: p.classifications?.[0]?.names?.[0]?.name || p.categories?.[0] || n?.nome || '', telefone: tel?.num || null, celular: tel?.cel ?? null,
+        whatsapp: false, site: p.url ? (/^https?:/i.test(p.url) ? p.url : 'https://' + p.url) : null, instagram: null, email: null,
+        endereco: a.freeformAddress || null, cidade: a.municipality || null, maps: mapaLink(p.name, x.position?.lat, x.position?.lon) });
+    }
+    if ((d.results || []).length < 100) break;
+  }
+  return { fonte: 'tomtom', lugar, itens };
+}
+
+// HERE: plano gratuito com 1.000 buscas por dia (chave em HERE_KEY)
+async function buscaHere(env, f) {
+  const { q, n } = oQue(f), lugar = [f.cidade, f.estado, f.pais].filter(Boolean).join(', '), k = encodeURIComponent(env.HERE_KEY);
+  const pega = async u => { const r = await fetch(u, { signal: AbortSignal.timeout(15000) }); const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'HERE: chave inválida.' : r.status === 429 ? 'HERE: limite de buscas atingido. Tente mais tarde.' : 'HERE: ' + (d.title || 'erro na busca')); return d; };
+  const g = await pega(`https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(lugar)}&limit=1&lang=pt-BR&apiKey=${k}`);
+  const pos = g.items?.[0]?.position; if (!pos) throw new Error('Não encontrei essa cidade. Confira o nome, o estado e o país.');
+  const d = await pega(`https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(q)}&in=circle:${pos.lat},${pos.lng};r=${raioBusca(f)}&limit=100&lang=pt-BR&apiKey=${k}`);
+  const itens = (d.items || []).filter(x => !x.resultType || x.resultType === 'place').map(x => {
+    const cs = Array.isArray(x.contacts) ? x.contacts : [x.contacts || {}], pick = k => cs.flatMap(c => c?.[k] || []).map(v => v.value).filter(Boolean);
+    const tel = telefone(pick('mobile')[0] || pick('phone')[0], f.pais), www = pick('www');
+    const insta = www.find(u => /instagram\.com/i.test(u)), site = www.find(u => !/instagram\.com|facebook\.com/i.test(u));
+    return { id: 'h:' + x.id, nome: x.title, categoria: (x.categories || []).find(c => c.primary)?.name || x.categories?.[0]?.name || n?.nome || '', telefone: tel?.num || null, celular: tel?.cel ?? null,
+      whatsapp: false, site: site || null, instagram: insta || null, email: pick('email')[0] || null, endereco: x.address?.label || null, cidade: x.address?.city || null,
+      maps: mapaLink(x.title, x.position?.lat, x.position?.lng) };
+  });
+  return { fonte: 'here', lugar, itens };
+}
+
 async function buscaProspects(env, f) {
   if (!f.cidade && !f.estado) throw new Error('Coloque a cidade ou o estado.');
-  const r = f.fonte === 'google' && env.GOOGLE_PLACES_KEY ? await buscaGoogle(env, f) : await buscaOSM(f);
+  const r = f.fonte === 'google' && env.GOOGLE_PLACES_KEY ? await buscaGoogle(env, f)
+    : f.fonte === 'tomtom' && env.TOMTOM_KEY ? await buscaTomTom(env, f)
+    : f.fonte === 'here' && env.HERE_KEY ? await buscaHere(env, f) : await buscaOSM(f);
+  const vistos = new Set(); r.itens = r.itens.filter(x => x.nome && !vistos.has(x.id) && vistos.add(x.id)); // sem repetidos
   // sites que são só Instagram/Facebook/Linktree contam como "sem site próprio"
   r.itens.forEach(x => { if (x.site && /instagram\.com|facebook\.com|linktr\.ee|wa\.me|whatsapp/i.test(x.site)) { x.instagram = x.instagram || (/instagram/.test(x.site) ? x.site : null); x.redeSocial = x.site; x.site = null; } });
   return { ...r, nicho: NICHOS.find(x => x.id === f.nicho)?.nome || f.termo, total: r.itens.length };
