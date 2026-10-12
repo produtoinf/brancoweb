@@ -344,6 +344,10 @@ document.addEventListener('DOMContentLoaded',function(){
     <div class="cx" id="cx-stage" aria-hidden="true">
       <div class="cx__scene" id="cx-scene">
         <span class="cx__sym s1">&lt;/&gt;</span><span class="cx__sym s2">{ }</span>
+        <div class="cx__lay ly1"></div><div class="cx__lay ly2 grid"></div><div class="cx__lay ly3"></div><div class="cx__lay ly4 grid"></div><div class="cx__lay ly5"></div>
+        <div class="cx__chip"><i></i><i></i><i></i></div>
+        <div class="cx__rail"><span>▤</span><span>⌕</span><span>⚙</span></div>
+        <div class="cx__base b1"></div><div class="cx__base b2"></div><div class="cx__base b3"></div>
         <div class="cx__panel">
           <div class="cx__bar"><i></i><i></i><i></i><span class="cx__file">brancoweb / index.html</span><small>● ao vivo</small></div>
           <div class="cx__tabs"><button type="button" data-t="0" class="on">index.html</button><button type="button" data-t="1">style.css</button><button type="button" data-t="2">app.js</button></div>
@@ -351,7 +355,7 @@ document.addEventListener('DOMContentLoaded',function(){
         </div>
         <div class="pc cx__b b1" data-z="70"><div class="pc__top"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg><div><b>Tráfego pago</b><small>Meta Ads · Google Ads</small></div></div><strong class="pc__big">Campanhas</strong><p class="pc__ok"><i>●</i>Público certo, na hora certa</p></div><div class="pc cx__b b2" data-z="110"><div class="pc__top"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg><div><b>Sites</b><small>Sob medida</small></div></div><strong class="pc__big">Online 24h</strong><p class="pc__ok"><i>●</i>No celular e no computador</p></div><div class="pc cx__b b3" data-z="90"><div class="pc__top"><svg viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg><div><b>Responsivo</b><small>Desktop · Tablet · Mobile</small></div></div><strong class="pc__big">100%</strong><p class="pc__ok"><i>●</i>Perfeito em qualquer tela</p></div><div class="pc cx__b b4" data-z="60"><div class="pc__top"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><div><b>Resultados</b><small>Acompanhamento</small></div></div><strong class="pc__big">Relatórios</strong><p class="pc__ok"><i>●</i>Você vê o retorno</p></div>
       </div>
-      <span class="cx__hint">( passe o mouse · clique nas abas )</span>
+      <span class="cx__hint" id="cx-hint">( clique no editor para ver por dentro )</span>
     </div>
   </section>
 
@@ -1237,4 +1241,65 @@ document.addEventListener('DOMContentLoaded',function(){
 });
 </script>
 <style id="intro-verde">#bi .w--v>span{color:#a8ff53;text-shadow:0 0 30px rgba(168,255,83,.35)}</style>
+<style id="cx3d-css">
+/* ===== editor: vista explodida 3D ao clicar ===== */
+.cx__float{transform-style:preserve-3d}
+.cx__scene{--rx:0deg;--ry:0deg;--bx:6deg;--by:-10deg;--bz:0deg;--s:1;
+  transform:scale(var(--s)) rotateX(calc(var(--bx) + var(--rx))) rotateY(calc(var(--by) + var(--ry))) rotateZ(var(--bz))!important;
+  transition:transform 1.1s cubic-bezier(.2,.75,.15,1)}
+.cx.boom .cx__scene{--bx:16deg;--by:-34deg;--bz:2deg;--s:.86}
+.cx__panel{cursor:pointer;transform:translateZ(0);transition:transform 1.1s cubic-bezier(.2,.75,.15,1),box-shadow .6s,border-color .6s}
+.cx.boom .cx__panel{border-color:rgba(168,255,83,.55);box-shadow:0 0 0 1px rgba(168,255,83,.25),0 0 50px rgba(168,255,83,.25),0 40px 90px rgba(0,0,0,.6)}
+/* placas de vidro atrás */
+.cx__lay{position:absolute;inset:0;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.015));
+  opacity:0;transform:translateZ(0);transition:transform 1.1s cubic-bezier(.2,.75,.15,1),opacity .7s;pointer-events:none}
+.cx__lay.grid{background-image:linear-gradient(rgba(168,255,83,.10) 1px,transparent 1px),linear-gradient(90deg,rgba(168,255,83,.10) 1px,transparent 1px);background-size:26px 26px;background-color:rgba(10,14,12,.55)}
+.cx.boom .cx__lay{opacity:1}
+.cx.boom .ly1{transform:translate3d(14px,-16px,-70px);transition-delay:.05s}
+.cx.boom .ly2{transform:translate3d(28px,-34px,-140px) scale(.97);transition-delay:.1s;box-shadow:inset 0 2px 0 rgba(168,255,83,.7),0 0 30px rgba(168,255,83,.15)}
+.cx.boom .ly3{transform:translate3d(46px,-52px,-215px) scale(.94);transition-delay:.15s;border-color:rgba(168,255,83,.4)}
+.cx.boom .ly4{transform:translate3d(64px,-72px,-290px) scale(.9);transition-delay:.2s}
+.cx.boom .ly5{transform:translate3d(84px,-92px,-370px) scale(.86);transition-delay:.25s;box-shadow:0 0 40px rgba(168,255,83,.18);border-color:rgba(168,255,83,.5)}
+/* peças: chip de luzes e barra lateral */
+.cx__chip,.cx__rail{position:absolute;opacity:0;transition:transform 1.1s cubic-bezier(.2,.75,.15,1) .2s,opacity .6s .2s;pointer-events:none;
+  background:linear-gradient(180deg,#2a2d31,#141619);border:1px solid rgba(255,255,255,.18);border-radius:12px;box-shadow:0 14px 30px rgba(0,0,0,.5)}
+.cx__chip{right:6%;top:-30px;display:flex;gap:10px;padding:12px 18px}
+.cx__chip i{width:10px;height:10px;border-radius:50%;background:#a8ff53;box-shadow:0 0 12px #a8ff53}
+.cx__rail{left:-56px;top:24%;display:grid;gap:16px;padding:14px 11px;color:#cfd2d6;font-size:15px;text-align:center}
+.cx.boom .cx__chip{opacity:1;transform:translate3d(30px,-60px,-200px)}
+.cx.boom .cx__rail{opacity:1;transform:translate3d(-40px,0,60px)}
+/* base metálica com luz verde */
+.cx__base{position:absolute;left:4%;right:4%;height:90px;bottom:-20px;border-radius:14px;opacity:0;pointer-events:none;
+  background:linear-gradient(180deg,#3a3d42,#17191c);border:1px solid rgba(255,255,255,.2);
+  transform-origin:50% 0;transform:rotateX(90deg) translateZ(0);transition:transform 1.1s cubic-bezier(.2,.75,.15,1),opacity .6s}
+.cx__base::after{content:"";position:absolute;left:10%;right:10%;top:12px;height:3px;border-radius:2px;background:#a8ff53;box-shadow:0 0 16px #a8ff53,0 0 40px rgba(168,255,83,.6)}
+.cx.boom .cx__base{opacity:1}
+.cx.boom .b1{transform:rotateX(68deg) translate3d(0,-20px,-40px)}
+.cx.boom .b2{transform:rotateX(68deg) translate3d(-20px,-110px,-90px) scale(.92);transition-delay:.08s}
+.cx.boom .b3{transform:rotateX(68deg) translate3d(30px,-200px,-140px) scale(.84);transition-delay:.16s}
+/* bolhas vêm para frente, com borda verde */
+.cx .pc.cx__b{transition:transform 1.1s cubic-bezier(.2,.75,.15,1),border-color .5s,box-shadow .5s}
+.cx.boom .pc.cx__b{transform:translateZ(calc(var(--z,80px) + 130px));border-color:rgba(168,255,83,.6);box-shadow:0 0 0 1px rgba(168,255,83,.2),0 0 34px rgba(168,255,83,.25),0 30px 60px rgba(0,0,0,.6)}
+.cx.boom .pc.cx__b:hover{transform:translateZ(calc(var(--z,80px) + 170px)) scale(1.04)}
+.cx.boom .cx__b.b1{transition-delay:.05s}.cx.boom .cx__b.b2{transition-delay:.12s}.cx.boom .cx__b.b3{transition-delay:.19s}.cx.boom .cx__b.b4{transition-delay:.26s}
+.cx::after{content:"";position:absolute;left:10%;right:10%;bottom:-30px;height:120px;border-radius:50%;background:radial-gradient(ellipse,rgba(168,255,83,.25),transparent 70%);filter:blur(20px);opacity:0;transition:opacity .9s;pointer-events:none}
+.cx.boom::after{opacity:1}
+@media (max-width:760px){.cx.boom .cx__scene{--bx:14deg;--by:-26deg;--s:.74}.cx.boom .pc.cx__b{transform:translateZ(70px) scale(.82)}.cx__rail{display:none}.cx.boom .ly4,.cx.boom .ly5{opacity:.6}}
+@media (prefers-reduced-motion:reduce){.cx__scene,.cx__lay,.cx__base,.cx .pc.cx__b,.cx__panel{transition-duration:.01s!important}}
+</style>
+<script id="cx3d-js">
+document.addEventListener('DOMContentLoaded',function(){
+  var st=document.getElementById('cx-stage');if(!st)return;
+  var sc=document.getElementById('cx-scene'),hint=document.getElementById('cx-hint'),pn=st.querySelector('.cx__panel');
+  st.removeAttribute('aria-hidden');
+  pn.setAttribute('role','button');pn.setAttribute('tabindex','0');pn.setAttribute('aria-pressed','false');pn.setAttribute('aria-label','Ver o editor por dentro em 3D');
+  function toggle(e){if(e&&e.target.closest('.cx__tabs'))return;var on=st.classList.toggle('boom');pn.setAttribute('aria-pressed',on);hint.textContent=on?'( clique de novo para fechar )':'( clique no editor para ver por dentro )'}
+  pn.addEventListener('click',toggle);
+  pn.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
+  /* inclinação com o mouse por variáveis (não sobrescreve a vista explodida) */
+  st.addEventListener('pointermove',function(e){var r=st.getBoundingClientRect(),px=(e.clientX-r.left)/r.width-.5,py=(e.clientY-r.top)/r.height-.5;
+    sc.style.setProperty('--rx',(-py*14)+'deg');sc.style.setProperty('--ry',(px*22)+'deg');sc.style.transform=''},true);
+  st.addEventListener('pointerleave',function(){sc.style.setProperty('--rx','0deg');sc.style.setProperty('--ry','0deg')});
+});
+</script>
 </body></html>
