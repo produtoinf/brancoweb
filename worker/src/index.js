@@ -32,6 +32,9 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS sessoes (token TEXT PRIMARY KEY, criado_em TEXT NOT NULL DEFAULT (datetime('now')))`,
   `CREATE TABLE IF NOT EXISTS config (chave TEXT PRIMARY KEY, valor TEXT)`,
   `CREATE TABLE IF NOT EXISTS limites (chave TEXT PRIMARY KEY, n INTEGER NOT NULL, ate TEXT NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS extrato (id INTEGER PRIMARY KEY, ext_id TEXT UNIQUE NOT NULL, data TEXT NOT NULL, valor INTEGER NOT NULL, descricao TEXT,
+     venda_id INTEGER, ignorar INTEGER NOT NULL DEFAULT 0, criado_em TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE INDEX IF NOT EXISTS ex_data ON extrato (data)`,
 ];
 const MODELOS_INICIAIS = [
   ['Primeiro contato', 'Oi, {nome}! Aqui é da Branco 👋 Vi que você se interessou por {projeto}. Posso te fazer umas perguntas rápidas para montar sua proposta?'],
@@ -294,6 +297,33 @@ async function api(req, db, env, caminho) {
     if (id && m === 'DELETE') { await db.prepare('DELETE FROM modelos WHERE id = ?').bind(id).run(); return json({ ok: true }); }
   }
 
+  // extrato do banco (Nubank): entradas importadas de um arquivo CSV/OFX e ligadas às vendas
+  if (rec === 'extrato') {
+    if (m === 'GET') return json((await db.prepare('SELECT id, data, valor, descricao, venda_id, ignorar FROM extrato ORDER BY data DESC, id DESC LIMIT 2000').all()).results);
+    if (m === 'POST' && !id) {
+      const itens = (Array.isArray(b.itens) ? b.itens : []).slice(0, 3000).map(x => ({ ext: txt(x.ext_id, 120), data: dataOk(x.data), valor: inteiro(x.valor, 1, 1e11), desc: txt(x.descricao, 300) }))
+        .filter(x => x.ext && x.data && x.valor);
+      if (!itens.length) return erro('Nenhuma entrada de dinheiro encontrada no arquivo.');
+      const antes = (await db.prepare('SELECT COUNT(*) n FROM extrato').first()).n;
+      for (let i = 0; i < itens.length; i += 50) // em lotes, ignorando o que já foi importado
+        await db.batch(itens.slice(i, i + 50).map(x => db.prepare("INSERT OR IGNORE INTO extrato (ext_id, data, valor, descricao, criado_em) VALUES (?, ?, ?, ?, datetime('now'))").bind(x.ext, x.data, x.valor, x.desc)));
+      const depois = (await db.prepare('SELECT COUNT(*) n FROM extrato').first()).n;
+      return json({ ok: true, novos: depois - antes, repetidos: itens.length - (depois - antes) });
+    }
+    if (id && m === 'PATCH') {
+      const q = [];
+      if ('venda_id' in b) {
+        const v = b.venda_id == null ? null : inteiro(b.venda_id, 1, 1e12);
+        q.push(db.prepare('UPDATE extrato SET venda_id = ?, ignorar = 0 WHERE id = ?').bind(v, id));
+        if (v) q.push(db.prepare('UPDATE vendas SET pago = 1 WHERE id = ?').bind(v)); // recebeu → venda marcada como recebida
+      }
+      if ('ignorar' in b) q.push(db.prepare('UPDATE extrato SET ignorar = ? WHERE id = ?').bind(b.ignorar ? 1 : 0, id));
+      if (q.length) await db.batch(q);
+      return json({ ok: true });
+    }
+    if (id && m === 'DELETE') { await db.prepare('DELETE FROM extrato WHERE id = ?').bind(id).run(); return json({ ok: true }); }
+  }
+
   // financeiro
   if (rec === 'vendas') {
     if (m === 'GET') {
@@ -308,7 +338,8 @@ async function api(req, db, env, caminho) {
       if (!cliente) return erro('Coloque o nome do cliente.'); if (!data) return erro('Coloque a data da venda.');
       const val = [cliente, txt(b.servico, 80), inteiro(b.valor, 0, 1e11) || 0, inteiro(b.mensal, 0, 1e11) || 0, data, dataOk(b.fim), b.pago ? 1 : 0, txt(b.notas, 1000), inteiro(b.contato_id, 1, 1e12)];
       if (id) await db.prepare('UPDATE vendas SET cliente=?, servico=?, valor=?, mensal=?, data=?, fim=?, pago=?, notas=?, contato_id=? WHERE id = ?').bind(...val, id).run();
-      else await db.prepare("INSERT INTO vendas (cliente, servico, valor, mensal, data, fim, pago, notas, contato_id, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))").bind(...val).run();
+      else { const r = await db.prepare("INSERT INTO vendas (cliente, servico, valor, mensal, data, fim, pago, notas, contato_id, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))").bind(...val).run();
+        return json({ ok: true, id: r.meta?.last_row_id }); }
       return json({ ok: true });
     }
   }

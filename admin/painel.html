@@ -166,6 +166,12 @@ html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-convers
 /* financeiro */
 .kpi b.money{font-size:clamp(1.15rem,1.55vw,1.55rem);letter-spacing:-.03em;white-space:nowrap}
 .money{font-variant-numeric:tabular-nums;white-space:nowrap}
+.up{display:inline-flex;align-items:center;gap:8px;font:500 .85rem var(--mono);border:1px solid var(--fg);background:var(--fg);color:var(--bg);border-radius:999px;padding:10px 16px;cursor:pointer}
+.up:hover{opacity:.9}.up input{display:none}
+.nu{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:#820ad1;color:#fff;font:800 .62rem Archivo;letter-spacing:-.02em}
+.ext-v{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.ext-v select{padding:7px 12px;font-size:.75rem;max-width:230px}.ext-v button{padding:7px 12px;font-size:.72rem}
+.sug{font:500 .66rem var(--mono);color:var(--ok)}
+tr.ign td{opacity:.45}
 .chk{display:flex;align-items:center;gap:8px;font:500 .78rem var(--mono);color:var(--mute)}.chk input{width:18px;height:18px;padding:0}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg);font:500 .8rem var(--mono);padding:11px 20px;border-radius:999px;z-index:40;box-shadow:0 10px 30px #0005;animation:tin .25s ease}
 @keyframes tin{from{opacity:0;transform:translate(-50%,10px)}}
@@ -274,6 +280,12 @@ html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-convers
           <div class="leg"><span style="--c:var(--fg)">valor único</span><span style="--c:var(--ok)">mensalidades</span></div></div>
           <div class="chart"><canvas id="cFin"></canvas></div></div>
         <div class="box"><div class="hd"><h2 id="finServT">Por serviço</h2></div><div class="chart sm"><canvas id="cServ"></canvas></div><div class="rank mt" id="finServ"></div></div>
+      </section>
+      <section class="box mt" id="extBox"><div class="hd"><div><h2><span class="nu">nu</span> Recebimentos no Nubank</h2><p class="label" id="extTxt">importe o extrato do app (CSV ou OFX) para conferir quem já pagou</p></div>
+        <div class="busca"><div class="seg" id="fExt"></div><label class="up">Importar extrato<input type="file" id="arqExt" accept=".csv,.ofx,.txt"></label></div></div>
+        <div class="kpis" id="kExt"></div>
+        <div class="tbl mt"><table><thead><tr><th>Data</th><th>Quem pagou</th><th>Valor</th><th>Venda</th><th></th></tr></thead><tbody id="extLista"></tbody></table></div>
+        <details class="mt"><summary style="text-align:left">como baixar o extrato no Nubank</summary><p class="dica mt">No app do Nubank (conta), abra o extrato e use a opção de exportar/compartilhar o extrato do período em <b>CSV</b> ou <b>OFX</b>. O arquivo chega no seu e-mail: baixe e clique em “Importar extrato”.<br>Pode importar o mesmo período mais de uma vez: o que já estava aqui não é repetido. Só as <b>entradas</b> de dinheiro aparecem. O arquivo é lido no seu navegador; só data, valor e descrição de cada entrada são salvos.</p></details>
       </section>
       <section class="box mt" id="finForm"><div class="hd"><h2 id="finFormT">Registrar venda</h2></div>
         <form class="form" id="fVenda"><input type="hidden" name="id"><input type="hidden" name="contato_id">
@@ -708,12 +720,71 @@ function desenhaFin(){
     f.id.value=v.id;f.cliente.value=v.cliente;f.servico.value=v.servico||'';f.valor.value=v.valor?reais(v.valor):'';f.mensal.value=v.mensal?reais(v.mensal):'';f.data.value=v.data;f.fim.value=v.fim||'';f.notas.value=v.notas||'';f.pago.checked=!!v.pago;
     $('#finFormT').textContent='Editar venda';$('#bVenda').textContent='Salvar alterações';$('#cVenda').hidden=false;$('#finForm').scrollIntoView({behavior:'smooth'})});
 }
-async function carregaFin(){fin=await api('/api/vendas');desenhaFin();if(!$('#fVenda').data.value)$('#fVenda').data.value=hojeL()}
+async function carregaFin(){const r=await Promise.all([api('/api/vendas'),api('/api/extrato').catch(()=>[])]);fin=r[0];ext=Array.isArray(r[1])?r[1]:[];desenhaFin();desenhaExt();if(!$('#fVenda').data.value)$('#fVenda').data.value=hojeL()}
+/* ---------- extrato do Nubank ---------- */
+let ext=[],filtroExt='pendentes';
+const semAcento=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+function centSinal(v){v=String(v??'').trim();if(!v)return 0;const neg=/^-|\(.*\)|-$/.test(v);v=v.replace(/[^\d.,]/g,'');
+  const c=v.lastIndexOf(','),d=v.lastIndexOf('.');if(c>d)v=v.replace(/\./g,'').replace(',','.');else v=v.replace(/,/g,'');
+  const n=parseFloat(v);return isFinite(n)?Math.round(n*100)*(neg?-1:1):0}
+function dataISO(v){v=String(v||'').trim();let m=v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);if(m)return m[3]+'-'+m[2]+'-'+m[1];m=v.match(/^(\d{4})-?(\d{2})-?(\d{2})/);return m?m[1]+'-'+m[2]+'-'+m[3]:null}
+function linhasCSV(t){const out=[];let row=[],cel='',q=false;const sep=(t.split('\n')[0].match(/;/g)||[]).length>(t.split('\n')[0].match(/,/g)||[]).length?';':',';
+  for(let i=0;i<t.length;i++){const ch=t[i];if(q){if(ch==='"'&&t[i+1]==='"'){cel+='"';i++}else if(ch==='"')q=false;else cel+=ch}
+    else if(ch==='"')q=true;else if(ch===sep){row.push(cel);cel=''}else if(ch==='\n'){row.push(cel);out.push(row);row=[];cel=''}else if(ch!=='\r')cel+=ch}
+  if(cel||row.length){row.push(cel);out.push(row)}return out.filter(r=>r.some(c=>c.trim()))}
+function lerExtrato(t){
+  if(/<STMTTRN>/i.test(t))return [...t.matchAll(/<STMTTRN>([\s\S]*?)(?=<\/STMTTRN>|<STMTTRN>|<\/BANKTRANLIST>)/gi)].map(m=>{
+    const g=k=>((m[1].match(new RegExp('<'+k+'>([^<\\r\\n]*)','i'))||[])[1]||'').trim(),d=dataISO(g('DTPOSTED'));
+    return{data:d,valor:centSinal(g('TRNAMT')),descricao:g('MEMO')||g('NAME'),ext_id:'ofx:'+(g('FITID')||d+'|'+g('TRNAMT')+'|'+g('MEMO'))}});
+  const L=linhasCSV(t);if(L.length<2)return[];const h=L[0].map(semAcento),col=re=>h.findIndex(x=>re.test(x.trim()));
+  const iD=col(/^data|^date/),iV=col(/valor|amount|value/),iT=col(/descri|title|historico|memo/),iI=col(/identificador|^id$/);
+  if(iD<0||iV<0)throw new Error('Não reconheci as colunas de data e valor desse arquivo.');
+  if(h.includes('title')&&h.includes('amount')&&iI<0)throw new Error('Esse arquivo é da fatura do cartão. Importe o extrato da conta.');
+  return L.slice(1).map(r=>{const d=dataISO(r[iD]),v=centSinal(r[iV]),ds=(r[iT]||'').trim();return{data:d,valor:v,descricao:ds,ext_id:'csv:'+((iI>=0&&r[iI])?r[iI].trim():d+'|'+v+'|'+ds)}})}
+const quemPagou=d=>{const p=String(d||'').split(' - ');return (p.length>1?p[1]:d||'').trim()};
+function pontos(e,v){let n=0;if(!v.pago&&v.valor===e.valor)n+=3;if(v.mensal&&v.mensal===e.valor)n+=2;
+  const desc=semAcento(e.descricao),tok=semAcento(v.cliente).split(/[^a-z0-9]+/).filter(x=>x.length>=3);n+=Math.min(4,tok.filter(x=>desc.includes(x)).length*2);return n}
+function sugestoes(e){return fin.vendas.map(v=>({v,p:pontos(e,v)})).filter(x=>x.p>=2).sort((a,b)=>b.p-a.p)}
+function desenhaExt(){
+  const km=hojeL().slice(0,7),ent=ext.filter(e=>!e.ignorar),mes=ent.filter(e=>e.data.slice(0,7)===km),lig=ent.filter(e=>e.venda_id),pend=ent.filter(e=>!e.venda_id);
+  $('#kExt').innerHTML=ext.length?[{l:'entrou este mês',v:brl(mes.reduce((a,e)=>a+e.valor,0)),s:mes.length+' entrada'+(mes.length===1?'':'s')+' no Nubank',cls:'money'},
+    {l:'ligado a vendas',v:lig.length,s:brl(lig.reduce((a,e)=>a+e.valor,0))+' conferidos',meter:pct(lig.length,ent.length)},
+    {l:'sem venda',v:pend.length,s:pend.filter(e=>sugestoes(e).length).length+' com sugestão',meter:pct(pend.length,ent.length)}].map(kpi).join(''):'';
+  const F=[['pendentes','Sem venda ('+pend.length+')'],['ligados','Ligados ('+lig.length+')'],['ignorados','Ignorados'],['todos','Todos']];
+  $('#fExt').innerHTML=ext.length?F.map(f=>'<button type="button" aria-pressed="'+(f[0]===filtroExt)+'" data-fx="'+f[0]+'">'+f[1]+'</button>').join(''):'';
+  $$('[data-fx]').forEach(b=>b.onclick=()=>{filtroExt=b.dataset.fx;desenhaExt()});
+  const L=filtroExt==='pendentes'?pend:filtroExt==='ligados'?lig:filtroExt==='ignorados'?ext.filter(e=>e.ignorar):ext;
+  $('#extTxt').textContent=ext.length?ext.length+' entradas importadas · última em '+ext[0].data.split('-').reverse().join('/'):'importe o extrato do app (CSV ou OFX) para conferir quem já pagou';
+  $('#extLista').innerHTML=L.length?L.slice(0,300).map(e=>{const v=e.venda_id&&fin.vendas.find(x=>x.id===e.venda_id),sg=!e.venda_id&&!e.ignorar?sugestoes(e):[];
+    const opts=fin.vendas.filter(x=>!x.pago||(sg[0]&&x.id===sg[0].v.id)).sort((a,b)=>(sg.findIndex(s=>s.v.id===b.id)>=0)-(sg.findIndex(s=>s.v.id===a.id)>=0)||b.data.localeCompare(a.data));
+    return '<tr class="'+(e.ignorar?'ign':'')+'"><td style="white-space:nowrap">'+e.data.split('-').reverse().join('/')+'</td><td><b>'+esc(quemPagou(e.descricao))+'</b><br><small class="label">'+esc(e.descricao||'')+'</small></td><td class="money"><b>'+brl(e.valor)+'</b></td><td>'+
+      (v?'<span class="pill on st-fechou">✓ '+esc(v.cliente)+(v.servico?' · '+esc(v.servico):'')+'</span>':e.venda_id?'<span class="pill">venda excluída</span>':e.ignorar?'<span class="pill">ignorado</span>':
+       '<div class="ext-v"><select data-sel="'+e.id+'"><option value="">escolher venda…</option>'+opts.map(x=>'<option value="'+x.id+'"'+(sg[0]&&sg[0].v.id===x.id?' selected':'')+'>'+esc(x.cliente)+' · '+brl(x.valor||x.mensal)+(x.pago?' (recebida)':'')+'</option>').join('')+'</select>'+(sg[0]?'<span class="sug">sugestão</span>':'')+'</div>')+'</td>'+
+      '<td style="white-space:nowrap">'+(e.venda_id?'<button class="ghost" data-xl="'+e.id+'">Desligar</button>':e.ignorar?'<button class="ghost" data-xi="'+e.id+'" data-v="0">Voltar</button>':
+        '<button class="solid" data-xv="'+e.id+'">Ligar</button> <button class="ghost" data-xn="'+e.id+'">Nova venda</button> <button class="ghost" data-xi="'+e.id+'" data-v="1">Ignorar</button>')+'</td></tr>'}).join('')
+    :'<tr><td colspan="5" class="vazio">'+(ext.length?'Nada aqui.':'Nenhum extrato importado ainda.')+'</td></tr>';
+  const patch=async(id,b,msg)=>{try{await api('/api/extrato/'+id,{method:'PATCH',body:b});toast(msg);carregaFin()}catch(x){toast(x.erro||'Erro')}};
+  $$('[data-xv]').forEach(b=>b.onclick=()=>{const v=$('[data-sel="'+b.dataset.xv+'"]').value;if(!v)return toast('Escolha a venda');patch(b.dataset.xv,{venda_id:+v},'Ligado ✓ venda marcada como recebida')});
+  $$('[data-xl]').forEach(b=>b.onclick=()=>patch(b.dataset.xl,{venda_id:null},'Desligado'));
+  $$('[data-xi]').forEach(b=>b.onclick=()=>patch(b.dataset.xi,{ignorar:b.dataset.v==='1'},b.dataset.v==='1'?'Ignorado':'De volta à lista'));
+  $$('[data-xn]').forEach(b=>b.onclick=()=>{const e=ext.find(x=>x.id===+b.dataset.xn),f=$('#fVenda');limpaVenda();f.cliente.value=quemPagou(e.descricao).toLowerCase().split(' ').map(w=>w&&w[0].toUpperCase()+w.slice(1)).join(' ').slice(0,120);f.valor.value=reais(e.valor);f.data.value=e.data;f.pago.checked=true;
+    f.dataset.ext=e.id;$('#finForm').scrollIntoView({behavior:'smooth'});toast('Confira e registre a venda')});
+}
+$('#arqExt').onchange=async ev=>{const a=ev.target.files[0];ev.target.value='';if(!a)return;
+  try{let t=await a.text();if(t.includes('\ufffd'))t=new TextDecoder('windows-1252').decode(await a.arrayBuffer());
+    const itens=lerExtrato(t).filter(x=>x.data&&x.valor>0);
+    if(!itens.length)return toast('Não achei entradas de dinheiro nesse arquivo');
+    const r=await api('/api/extrato',{method:'POST',body:{itens}});toast(r.novos+' novas entradas'+(r.repetidos?' · '+r.repetidos+' já estavam':''));filtroExt='pendentes';carregaFin();
+  }catch(x){toast(x.message||x.erro||'Não consegui ler o arquivo')}};
+
 $('#csvFin').onclick=()=>csv('vendas-branco.csv',['Data','Cliente','Serviço','Valor único','Mensalidade','Fim mensalidade','Recebido','Observação'],fin.vendas.map(v=>[v.data,v.cliente,v.servico,reais(v.valor||0),reais(v.mensal||0),v.fim||'',v.pago?'sim':'não',v.notas||'']));
 $('#cVenda').onclick=limpaVenda;
 $('#fVenda').onsubmit=async e=>{e.preventDefault();const f=e.target,id=f.id.value;
   const body={cliente:f.cliente.value,servico:f.servico.value,valor:paraCent(f.valor.value),mensal:paraCent(f.mensal.value),data:f.data.value,fim:f.fim.value||null,notas:f.notas.value,pago:f.pago.checked,contato_id:f.contato_id.value||null};
-  try{await api(id?'/api/vendas/'+id:'/api/vendas',{method:id?'PATCH':'POST',body});toast(id?'Venda atualizada ✓':'Venda registrada 💰');limpaVenda();carregaFin()}catch(x){$('#eVenda').textContent=x.erro||'Erro'}};
+  const doExt=f.dataset.ext;delete f.dataset.ext;
+  try{const r=await api(id?'/api/vendas/'+id:'/api/vendas',{method:id?'PATCH':'POST',body});
+    if(doExt&&!id&&r.id)await api('/api/extrato/'+doExt,{method:'PATCH',body:{venda_id:r.id}});
+    toast(id?'Venda atualizada ✓':'Venda registrada 💰');limpaVenda();carregaFin()}catch(x){$('#eVenda').textContent=x.erro||'Erro'}};
 
 /* ---------- modo demonstração (?demo): dados de exemplo, nada é salvo ---------- */
 function demoApi(p,o){
@@ -738,6 +809,8 @@ function demoApi(p,o){
   if(p==='/api/vendas')return Promise.resolve({vendas:D.vendas,negociacao:{qtd:D.contatos.filter(c=>c.venda==='proposta').length,total:D.contatos.filter(c=>c.venda==='proposta').reduce((a,c)=>a+c.proposta,0)}});
   if(p==='/api/clientes')return Promise.resolve(D.clientes);
   if(p==='/api/config')return Promise.resolve({manutencao:false,mensagem:''});
+  if(p==='/api/extrato'&&(!o.method||o.method==='GET'))return Promise.resolve([[dia(1),150000,'Transferência recebida pelo Pix - DOCERIA DA ANA LTDA - 12.345.678/0001-90 - NU PAGAMENTOS',0],[dia(3),60000,'Transferência recebida pelo Pix - CLINICA BELLA - •••.456.789-•• - ITAU',2],[dia(6),35000,'Transferência recebida pelo Pix - MARCOS PEREIRA - •••.111.222-•• - CAIXA',0],[dia(12),80000,'Transferência recebida pelo Pix - ALVES FIT ACADEMIA - BRADESCO',3],[dia(20),12000,'Reembolso recebido',0]]
+    .map((x,i)=>({id:i+1,data:x[0],valor:x[1],descricao:x[2],venda_id:x[3]||null,ignorar:0})));
   return Promise.resolve({});
 }
 if(DEMO){const b=document.createElement('div');b.className='demo';b.textContent='modo demonstração · dados de exemplo';document.body.appendChild(b)}
