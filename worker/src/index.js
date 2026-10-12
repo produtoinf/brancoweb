@@ -31,6 +31,7 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS vc_site ON visitas_cliente (site, criado_em)`,
   `CREATE TABLE IF NOT EXISTS sessoes (token TEXT PRIMARY KEY, criado_em TEXT NOT NULL DEFAULT (datetime('now')))`,
   `CREATE TABLE IF NOT EXISTS config (chave TEXT PRIMARY KEY, valor TEXT)`,
+  `CREATE TABLE IF NOT EXISTS limites (chave TEXT PRIMARY KEY, n INTEGER NOT NULL, ate TEXT NOT NULL)`,
 ];
 const MODELOS_INICIAIS = [
   ['Primeiro contato', 'Oi, {nome}! Aqui é da Branco 👋 Vi que você se interessou por {projeto}. Posso te fazer umas perguntas rápidas para montar sua proposta?'],
@@ -97,6 +98,22 @@ function iguais(a, b) { // comparação de senha em tempo constante
   let d = x.length ^ y.length; for (let i = 0; i < Math.max(x.length, y.length); i++) d |= (x[i] || 0) ^ (y[i] || 0); return d === 0;
 }
 const cookie = (req, nome) => (req.headers.get('Cookie') || '').split(/;\s*/).map(c => c.split('=')).find(c => c[0] === nome)?.[1];
+
+/* ---------- segurança ---------- */
+const ip = req => req.headers.get('CF-Connecting-IP') || req.headers.get('X-Forwarded-For')?.split(',')[0].trim() || 'local';
+// conta pedidos por chave numa janela de tempo; devolve true quando passou do máximo
+async function excedeu(db, chave, max, minutos) {
+  const r = await db.prepare(`INSERT INTO limites (chave, n, ate) VALUES (?, 1, datetime('now', ?))
+      ON CONFLICT(chave) DO UPDATE SET n = CASE WHEN ate < datetime('now') THEN 1 ELSE n + 1 END,
+      ate = CASE WHEN ate < datetime('now') THEN excluded.ate ELSE ate END RETURNING n`).bind(chave, `+${minutos} minutes`).first();
+  return r.n > max;
+}
+const bloqueadoLogin = async (db, req) => {
+  const r = await db.prepare("SELECT n FROM limites WHERE chave = ? AND ate >= datetime('now')").bind('login:' + ip(req)).first();
+  return (r?.n || 0) >= 8; // 8 senhas erradas → espera 15 minutos
+};
+const CSP_PAINEL = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'";
+const SEGURANCA = { 'Content-Security-Policy': CSP_PAINEL, 'X-Content-Type-Options': 'nosniff', 'Strict-Transport-Security': 'max-age=31536000; includeSubDomains', 'Permissions-Policy': 'camera=(), microphone=(), geolocation=()' };
 
 async function logado(req, db) {
   const t = cookie(req, 'bsess'); if (!t || t.length !== 40) return false;
@@ -175,7 +192,12 @@ async function api(req, db, env, caminho) {
   if (rec === 'login' && m === 'POST') {
     const b = await corpo(req);
     if (!env.ADMIN_SENHA) return erro('Configure a variável ADMIN_SENHA no Worker.', 500);
-    if (!iguais(String(b.senha || ''), env.ADMIN_SENHA)) { await new Promise(r => setTimeout(r, 600)); return erro('Senha errada.', 401); }
+    if (await bloqueadoLogin(db, req)) return erro('Muitas tentativas. Espere 15 minutos e tente de novo.', 429);
+    if (!iguais(String(b.senha || ''), env.ADMIN_SENHA)) {
+      await excedeu(db, 'login:' + ip(req), 8, 15); await new Promise(r => setTimeout(r, 600));
+      return erro('Senha errada.', 401);
+    }
+    await db.batch([db.prepare('DELETE FROM limites WHERE chave = ?').bind('login:' + ip(req)), db.prepare("DELETE FROM limites WHERE ate < datetime('now')")]);
     const t = aleatorio(40);
     await db.batch([db.prepare("INSERT INTO sessoes (token, criado_em) VALUES (?, datetime('now'))").bind(t), db.prepare("DELETE FROM sessoes WHERE criado_em < datetime('now','-30 days')")]);
     return json({ ok: true }, 200, { 'Set-Cookie': `bsess=${t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000` });
@@ -315,23 +337,32 @@ async function apiCliente(db, token, dias) {
 export default {
   async fetch(req, env) {
     const url = new URL(req.url), p = url.pathname.replace(/\/+$/, '') || '/';
-    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
+    const publica = ['/t', '/lead', '/c', '/status', '/c.js', '/chat.js'].includes(p) || p.startsWith('/api/cliente/');
+    if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: publica ? CORS : {} });
+    // o painel só aceita alterações vindas dele mesmo (proteção contra pedidos forjados por outros sites)
+    if (p.startsWith('/api/') && !publica && req.method !== 'GET') {
+      const o = req.headers.get('Origin');
+      if (o && o !== url.origin) return erro('Origem não permitida.', 403);
+    }
     if (!env.DB) return new Response('Falta ligar o banco D1 com o nome DB neste Worker.', { status: 500 });
     try {
       await prepara(env.DB);
+      // rotas que o site chama: limite por IP para robôs não lotarem o banco
+      const LIM = { '/t': 400, '/lead': 20, '/c': 400 };
+      if (LIM[p] && req.method === 'POST' && await excedeu(env.DB, p + ':' + ip(req), LIM[p], 60)) return new Response(null, { status: 429, headers: CORS });
       if (p === '/t' && req.method === 'POST') return await rotaEvento(req, env.DB);
       if (p === '/lead' && req.method === 'POST') return await rotaLead(req, env.DB);
       if (p === '/c' && req.method === 'POST') return await rotaVisitaCliente(req, env.DB);
       if (p === '/status') return await rotaStatus(env.DB);
       if (p === '/c.js') return js(contadorCliente(url.origin));
       if (p === '/chat.js') return js('/* assistente: desativado nesta versão */');
-      if (p === '/admin') return html(PAINEL_HTML);
+      if (p === '/admin') return html(PAINEL_HTML, SEGURANCA);
       if (p.startsWith('/api/cliente/')) { // usado também pela área do cliente dentro do site (outro domínio)
         const r = await apiCliente(env.DB, p.split('/')[3] || '', inteiro(url.searchParams.get('dias'), 1, 365) || 30);
         Object.entries(CORS).forEach(([k, v]) => r.headers.set(k, v)); return r;
       }
       if (p.startsWith('/api/')) return await api(req, env.DB, env, p);
-      if (p.startsWith('/cliente/')) return html(CLIENTE_HTML);
+      if (p.startsWith('/cliente/')) return html(CLIENTE_HTML, SEGURANCA);
       if (p === '/') return Response.redirect(url.origin + '/admin', 302);
       return new Response('Não encontrado', { status: 404 });
     } catch (e) {
