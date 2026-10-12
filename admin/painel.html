@@ -174,6 +174,7 @@ html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-convers
 .tag.hot{background:color-mix(in srgb,#ff7a45 18%,transparent);color:#ff7a45}.tag.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 #pRes td{vertical-align:middle}#pRes td small{display:block;color:var(--mute);font:500 .7rem/1.4 var(--mono);margin-top:3px}
 .pchk{width:18px;height:18px;padding:0}
+.pst{margin:16px 0 0;padding:14px 16px;border-radius:14px;background:var(--soft);font:500 .8rem/1.55 var(--mono);color:var(--fg)}.pst.erro{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err)}
 .seq{position:fixed;inset:0;z-index:60;background:#000a;display:grid;place-items:center;padding:16px;backdrop-filter:blur(4px)}
 .seq .box{width:min(560px,100%);max-height:92vh;overflow:auto}
 .seq textarea{min-height:150px}
@@ -331,6 +332,7 @@ tr.ign td{opacity:.45}
             <label class="chk"><input type="checkbox" id="pCel"> só com celular/WhatsApp</label><label class="chk"><input type="checkbox" id="pSem"> só sem site próprio</label>
             <button class="solid" id="bBusca" style="margin-left:auto">Buscar estabelecimentos</button></div>
         </form>
+        <p class="pst" id="pStatus" hidden></p>
         <datalist id="ufs"><option>Acre</option><option>Alagoas</option><option>Amapá</option><option>Amazonas</option><option>Bahia</option><option>Ceará</option><option>Distrito Federal</option><option>Espírito Santo</option><option>Goiás</option><option>Maranhão</option><option>Mato Grosso</option><option>Mato Grosso do Sul</option><option>Minas Gerais</option><option>Pará</option><option>Paraíba</option><option>Paraná</option><option>Pernambuco</option><option>Piauí</option><option>Rio de Janeiro</option><option>Rio Grande do Norte</option><option>Rio Grande do Sul</option><option>Rondônia</option><option>Roraima</option><option>Santa Catarina</option><option>São Paulo</option><option>Sergipe</option><option>Tocantins</option></datalist>
       </section>
       <section class="kpis mt" id="kPros"></section>
@@ -664,7 +666,8 @@ function desenhaPros(){
     {l:'sem site próprio',v:T.filter(x=>!x.site).length,s:'oportunidade de venda 🔥',meter:pct(T.filter(x=>!x.site).length,T.length)}].map(kpi).join(''):'';
   $('#pResBox').hidden=!T.length;if(!T.length)return;
   $('#pResT').textContent=(pros.nicho||'Resultados')+' · '+L.length;$('#pResS').textContent='fonte: '+(pros.fonte==='google'?'Google Maps':'OpenStreetMap')+' · '+pros.sel.size+' selecionado'+(pros.sel.size===1?'':'s');
-  $('#pRes').innerHTML=L.length?L.map(x=>{const j=jaSalvo(x);return '<tr><td><input type="checkbox" class="pchk" data-pid="'+esc(x.id)+'"'+(pros.sel.has(x.id)?' checked':'')+'></td>'+
+  if(!L.length&&T.length)$('#pRes').innerHTML='<tr><td colspan="7" class="vazio">'+T.length+' resultado(s) escondido(s) pelos filtros acima.</td></tr>';
+  else $('#pRes').innerHTML=L.length?L.map(x=>{const j=jaSalvo(x);return '<tr><td><input type="checkbox" class="pchk" data-pid="'+esc(x.id)+'"'+(pros.sel.has(x.id)?' checked':'')+'></td>'+
     '<td><b>'+esc(x.nome)+'</b><small>'+esc(x.categoria||'')+(x.avaliacao?' · ★ '+x.avaliacao+' ('+x.avaliacoes+')':'')+'</small>'+(j?'<span class="tag ok">no follow-up</span>':'')+'</td>'+
     '<td>'+(x.telefone?'<span class="money">'+esc(fone(x.telefone))+'</span><br>'+(x.celular||x.whatsapp?'<span class="tag ok">whatsapp</span>':x.celular===false?'<span class="tag">fixo</span>':''):'<span class="label">—</span>')+'</td>'+
     '<td>'+(x.site?'<a class="pill" href="'+esc(x.site)+'" target="_blank" rel="noopener noreferrer">'+esc(host(x.site))+' ↗</a>':'<span class="tag hot">sem site</span>')+'</td>'+
@@ -677,11 +680,16 @@ function desenhaPros(){
 }
 ['pCel','pSem'].forEach(id=>$('#'+id).onchange=desenhaPros);
 const abrirWa=(x,txt)=>window.open('https://api.whatsapp.com/send?phone='+x.telefone+'&text='+encodeURIComponent(txt),'_blank','noopener');
+const pStatus=(t,erro)=>{const e=$('#pStatus');e.hidden=!t;e.className='pst'+(erro?' erro':'');e.innerHTML=t||''};
 $('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca');b.disabled=true;b.textContent='Buscando…';
+  pStatus('Buscando '+esc(f.nicho.selectedOptions[0]?.value?f.nicho.selectedOptions[0].textContent:f.termo.value||'')+' em '+esc(f.cidade.value||f.estado.value)+'… (pode levar até 30 segundos)');
   try{const q=new URLSearchParams({nicho:f.nicho.value,termo:f.termo.value,pais:f.pais.value,estado:f.estado.value,cidade:f.cidade.value,fonte:f.fonte.value});
     const r=await api('/api/prospeccao?'+q);r.itens.forEach(x=>x.cidade=f.cidade.value||null);pros={...r,sel:new Set()};desenhaPros();
-    toast(r.total?r.total+' estabelecimentos encontrados':'Nada encontrado. Tente outra fonte ou palavra.');
-  }catch(x){toast(x.erro||'Erro na busca')}finally{b.disabled=false;b.textContent='Buscar estabelecimentos'}};
+    const osm=r.fonte==='osm',vis=proFiltrados().length;
+    if(!r.total)pStatus('Nenhum estabelecimento encontrado em '+esc(r.lugar||'')+'.'+(osm?'<br>O OpenStreetMap tem poucos dados em muitas cidades. Com o <b>Google Maps</b> (chave GOOGLE_PLACES_KEY no Worker) a lista fica bem mais completa.':' Tente outra palavra ou um nicho parecido.'),false);
+    else if(!vis)pStatus(r.total+' encontrados, mas <b>todos foram escondidos pelos filtros</b> (“só com WhatsApp” / “só sem site”). Desmarque um filtro para ver.');
+    else pStatus(r.total+' encontrados'+(vis<r.total?' · '+vis+' aparecendo com os filtros':'')+(osm?' · fonte OpenStreetMap (dados limitados; o Google Maps traz bem mais)':' · fonte Google Maps'));
+  }catch(x){pStatus(esc(x.erro||'Erro na busca. Tente de novo.'),true)}finally{b.disabled=false;b.textContent='Buscar estabelecimentos'}};
 $('#pTodos').onclick=()=>{const L=proFiltrados(),todos=L.every(x=>pros.sel.has(x.id));L.forEach(x=>todos?pros.sel.delete(x.id):pros.sel.add(x.id));desenhaPros()};
 const selecionados=()=>{const L=proFiltrados().filter(x=>pros.sel.has(x.id));return L.length?L:[]};
 async function salvarPros(L){const r=await api('/api/prospeccao/salvar',{method:'POST',body:{itens:L.map(x=>({nome:x.nome,telefone:x.telefone,site:x.site,instagram:x.instagram,endereco:x.endereco,cidade:x.cidade,nicho:pros.nicho,maps:x.maps,notas:[x.categoria,x.avaliacao&&'★ '+x.avaliacao+' ('+x.avaliacoes+')',x.email].filter(Boolean).join(' · ')}))}});
