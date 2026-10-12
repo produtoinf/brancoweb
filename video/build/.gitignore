@@ -1,4 +1,5 @@
 node_modules/
-video_mudo.mp4
-trilha.wav
-sfx.json
+*_mudo.mp4
+*.wav
+!voz/*.wav
+*_sfx.json
