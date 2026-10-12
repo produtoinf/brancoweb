@@ -30,9 +30,18 @@ COMO COLOCAR NO AR (pelo site da Cloudflare, sem instalar nada)
      const API = 'https://branco-admin.brancowebs.workers.dev';
    pelo endereço do seu Worker novo.
 
+PROSPECÇÃO COM GOOGLE MAPS (opcional, bem mais completo que o OpenStreetMap)
+   1. console.cloud.google.com > crie um projeto > ative "Places API (New)" (precisa de conta de faturamento;
+      o Google dá uma cota grátis por mês — crie um alerta de orçamento para não ter surpresa)
+   2. APIs e serviços > Credenciais > Criar chave de API > restrinja a chave à "Places API (New)"
+   3. Worker branco-admin > Settings > Variables and Secrets > Add > Secret
+      Name: GOOGLE_PLACES_KEY   Value: (a chave)
+   Sem a chave, a prospecção usa o OpenStreetMap (grátis, mas com menos estabelecimentos).
+
 O QUE O WORKER FAZ
 - Conta visitas, cliques no WhatsApp, formulário aberto e cadastros do site (track.js)
 - Painel /admin: visão geral com gráficos, follow-up, financeiro, clientes
+- Prospecção: busca estabelecimentos por nicho e cidade, salva no follow-up e abre a sequência de mensagens
 - Aviso "site em atualização" (liga/desliga no painel)
 - Área do cliente: cada cliente ganha um link secreto /cliente/... com andamento do projeto,
   recado, próximo passo, links/arquivos e as visitas do site dele (gráfico, origem, aparelho, páginas)

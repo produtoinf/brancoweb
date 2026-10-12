@@ -48,7 +48,8 @@ const LEMBRETES = [2, 7, 15]; // dias até o próximo lembrete depois de cada me
 // colunas que cada tabela precisa ter: se o banco veio de uma versão antiga, as que faltam são criadas (nada é apagado)
 const COLUNAS = {
   eventos: ['tipo', 'v', 'p', 'o', 'd', 'criado_em'],
-  contatos: ['lid', 'v', 'nome', 'telefone', 'empresa', 'projeto', 'mensagem', 'status', 'origem', 'venda', 'contatos INTEGER', 'ultimo_contato', 'proximo_contato', 'notas', 'proposta INTEGER', 'criado_em', 'atualizado_em'],
+  contatos: ['lid', 'v', 'nome', 'telefone', 'empresa', 'projeto', 'mensagem', 'status', 'origem', 'venda', 'contatos INTEGER', 'ultimo_contato', 'proximo_contato', 'notas', 'proposta INTEGER', 'criado_em', 'atualizado_em',
+    'site', 'instagram', 'endereco', 'cidade', 'nicho', 'maps'],
   modelos: ['titulo', 'texto', 'criado_em'],
   vendas: ['cliente', 'servico', 'valor INTEGER', 'mensal INTEGER', 'data', 'fim', 'pago INTEGER', 'notas', 'contato_id INTEGER', 'criado_em'],
   clientes: ['nome', 'email', 'projeto', 'site_url', 'etapa INTEGER', 'recado', 'site', 'token', 'criado_em'],
@@ -218,9 +219,26 @@ async function api(req, db, env, caminho) {
 
   // configurações (aviso de manutenção)
   if (rec === 'config') {
-    if (m === 'PUT') await db.batch([['manutencao', b.manutencao ? '1' : '0'], ['mensagem', txt(b.mensagem, 300) || '']]
-      .map(x => db.prepare('INSERT INTO config (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor').bind(...x)));
-    return rotaStatus(db);
+    const novos = [];
+    if (m === 'PUT') {
+      if ('manutencao' in b) novos.push(['manutencao', b.manutencao ? '1' : '0']);
+      if ('mensagem' in b) novos.push(['mensagem', txt(b.mensagem, 300) || '']);
+      for (const k of ['msg_semsite', 'msg_comsite']) if (k in b) novos.push([k, txt(b[k], 1500) || '']);
+      if (novos.length) await db.batch(novos.map(x => db.prepare('INSERT INTO config (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor').bind(...x)));
+    }
+    const c = Object.fromEntries((await db.prepare('SELECT chave, valor FROM config').all()).results.map(x => [x.chave, x.valor]));
+    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: c.msg_semsite || '', msg_comsite: c.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY });
+  }
+
+  // prospecção: busca estabelecimentos por nicho e cidade
+  if (rec === 'prospeccao') {
+    if (seg[1] === 'nichos') return json(NICHOS.map(n => ({ id: n.id, nome: n.nome, grupo: n.grupo })));
+    if (seg[1] === 'salvar' && m === 'POST') return json(await salvaProspects(db, b.itens));
+    if (m === 'GET') {
+      if (await excedeu(db, 'busca:' + ip(req), 60, 60)) return erro('Muitas buscas seguidas. Espere alguns minutos.', 429);
+      const q = new URL(req.url).searchParams;
+      return json(await buscaProspects(env, { nicho: q.get('nicho'), termo: txt(q.get('termo'), 60), cidade: txt(q.get('cidade'), 80), estado: txt(q.get('estado'), 60), pais: txt(q.get('pais'), 60) || 'Brasil', fonte: q.get('fonte') }));
+    }
   }
 
   // clientes
@@ -259,7 +277,7 @@ async function api(req, db, env, caminho) {
   // follow-up
   if (rec === 'followup' && m === 'GET') {
     const [c, mo] = await db.batch([
-      db.prepare(`SELECT id, nome, empresa, telefone, projeto, mensagem, COALESCE(status,'enviado') status, origem, COALESCE(venda,'novo') venda, COALESCE(contatos,0) contatos,
+      db.prepare(`SELECT id, nome, empresa, telefone, projeto, mensagem, COALESCE(status,'enviado') status, origem, site, instagram, endereco, cidade, nicho, maps, COALESCE(venda,'novo') venda, COALESCE(contatos,0) contatos,
         ultimo_contato, proximo_contato, notas, proposta, criado_em FROM contatos ORDER BY (COALESCE(venda,'novo') IN ('fechou','perdido')), COALESCE(proximo_contato, '0000'), criado_em DESC`),
       db.prepare('SELECT id, titulo, texto FROM modelos ORDER BY id')]);
     return json({ contatos: c.results, modelos: mo.results });
@@ -344,6 +362,116 @@ async function api(req, db, env, caminho) {
     }
   }
   return erro('Rota não encontrada.', 404);
+}
+
+/* ---------- prospecção ---------- */
+// nicho → etiquetas do OpenStreetMap e termo de busca do Google
+const NICHOS = [
+  ['restaurante', 'Restaurante', 'Alimentação', 'amenity=restaurant'], ['pizzaria', 'Pizzaria', 'Alimentação', 'amenity=restaurant&cuisine=pizza'],
+  ['hamburgueria', 'Hamburgueria / lanchonete', 'Alimentação', 'amenity=fast_food'], ['cafeteria', 'Cafeteria', 'Alimentação', 'amenity=cafe'],
+  ['bar', 'Bar / pub', 'Alimentação', 'amenity=bar|amenity=pub'], ['padaria', 'Padaria', 'Alimentação', 'shop=bakery'],
+  ['confeitaria', 'Confeitaria / doceria', 'Alimentação', 'shop=confectionery|shop=pastry'], ['sorveteria', 'Sorveteria / açaí', 'Alimentação', 'amenity=ice_cream'],
+  ['mercado', 'Mercado / conveniência', 'Alimentação', 'shop=supermarket|shop=convenience'], ['acougue', 'Açougue', 'Alimentação', 'shop=butcher'],
+  ['salao', 'Salão de beleza', 'Beleza', 'shop=hairdresser'], ['barbearia', 'Barbearia', 'Beleza', 'shop=barber|hairdresser=barber'],
+  ['estetica', 'Clínica de estética', 'Beleza', 'shop=beauty'], ['manicure', 'Manicure / nail designer', 'Beleza', 'beauty=nails'],
+  ['tatuagem', 'Estúdio de tatuagem', 'Beleza', 'shop=tattoo'], ['cosmeticos', 'Loja de cosméticos', 'Beleza', 'shop=cosmetics|shop=perfumery'],
+  ['dentista', 'Dentista', 'Saúde', 'amenity=dentist|healthcare=dentist'], ['clinica', 'Clínica médica', 'Saúde', 'amenity=clinic|amenity=doctors'],
+  ['psicologo', 'Psicólogo', 'Saúde', 'healthcare=psychotherapist|healthcare:speciality=psychology'], ['fisioterapia', 'Fisioterapia', 'Saúde', 'healthcare=physiotherapist'],
+  ['nutricionista', 'Nutricionista', 'Saúde', 'healthcare=nutrition_counselling|healthcare:speciality=nutrition'], ['farmacia', 'Farmácia', 'Saúde', 'amenity=pharmacy'],
+  ['otica', 'Ótica', 'Saúde', 'shop=optician'], ['veterinario', 'Veterinário', 'Pet', 'amenity=veterinary'], ['petshop', 'Pet shop', 'Pet', 'shop=pet|shop=pet_grooming'],
+  ['academia', 'Academia', 'Esporte', 'leisure=fitness_centre'], ['pilates', 'Pilates / yoga', 'Esporte', 'sport=pilates|sport=yoga'],
+  ['crossfit', 'Crossfit / luta', 'Esporte', 'sport=crossfit|sport=martial_arts'],
+  ['advogado', 'Advogado', 'Serviços', 'office=lawyer'], ['contador', 'Contador', 'Serviços', 'office=accountant'], ['imobiliaria', 'Imobiliária', 'Serviços', 'office=estate_agent'],
+  ['arquiteto', 'Arquiteto', 'Serviços', 'office=architect'], ['construtora', 'Construtora / reformas', 'Serviços', 'craft=builder|office=construction_company'],
+  ['fotografo', 'Fotógrafo', 'Serviços', 'craft=photographer|shop=photo'], ['eventos', 'Buffet / eventos', 'Serviços', 'amenity=events_venue|craft=caterer'],
+  ['lavanderia', 'Lavanderia', 'Serviços', 'shop=laundry|shop=dry_cleaning'], ['autoescola', 'Autoescola', 'Educação', 'amenity=driving_school'],
+  ['idiomas', 'Escola de idiomas', 'Educação', 'amenity=language_school'], ['escola', 'Escola / cursos', 'Educação', 'amenity=school|amenity=college'],
+  ['oficina', 'Oficina mecânica', 'Automotivo', 'shop=car_repair'], ['lavacar', 'Lava-car / estética automotiva', 'Automotivo', 'amenity=car_wash'],
+  ['autopecas', 'Autopeças', 'Automotivo', 'shop=car_parts'], ['concessionaria', 'Loja de carros', 'Automotivo', 'shop=car'],
+  ['roupas', 'Loja de roupas', 'Comércio', 'shop=clothes|shop=boutique'], ['calcados', 'Loja de calçados', 'Comércio', 'shop=shoes'],
+  ['joalheria', 'Joalheria / acessórios', 'Comércio', 'shop=jewelry'], ['moveis', 'Loja de móveis / decoração', 'Comércio', 'shop=furniture|shop=interior_decoration'],
+  ['construcao', 'Material de construção', 'Comércio', 'shop=hardware|shop=doityourself'], ['eletronicos', 'Celulares / eletrônicos', 'Comércio', 'shop=mobile_phone|shop=electronics'],
+  ['floricultura', 'Floricultura', 'Comércio', 'shop=florist'], ['papelaria', 'Papelaria / gráfica', 'Comércio', 'shop=stationery|shop=copyshop'],
+  ['hotel', 'Hotel / pousada', 'Turismo', 'tourism=hotel|tourism=guest_house|tourism=hostel'], ['agencia', 'Agência de viagens', 'Turismo', 'shop=travel_agency'],
+].map(([id, nome, grupo, osm]) => ({ id, nome, grupo, osm: osm.split('|').map(t => t.split('&').map(kv => kv.split('='))) }));
+
+const UA = { 'User-Agent': 'BrancoPainel/1.0 (+https://produtoinf.github.io/brancoweb)' };
+function telefone(t, pais) { // devolve número com DDI e se parece celular (WhatsApp)
+  let d = String(t || '').split(/[;,/]/)[0].replace(/\D/g, ''); if (!d) return null;
+  const br = /bra[sz]il/i.test(pais || '');
+  if (br) { d = d.replace(/^0+/, ''); if (d.length === 10 || d.length === 11) d = '55' + d; }
+  const cel = br ? /^55\d{2}9\d{8}$/.test(d) : null;
+  return { num: d, cel };
+}
+async function buscaOSM({ nicho, termo, cidade, estado, pais }) {
+  const p = new URLSearchParams({ format: 'jsonv2', limit: '1', country: pais }); if (cidade) p.set('city', cidade); if (estado) p.set('state', estado);
+  const geo = await (await fetch('https://nominatim.openstreetmap.org/search?' + p, { headers: UA })).json().catch(() => []);
+  const g = geo[0]; if (!g) throw new Error('Não encontrei essa cidade. Confira o nome, o estado e o país.');
+  const area = g.osm_type === 'relation' ? 3600000000 + Number(g.osm_id) : g.osm_type === 'way' ? 2400000000 + Number(g.osm_id) : null;
+  const onde = area ? '(area.a)' : `(around:8000,${g.lat},${g.lon})`;
+  const n = NICHOS.find(x => x.id === nicho), esc = s => s.replace(/[\\"]/g, '');
+  const filtros = n ? n.osm.map(t => 'nwr' + t.map(([k, v]) => `["${k}"="${v}"]`).join('') + onde + ';') : [];
+  if (termo) filtros.push(`nwr["name"~"${esc(termo)}",i]["shop"]${onde};`, `nwr["name"~"${esc(termo)}",i]["amenity"]${onde};`, `nwr["name"~"${esc(termo)}",i]["office"]${onde};`, `nwr["name"~"${esc(termo)}",i]["craft"]${onde};`, `nwr["name"~"${esc(termo)}",i]["healthcare"]${onde};`);
+  if (!filtros.length) throw new Error('Escolha um nicho ou digite uma palavra.');
+  const ql = `[out:json][timeout:25];${area ? `area(id:${area})->.a;` : ''}(${filtros.join('')});out center tags 400;`;
+  let dados = null;
+  for (const u of ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter']) {
+    try { const r = await fetch(u, { method: 'POST', headers: { ...UA, 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(ql) }); if (r.ok) { dados = await r.json(); break; } } catch {}
+  }
+  if (!dados) throw new Error('O serviço de mapas não respondeu agora. Tente de novo em instantes.');
+  const lugar = g.display_name.split(',').slice(0, 3).join(',');
+  const itens = dados.elements.filter(e => e.tags?.name).map(e => {
+    const t = e.tags, a = k => t[k] || t['contact:' + k], lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon;
+    const tel = telefone(a('mobile') || a('whatsapp') || a('phone'), pais);
+    const end = [t['addr:street'] && (t['addr:street'] + (t['addr:housenumber'] ? ', ' + t['addr:housenumber'] : '')), t['addr:suburb'], t['addr:city'] || cidade].filter(Boolean).join(' · ');
+    return { id: 'osm:' + e.type[0] + e.id, nome: t.name, categoria: n?.nome || t.shop || t.amenity || t.office || t.craft || '', telefone: tel?.num || null, celular: tel?.cel ?? null,
+      whatsapp: !!a('whatsapp'), site: a('website') || t.url || null, instagram: a('instagram') || null, email: a('email') || null, endereco: end || null,
+      maps: lat ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(t.name)}%20${lat},${lon}` : null };
+  });
+  return { fonte: 'osm', lugar, itens };
+}
+async function buscaGoogle(env, { nicho, termo, cidade, estado, pais }) {
+  const n = NICHOS.find(x => x.id === nicho), oque = termo || n?.nome; if (!oque) throw new Error('Escolha um nicho ou digite uma palavra.');
+  const textQuery = `${oque} em ${[cidade, estado, pais].filter(Boolean).join(', ')}`, itens = [];
+  let token = '';
+  for (let i = 0; i < 3; i++) { // até 60 resultados (3 páginas)
+    const r = await fetch('https://places.googleapis.com/v1/places:searchText', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': env.GOOGLE_PLACES_KEY,
+      'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.googleMapsUri,places.rating,places.userRatingCount,places.primaryTypeDisplayName,places.businessStatus,nextPageToken' },
+      body: JSON.stringify({ textQuery, languageCode: 'pt-BR', pageSize: 20, ...(token ? { pageToken: token } : {}) }) });
+    const d = await r.json(); if (!r.ok) throw new Error('Google: ' + (d.error?.message || 'erro na busca'));
+    for (const pl of d.places || []) {
+      if (pl.businessStatus && pl.businessStatus !== 'OPERATIONAL') continue;
+      const tel = telefone(pl.internationalPhoneNumber || pl.nationalPhoneNumber, pais);
+      itens.push({ id: 'g:' + pl.id, nome: pl.displayName?.text, categoria: pl.primaryTypeDisplayName?.text || n?.nome || '', telefone: tel?.num || null, celular: tel?.cel ?? null, whatsapp: false,
+        site: pl.websiteUri || null, instagram: /instagram\.com/.test(pl.websiteUri || '') ? pl.websiteUri : null, email: null, endereco: pl.formattedAddress || null, maps: pl.googleMapsUri || null,
+        avaliacao: pl.rating || null, avaliacoes: pl.userRatingCount || 0 });
+    }
+    token = d.nextPageToken; if (!token) break;
+  }
+  return { fonte: 'google', lugar: [cidade, estado, pais].filter(Boolean).join(', '), itens };
+}
+async function buscaProspects(env, f) {
+  if (!f.cidade && !f.estado) throw new Error('Coloque a cidade ou o estado.');
+  const r = f.fonte === 'google' && env.GOOGLE_PLACES_KEY ? await buscaGoogle(env, f) : await buscaOSM(f);
+  // sites que são só Instagram/Facebook/Linktree contam como "sem site próprio"
+  r.itens.forEach(x => { if (x.site && /instagram\.com|facebook\.com|linktr\.ee|wa\.me|whatsapp/i.test(x.site)) { x.instagram = x.instagram || (/instagram/.test(x.site) ? x.site : null); x.redeSocial = x.site; x.site = null; } });
+  return { ...r, nicho: NICHOS.find(x => x.id === f.nicho)?.nome || f.termo, total: r.itens.length };
+}
+async function salvaProspects(db, itens) {
+  itens = (Array.isArray(itens) ? itens : []).slice(0, 500);
+  const ids = [];
+  let novos = 0;
+  for (const x of itens) {
+    const nome = txt(x.nome, 100); if (!nome) { ids.push(null); continue; }
+    const tel = digitos(x.telefone), cidade = txt(x.cidade, 80);
+    const ja = await db.prepare('SELECT id FROM contatos WHERE (? IS NOT NULL AND telefone = ?) OR (lower(nome) = lower(?) AND COALESCE(cidade,\'\') = COALESCE(?,\'\')) LIMIT 1').bind(tel, tel, nome, cidade).first();
+    if (ja) { ids.push(ja.id); continue; }
+    const r = await db.prepare(`INSERT INTO contatos (lid, nome, empresa, telefone, projeto, status, origem, venda, contatos, site, instagram, endereco, cidade, nicho, maps, notas, criado_em)
+        VALUES (?, ?, ?, ?, ?, 'enviado', 'prospeccao', 'novo', 0, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`)
+      .bind('p-' + aleatorio(16), nome, nome, tel, txt(x.nicho, 80), urlOk(x.site), txt(x.instagram, 200), txt(x.endereco, 300), cidade, txt(x.nicho, 80), urlOk(x.maps), txt(x.notas, 500)).run();
+    ids.push(r.meta?.last_row_id ?? null); novos++;
+  }
+  return { ok: true, novos, repetidos: itens.length - novos, ids };
 }
 
 /* ---------- área do cliente (link secreto) ---------- */

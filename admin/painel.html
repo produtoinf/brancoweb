@@ -166,6 +166,19 @@ html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-convers
 /* financeiro */
 .kpi b.money{font-size:clamp(1.15rem,1.55vw,1.55rem);letter-spacing:-.03em;white-space:nowrap}
 .money{font-variant-numeric:tabular-nums;white-space:nowrap}
+.pf{display:grid;grid-template-columns:2fr 1.4fr 1fr 1.4fr 1.2fr;gap:10px;align-items:end}
+@media(max-width:1100px){.pf{grid-template-columns:1fr 1fr}}
+.pf select,.pf input{width:100%}
+.pf .ops{grid-column:1/-1;display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+.tag{display:inline-block;font:600 .64rem var(--mono);padding:3px 8px;border-radius:999px;background:var(--soft);color:var(--mute);white-space:nowrap}
+.tag.hot{background:color-mix(in srgb,#ff7a45 18%,transparent);color:#ff7a45}.tag.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
+#pRes td{vertical-align:middle}#pRes td small{display:block;color:var(--mute);font:500 .7rem/1.4 var(--mono);margin-top:3px}
+.pchk{width:18px;height:18px;padding:0}
+.seq{position:fixed;inset:0;z-index:60;background:#000a;display:grid;place-items:center;padding:16px;backdrop-filter:blur(4px)}
+.seq .box{width:min(560px,100%);max-height:92vh;overflow:auto}
+.seq textarea{min-height:150px}
+.seq .top{display:flex;justify-content:space-between;align-items:center}
+.seq .bar{height:4px;background:var(--soft);border-radius:4px;overflow:hidden;margin:14px 0}.seq .bar i{display:block;height:100%;background:var(--ok)}
 .up{display:inline-flex;align-items:center;gap:8px;font:500 .85rem var(--mono);border:1px solid var(--fg);background:var(--fg);color:var(--bg);border-radius:999px;padding:10px 16px;cursor:pointer}
 .up:hover{opacity:.9}.up input{display:none}
 .nu{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:#820ad1;color:#fff;font:800 .62rem Archivo;letter-spacing:-.02em}
@@ -212,6 +225,7 @@ tr.ign td{opacity:.45}
       <button role="tab" aria-selected="true" data-tab="site"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 6-6"/></svg><span class="t">Visão geral</span></button>
       <button role="tab" aria-selected="false" data-tab="follow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span class="t">Follow-up</span><span class="badge" id="bFollow" hidden></span></button>
       <button role="tab" aria-selected="false" data-tab="financeiro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></svg><span class="t">Financeiro</span></button>
+      <button role="tab" aria-selected="false" data-tab="prospec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span class="t">Prospecção</span></button>
       <button role="tab" aria-selected="false" data-tab="clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="t">Clientes</span></button>
     </nav>
     <div class="foot">
@@ -304,6 +318,32 @@ tr.ign td{opacity:.45}
       <section class="box mt"><div class="hd"><h2>Vendas</h2><button class="ghost" id="csvFin">Exportar CSV</button></div><div class="tbl"><table><thead><tr><th>Data</th><th>Cliente</th><th>Serviço</th><th>Valor único</th><th>Mensal</th><th>Recebido</th><th></th></tr></thead><tbody id="finVendas"></tbody></table></div></section>
     </div>
 
+    <!-- PROSPECÇÃO -->
+    <div id="tProspec" hidden>
+      <section class="box"><div class="hd"><div><h2>Encontrar estabelecimentos</h2><p class="label" id="pFonteTxt">busque por nicho e cidade · nome, telefone, site, instagram e endereço</p></div></div>
+        <form class="pf" id="fBusca">
+          <label class="fl"><span>Nicho</span><select name="nicho" id="pNicho"><option value="">— escolha —</option></select></label>
+          <label class="fl"><span>ou palavra-chave</span><input name="termo" placeholder="Ex: hamburgueria artesanal" maxlength="60"></label>
+          <label class="fl"><span>País</span><input name="pais" value="Brasil" maxlength="60"></label>
+          <label class="fl"><span>Estado</span><input name="estado" list="ufs" placeholder="Ex: Paraná" maxlength="60"></label>
+          <label class="fl"><span>Cidade</span><input name="cidade" placeholder="Ex: Curitiba" maxlength="80"></label>
+          <div class="ops"><label class="fl" style="min-width:200px"><span>Fonte dos dados</span><select name="fonte" id="pFonte"><option value="osm">OpenStreetMap (grátis)</option><option value="google">Google Maps</option></select></label>
+            <label class="chk"><input type="checkbox" id="pCel"> só com celular/WhatsApp</label><label class="chk"><input type="checkbox" id="pSem"> só sem site próprio</label>
+            <button class="solid" id="bBusca" style="margin-left:auto">Buscar estabelecimentos</button></div>
+        </form>
+        <datalist id="ufs"><option>Acre</option><option>Alagoas</option><option>Amapá</option><option>Amazonas</option><option>Bahia</option><option>Ceará</option><option>Distrito Federal</option><option>Espírito Santo</option><option>Goiás</option><option>Maranhão</option><option>Mato Grosso</option><option>Mato Grosso do Sul</option><option>Minas Gerais</option><option>Pará</option><option>Paraíba</option><option>Paraná</option><option>Pernambuco</option><option>Piauí</option><option>Rio de Janeiro</option><option>Rio Grande do Norte</option><option>Rio Grande do Sul</option><option>Rondônia</option><option>Roraima</option><option>Santa Catarina</option><option>São Paulo</option><option>Sergipe</option><option>Tocantins</option></datalist>
+      </section>
+      <section class="kpis mt" id="kPros"></section>
+      <section class="box mt" id="pResBox" hidden><div class="hd"><div><h2 id="pResT">Resultados</h2><p class="label" id="pResS"></p></div>
+        <div class="busca"><button class="ghost" id="pTodos">Selecionar todos</button><button class="ghost" id="pSalvar">Salvar no follow-up</button><button class="ghost" id="pCsv">Exportar CSV</button><button class="solid" id="pSeq">Iniciar sequência de mensagens →</button></div></div>
+        <div class="tbl"><table><thead><tr><th></th><th>Estabelecimento</th><th>Telefone</th><th>Site</th><th>Redes</th><th>Endereço</th><th></th></tr></thead><tbody id="pRes"></tbody></table></div></section>
+      <section class="grid2">
+        <div class="box"><div class="hd"><div><h2>Mensagem · quem não tem site</h2><p class="dica">use {nome}, {nicho} e {cidade}</p></div></div><textarea id="msgSem" rows="6" maxlength="1500"></textarea></div>
+        <div class="box"><div class="hd"><div><h2>Mensagem · quem já tem site</h2><p class="dica">use {nome}, {nicho}, {cidade} e {site}</p></div></div><textarea id="msgCom" rows="6" maxlength="1500"></textarea></div>
+      </section>
+      <div class="acts mt"><button class="solid" id="sMsgs">Salvar mensagens</button><p class="dica">Por que não envio sozinho: o WhatsApp bane números que disparam mensagens automáticas para quem não te conhece. A sequência deixa cada envio em poucos segundos, com você no controle, e já agenda os lembretes no follow-up.</p></div>
+    </div>
+
     <!-- CLIENTES -->
     <div id="tClientes" hidden>
       <div id="lista">
@@ -331,6 +371,7 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const fmt=d=>d?new Date(d.replace(' ','T')+'Z').toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
 const num=n=>Number(n||0).toLocaleString('pt-BR');
 const pct=(a,b)=>b?Math.round(a/b*1000)/10:0;
+const host=u=>{try{return new URL(u).hostname.replace('www.','')}catch(e){return u}};
 const ETAPAS=['Conversa','Conteúdo e direção','Criação e produção','Revisão','No ar'];
 const api=async(p,o={})=>{if(DEMO)return demoApi(p,o);const r=await fetch(p,{...o,headers:{'Content-Type':'application/json'},body:o.body?JSON.stringify(o.body):undefined});
   const d=await r.json().catch(()=>({}));if(r.status===401&&p!=='/api/login'){location.reload();throw 0}if(!r.ok)throw d;return d};
@@ -575,7 +616,7 @@ function abre(id){
 function fecha(){aberto=null;$('#det').hidden=true;$('#lista').hidden=false}
 
 /* ---------- navegação ---------- */
-const TITULOS={site:['( como o seu site está indo )','Visão<br><span>geral.</span>'],follow:['( quem chamar e quando )','Follow-<br><span>up.</span>'],financeiro:['( quanto entrou e quanto vai entrar )','Valores<br><span>gerados.</span>'],clientes:['( projetos e áreas do cliente )','Seus<br><span>clientes.</span>']};
+const TITULOS={site:['( como o seu site está indo )','Visão<br><span>geral.</span>'],follow:['( quem chamar e quando )','Follow-<br><span>up.</span>'],financeiro:['( quanto entrou e quanto vai entrar )','Valores<br><span>gerados.</span>'],prospec:['( novos clientes por nicho e cidade )','Prospec-<br><span>ção.</span>'],clientes:['( projetos e áreas do cliente )','Seus<br><span>clientes.</span>']};
 function redesenha(){if(telaAtual==='site')desenhaSite();if(telaAtual==='follow'&&fu.contatos)desenhaFollow();if(telaAtual==='financeiro')desenhaFin()}
 function telaAdmin(){
   $('#admin').hidden=false;document.body.classList.add('logado');
@@ -583,9 +624,9 @@ function telaAdmin(){
   $('#segDias').innerHTML=D.map(x=>'<button type="button" data-d="'+x[0]+'" aria-pressed="'+(x[0]===$('#dias').value)+'">'+x[1]+'</button>').join('');
   $$('[data-d]').forEach(b=>b.onclick=()=>{$('#dias').value=b.dataset.d;$$('[data-d]').forEach(x=>x.setAttribute('aria-pressed',x===b));carregaSite()});
   const tab=t=>{telaAtual=t;$$('[data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));$('#tSite').hidden=t!=='site';$('#tClientes').hidden=t!=='clientes';
-    $('#tFollow').hidden=t!=='follow';$('#tFin').hidden=t!=='financeiro';$('#segDias').hidden=t!=='site';
+    $('#tFollow').hidden=t!=='follow';$('#tFin').hidden=t!=='financeiro';$('#tProspec').hidden=t!=='prospec';$('#segDias').hidden=t!=='site';
     $('#aSub').textContent=TITULOS[t][0];$('#aTitulo').innerHTML=TITULOS[t][1];scrollTo({top:0});
-    if(t==='site')carregaSite();if(t==='clientes')carregaClientes();if(t==='follow')carregaFollow();if(t==='financeiro')carregaFin()};
+    if(t==='site')carregaSite();if(t==='clientes')carregaClientes();if(t==='follow')carregaFollow();if(t==='financeiro')carregaFin();if(t==='prospec')carregaProspec()};
   window.irPara=tab;
   carregaConfig();
   $$('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
@@ -598,20 +639,84 @@ function telaAdmin(){
   setInterval(()=>{if(telaAtual==='site'&&!document.hidden)carregaSite().catch(()=>{})},120000);
 }
 
+/* ---------- PROSPECÇÃO ---------- */
+const MSG_SEM='Oi! Tudo bem? Encontrei a {nome} aqui em {cidade} e vi que vocês ainda não têm um site próprio. Sou da Branco, a gente cria sites profissionais e faz tráfego pago para {nicho}, para aparecer no Google e receber clientes direto no WhatsApp. Posso te mostrar alguns exemplos rapidinho?';
+const MSG_COM='Oi! Tudo bem? Vi o site da {nome} ({site}). Sou da Branco, a gente ajuda {nicho} em {cidade} a atrair mais clientes com tráfego pago e páginas que convertem. Posso te mandar 2 ideias rápidas do que daria para melhorar?';
+let pros={itens:[],sel:new Set()},pCfg=null,pJaSalvos=new Map();
+async function carregaProspec(){
+  if(!$('#pNicho').options[1]){const N=await api('/api/prospeccao/nichos').catch(()=>[]);const g={};N.forEach(n=>(g[n.grupo]=g[n.grupo]||[]).push(n));
+    $('#pNicho').innerHTML='<option value="">— escolha —</option>'+Object.entries(g).map(([k,v])=>'<optgroup label="'+esc(k)+'">'+v.map(n=>'<option value="'+n.id+'">'+esc(n.nome)+'</option>').join('')+'</optgroup>').join('')}
+  pCfg=await api('/api/config').catch(()=>({}));
+  $('#msgSem').value=pCfg.msg_semsite||MSG_SEM;$('#msgCom').value=pCfg.msg_comsite||MSG_COM;
+  const og=$('#pFonte').querySelector('[value=google]');og.disabled=!pCfg.google;og.textContent=pCfg.google?'Google Maps (mais completo)':'Google Maps (precisa da chave GOOGLE_PLACES_KEY)';
+  if(pCfg.google&&!$('#pFonte').dataset.ok){$('#pFonte').value='google';$('#pFonte').dataset.ok=1}
+  try{const f=await api('/api/followup');fu=f;pJaSalvos=new Map();f.contatos.forEach(c=>{if(c.telefone)pJaSalvos.set('t'+c.telefone,c.id);pJaSalvos.set('n'+semAcento(c.nome)+'|'+semAcento(c.cidade||''),c.id)})}catch(e){}
+  desenhaPros();
+}
+$('#sMsgs').onclick=async()=>{await api('/api/config',{method:'PUT',body:{msg_semsite:$('#msgSem').value,msg_comsite:$('#msgCom').value}});toast('Mensagens salvas ✓')};
+const jaSalvo=x=>pJaSalvos.get('t'+x.telefone)||pJaSalvos.get('n'+semAcento(x.nome)+'|'+semAcento(x.cidade||''));
+const msgPara=x=>($('#'+(x.site?'msgCom':'msgSem')).value||'').replace(/\{nome\}/g,x.nome).replace(/\{nicho\}/g,(pros.nicho||'negócios').toLowerCase()).replace(/\{cidade\}/g,x.cidade||'sua cidade').replace(/\{site\}/g,x.site||'');
+const proFiltrados=()=>pros.itens.filter(x=>(!$('#pCel').checked||x.celular||x.whatsapp)&&(!$('#pSem').checked||!x.site));
+function desenhaPros(){
+  const L=proFiltrados(),T=pros.itens;
+  $('#kPros').innerHTML=T.length?[{l:'encontrados',v:T.length,s:esc(pros.lugar||'')},{l:'com telefone',v:T.filter(x=>x.telefone).length,s:'dá para chamar',meter:pct(T.filter(x=>x.telefone).length,T.length)},
+    {l:'celular / whatsapp',v:T.filter(x=>x.celular||x.whatsapp).length,s:'chamar direto no WhatsApp',meter:pct(T.filter(x=>x.celular||x.whatsapp).length,T.length)},
+    {l:'sem site próprio',v:T.filter(x=>!x.site).length,s:'oportunidade de venda 🔥',meter:pct(T.filter(x=>!x.site).length,T.length)}].map(kpi).join(''):'';
+  $('#pResBox').hidden=!T.length;if(!T.length)return;
+  $('#pResT').textContent=(pros.nicho||'Resultados')+' · '+L.length;$('#pResS').textContent='fonte: '+(pros.fonte==='google'?'Google Maps':'OpenStreetMap')+' · '+pros.sel.size+' selecionado'+(pros.sel.size===1?'':'s');
+  $('#pRes').innerHTML=L.length?L.map(x=>{const j=jaSalvo(x);return '<tr><td><input type="checkbox" class="pchk" data-pid="'+esc(x.id)+'"'+(pros.sel.has(x.id)?' checked':'')+'></td>'+
+    '<td><b>'+esc(x.nome)+'</b><small>'+esc(x.categoria||'')+(x.avaliacao?' · ★ '+x.avaliacao+' ('+x.avaliacoes+')':'')+'</small>'+(j?'<span class="tag ok">no follow-up</span>':'')+'</td>'+
+    '<td>'+(x.telefone?'<span class="money">'+esc(fone(x.telefone))+'</span><br>'+(x.celular||x.whatsapp?'<span class="tag ok">whatsapp</span>':x.celular===false?'<span class="tag">fixo</span>':''):'<span class="label">—</span>')+'</td>'+
+    '<td>'+(x.site?'<a class="pill" href="'+esc(x.site)+'" target="_blank" rel="noopener noreferrer">'+esc(host(x.site))+' ↗</a>':'<span class="tag hot">sem site</span>')+'</td>'+
+    '<td>'+[x.instagram&&'<a class="pill" href="'+esc(/^https?:/.test(x.instagram)?x.instagram:'https://instagram.com/'+x.instagram.replace('@',''))+'" target="_blank" rel="noopener noreferrer">insta ↗</a>',x.redeSocial&&!x.instagram&&'<a class="pill" href="'+esc(x.redeSocial)+'" target="_blank" rel="noopener noreferrer">rede ↗</a>',x.email&&'<span class="pill">'+esc(x.email)+'</span>'].filter(Boolean).join(' ')+'</td>'+
+    '<td><small style="margin:0">'+esc(x.endereco||'—')+'</small></td>'+
+    '<td style="white-space:nowrap">'+(x.maps?'<a class="pill" href="'+esc(x.maps)+'" target="_blank" rel="noopener noreferrer">mapa ↗</a> ':'')+(x.telefone?'<button class="ghost" data-pwa="'+esc(x.id)+'">WhatsApp</button>':'')+'</td></tr>'}).join('')
+    :'<tr><td colspan="7" class="vazio">Nenhum resultado com esses filtros.</td></tr>';
+  $$('[data-pid]').forEach(c=>c.onchange=()=>{c.checked?pros.sel.add(c.dataset.pid):pros.sel.delete(c.dataset.pid);$('#pResS').textContent='fonte: '+(pros.fonte==='google'?'Google Maps':'OpenStreetMap')+' · '+pros.sel.size+' selecionados'});
+  $$('[data-pwa]').forEach(b=>b.onclick=()=>{const x=pros.itens.find(i=>i.id===b.dataset.pwa);abrirWa(x,msgPara(x))});
+}
+['pCel','pSem'].forEach(id=>$('#'+id).onchange=desenhaPros);
+const abrirWa=(x,txt)=>window.open('https://api.whatsapp.com/send?phone='+x.telefone+'&text='+encodeURIComponent(txt),'_blank','noopener');
+$('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca');b.disabled=true;b.textContent='Buscando…';
+  try{const q=new URLSearchParams({nicho:f.nicho.value,termo:f.termo.value,pais:f.pais.value,estado:f.estado.value,cidade:f.cidade.value,fonte:f.fonte.value});
+    const r=await api('/api/prospeccao?'+q);r.itens.forEach(x=>x.cidade=f.cidade.value||null);pros={...r,sel:new Set()};desenhaPros();
+    toast(r.total?r.total+' estabelecimentos encontrados':'Nada encontrado. Tente outra fonte ou palavra.');
+  }catch(x){toast(x.erro||'Erro na busca')}finally{b.disabled=false;b.textContent='Buscar estabelecimentos'}};
+$('#pTodos').onclick=()=>{const L=proFiltrados(),todos=L.every(x=>pros.sel.has(x.id));L.forEach(x=>todos?pros.sel.delete(x.id):pros.sel.add(x.id));desenhaPros()};
+const selecionados=()=>{const L=proFiltrados().filter(x=>pros.sel.has(x.id));return L.length?L:[]};
+async function salvarPros(L){const r=await api('/api/prospeccao/salvar',{method:'POST',body:{itens:L.map(x=>({nome:x.nome,telefone:x.telefone,site:x.site,instagram:x.instagram,endereco:x.endereco,cidade:x.cidade,nicho:pros.nicho,maps:x.maps,notas:[x.categoria,x.avaliacao&&'★ '+x.avaliacao+' ('+x.avaliacoes+')',x.email].filter(Boolean).join(' · ')}))}});
+  L.forEach((x,i)=>{if(r.ids[i]){if(x.telefone)pJaSalvos.set('t'+x.telefone,r.ids[i]);pJaSalvos.set('n'+semAcento(x.nome)+'|'+semAcento(x.cidade||''),r.ids[i])}});badge();return r}
+$('#pSalvar').onclick=async()=>{const L=selecionados();if(!L.length)return toast('Selecione os estabelecimentos');const r=await salvarPros(L);toast(r.novos+' salvos no follow-up'+(r.repetidos?' · '+r.repetidos+' já estavam':''));desenhaPros();api('/api/followup').then(x=>{fu=x;badge()})};
+$('#pCsv').onclick=()=>{const L=selecionados().length?selecionados():proFiltrados();csv('prospeccao-branco.csv',['Nome','Categoria','Telefone','WhatsApp','Site','Instagram','E-mail','Endereço','Cidade','Mapa'],L.map(x=>[x.nome,x.categoria,x.telefone,x.celular||x.whatsapp?'sim':'',x.site,x.instagram,x.email,x.endereco,x.cidade,x.maps]))};
+// sequência: abre um por vez, você envia e vai para o próximo
+$('#pSeq').onclick=()=>{const L=(selecionados().length?selecionados():proFiltrados()).filter(x=>x.telefone);if(!L.length)return toast('Nenhum estabelecimento com telefone');sequencia(L)};
+function sequencia(L){let i=0;const el=document.createElement('div');el.className='seq';document.body.appendChild(el);
+  const fim=()=>{el.remove();api('/api/followup').then(x=>{fu=x;badge()});desenhaPros()};
+  const mostra=()=>{if(i>=L.length){toast('Sequência concluída 🎉');return fim()}const x=L[i];
+    el.innerHTML='<div class="box"><div class="top"><span class="label">'+(i+1)+' de '+L.length+'</span><button class="ghost" data-s="parar">Parar ✕</button></div><div class="bar"><i style="width:'+(i/L.length*100)+'%"></i></div>'+
+      '<h2 style="font-size:1.3rem">'+esc(x.nome)+'</h2><p class="label" style="margin:6px 0 14px">'+esc(fone(x.telefone))+(x.celular===false?' · telefone fixo, pode não ter WhatsApp':'')+' · '+(x.site?esc(host(x.site)):'sem site')+'</p>'+
+      '<textarea id="seqTxt">'+esc(msgPara(x))+'</textarea><div class="acts mt"><button class="solid" data-s="abrir">1. Abrir WhatsApp ↗</button><button class="ghost" data-s="enviei">2. Enviei → próximo</button><button class="ghost" data-s="pular">Pular</button></div>'+
+      '<p class="dica mt">Ao marcar “enviei”, o contato vai para o follow-up com lembretes em 2, 7 e 15 dias.</p></div>';
+    el.querySelector('[data-s=parar]').onclick=fim;
+    el.querySelector('[data-s=pular]').onclick=()=>{i++;mostra()};
+    el.querySelector('[data-s=abrir]').onclick=()=>abrirWa(x,$('#seqTxt').value);
+    el.querySelector('[data-s=enviei]').onclick=async()=>{try{let id=jaSalvo(x);if(!id){const r=await salvarPros([x]);id=r.ids[0]}if(id)await api('/api/contatos/'+id+'/enviei',{method:'POST',body:{hoje:hojeL()}});}catch(e){toast(e.erro||'Erro ao registrar')}i++;mostra()};
+  };mostra()}
+
 /* ---------- FOLLOW-UP ---------- */
 const VENDAS=[['novo','Novo'],['conversando','Conversando'],['proposta','Proposta enviada'],['fechou','Fechou'],['perdido','Perdido']];
 const COR_V={novo:'#4ea1ff',conversando:'#e5b84e',proposta:'#b38cff',fechou:'var(--ok)',perdido:'#5b5b63'};
 let fu={contatos:[],modelos:[]},filtro='ativos';
 const hojeL=()=>new Date().toLocaleDateString('sv-SE');
 const waNum=t=>t.length<=11?'55'+t:t;
-const fone=t=>{t=(t||'').slice(-11);return t.length===11?'('+t.slice(0,2)+') '+t.slice(2,7)+'-'+t.slice(7):t.length===10?'('+t.slice(0,2)+') '+t.slice(2,6)+'-'+t.slice(6):t};
+const fone=t=>{t=String(t||'').replace(/^55(?=\d{10,11}$)/,'').slice(-11);return t.length===11?'('+t.slice(0,2)+') '+t.slice(2,7)+'-'+t.slice(7):t.length===10?'('+t.slice(0,2)+') '+t.slice(2,6)+'-'+t.slice(6):t};
 const preenche=(txt,c)=>txt.replace(/\{nome\}/g,(c.nome||'').trim().split(/\s+/)[0]||'tudo bem').replace(/\{projeto\}/g,c.projeto?c.projeto.toLowerCase():'seu projeto').replace(/\{empresa\}/g,c.empresa||'seu negócio');
 const diasDesde=d=>d?Math.floor((Date.now()-new Date(d.replace(' ','T')+'Z'))/864e5):null;
 const precisaHoje=c=>c.telefone&&!['fechou','perdido'].includes(c.venda)&&(c.contatos===0||(c.proximo_contato&&c.proximo_contato<=hojeL()));
 function badge(){const n=(fu.contatos||[]).filter(precisaHoje).length;$('#bFollow').hidden=!n;$('#bFollow').textContent=n}
 function cardFu(c,destaque){
   const mi=Math.min(c.contatos,fu.modelos.length-1),ds=diasDesde(c.ultimo_contato),vd=VENDAS.find(v=>v[0]===c.venda)||VENDAS[0];
-  const info=[c.telefone?fone(c.telefone):'sem WhatsApp',c.projeto,c.status==='parcial'?'parou no meio do formulário':null,c.contatos?c.contatos+' mensage'+(c.contatos>1?'ns':'m')+' · última há '+ds+(ds===1?' dia':' dias'):'nunca chamado',c.proximo_contato&&!destaque?'próximo: '+c.proximo_contato.split('-').reverse().join('/'):null].filter(Boolean).map(esc).join(' · ');
+  const info=[c.telefone?fone(c.telefone):'sem WhatsApp',c.origem==='prospeccao'?'prospecção'+(c.cidade?' · '+c.cidade:''):null,c.projeto,c.origem==='prospeccao'?(c.site?'tem site':'sem site'):null,c.status==='parcial'?'parou no meio do formulário':null,c.contatos?c.contatos+' mensage'+(c.contatos>1?'ns':'m')+' · última há '+ds+(ds===1?' dia':' dias'):'nunca chamado',c.proximo_contato&&!destaque?'próximo: '+c.proximo_contato.split('-').reverse().join('/'):null].filter(Boolean).map(esc).join(' · ');
   return '<div class="fc'+(destaque?' hoje':'')+'" data-c="'+c.id+'"><div class="fc__top"><div><b>'+esc(c.nome)+'</b>'+(c.empresa?' <span class="label">'+esc(c.empresa)+'</span>':'')+'<small>'+info+'</small></div><span class="pill st-'+c.venda+'">'+vd[1]+(c.proposta?' · '+brl(c.proposta):'')+'</span></div>'+
   (!destaque?'<details><summary>abrir · mensagem, anotações, status</summary><div class="mt" style="display:grid;gap:12px">':'')+
   (c.telefone&&!['fechou','perdido'].includes(c.venda)&&fu.modelos.length?'<div class="fc__msg"><select data-mod aria-label="Mensagem pronta">'+fu.modelos.map((m,i)=>'<option value="'+i+'"'+(i===mi?' selected':'')+'>'+esc(m.titulo)+'</option>').join('')+'</select><textarea data-txt rows="3">'+esc(preenche(fu.modelos[mi].texto,c))+'</textarea><div class="fc__row"><button class="solid" data-enviar>Enviar no WhatsApp ↗</button>'+(c.contatos>=3?'<span class="dica">já foram 3+ mensagens — talvez marcar como perdido</span>':'')+'</div></div>':'')+
@@ -808,7 +913,14 @@ function demoApi(p,o){
   if(p==='/api/followup')return Promise.resolve({contatos:D.contatos,modelos:D.modelos});
   if(p==='/api/vendas')return Promise.resolve({vendas:D.vendas,negociacao:{qtd:D.contatos.filter(c=>c.venda==='proposta').length,total:D.contatos.filter(c=>c.venda==='proposta').reduce((a,c)=>a+c.proposta,0)}});
   if(p==='/api/clientes')return Promise.resolve(D.clientes);
-  if(p==='/api/config')return Promise.resolve({manutencao:false,mensagem:''});
+  if(p==='/api/config')return Promise.resolve({manutencao:false,mensagem:'',google:true});
+  if(p==='/api/prospeccao/nichos')return Promise.resolve([{id:'dentista',nome:'Dentista',grupo:'Saúde'},{id:'salao',nome:'Salão de beleza',grupo:'Beleza'},{id:'restaurante',nome:'Restaurante',grupo:'Alimentação'}]);
+  if(p.startsWith('/api/prospeccao/salvar'))return Promise.resolve({novos:(o.body?.itens||[]).length,repetidos:0,ids:(o.body?.itens||[]).map((_,i)=>100+i)});
+  if(p.startsWith('/api/prospeccao'))return Promise.resolve({fonte:'google',lugar:'Curitiba, Paraná, Brasil',nicho:'Dentista',total:6,itens:[
+    ['Clínica Sorriso Feliz','Dentista','5541998887766',true,null,'@sorrisofeliz','R. XV de Novembro, 1200 · Centro',4.8,312],['OdontoVida Batel','Dentista','5541988776655',true,'https://odontovida.com.br',null,'Av. do Batel, 1550 · Batel',4.6,128],
+    ['Dr. Paulo Mendes Odontologia','Dentista','554133334444',false,null,null,'R. Comendador Araújo, 300 · Centro',4.9,57],['Studio Dental Prime','Dentista','5541977665544',true,'https://dentalprime.com',null,'R. Padre Anchieta, 2100 · Bigorrilho',4.7,201],
+    ['Sorrir Mais Clínica','Dentista','5541966554433',true,null,'@sorrirmais','Av. República Argentina, 3000 · Água Verde',4.5,88],['Implantes Curitiba','Dentista',null,null,null,null,'R. Marechal Deodoro, 500 · Centro',4.2,19]]
+    .map((x,i)=>({id:'g:'+i,nome:x[0],categoria:x[1],telefone:x[2],celular:x[3],whatsapp:false,site:x[4],instagram:x[5],endereco:x[6],avaliacao:x[7],avaliacoes:x[8],maps:'https://maps.google.com'}))});
   if(p==='/api/extrato'&&(!o.method||o.method==='GET'))return Promise.resolve([[dia(1),150000,'Transferência recebida pelo Pix - DOCERIA DA ANA LTDA - 12.345.678/0001-90 - NU PAGAMENTOS',0],[dia(3),60000,'Transferência recebida pelo Pix - CLINICA BELLA - •••.456.789-•• - ITAU',2],[dia(6),35000,'Transferência recebida pelo Pix - MARCOS PEREIRA - •••.111.222-•• - CAIXA',0],[dia(12),80000,'Transferência recebida pelo Pix - ALVES FIT ACADEMIA - BRADESCO',3],[dia(20),12000,'Reembolso recebido',0]]
     .map((x,i)=>({id:i+1,data:x[0],valor:x[1],descricao:x[2],venda_id:x[3]||null,ignorar:0})));
   return Promise.resolve({});
