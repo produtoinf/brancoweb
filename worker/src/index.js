@@ -227,7 +227,7 @@ async function api(req, db, env, caminho) {
       if (novos.length) await db.batch(novos.map(x => db.prepare('INSERT INTO config (chave, valor) VALUES (?, ?) ON CONFLICT(chave) DO UPDATE SET valor = excluded.valor').bind(...x)));
     }
     const c = Object.fromEntries((await db.prepare('SELECT chave, valor FROM config').all()).results.map(x => [x.chave, x.valor]));
-    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: c.msg_semsite || '', msg_comsite: c.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY, tomtom: !!env.TOMTOM_KEY, here: !!env.HERE_KEY });
+    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: c.msg_semsite || '', msg_comsite: c.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY, serper: !!env.SERPER_KEY, tomtom: !!env.TOMTOM_KEY, here: !!env.HERE_KEY });
   }
 
   // cidades de um estado (IBGE), guardadas em cache por 30 dias
@@ -252,7 +252,7 @@ async function api(req, db, env, caminho) {
     if (seg[1] === 'salvar' && m === 'POST') return json(await salvaProspects(db, b.itens));
     if (seg[1] === 'enriquecer' && m === 'POST') {
       if (await excedeu(db, 'enriq:' + ip(req), 120, 60)) return erro('Muitas consultas seguidas. Espere alguns minutos.', 429);
-      return json(await enriquece(b.itens));
+      return json(await enriquece(env, b.itens));
     }
     if (m === 'GET') {
       if (await excedeu(db, 'busca:' + ip(req), 60, 60)) return erro('Muitas buscas seguidas. Espere alguns minutos.', 429);
@@ -561,11 +561,45 @@ async function contatosDoSite(url) {
   if (!telefone && !ig && !email) return null;
   return { telefone, celular: telefone ? ehCel(telefone) : null, whatsapp: !!whats, instagram: ig ? 'https://instagram.com/' + ig : null, email };
 }
-async function enriquece(itens) {
-  itens = (Array.isArray(itens) ? itens : []).slice(0, 25).filter(x => x && x.id && urlOk(x.site));
+// pega o telefone (e o site) de um estabelecimento no Google pelo nome + endereço/cidade
+// SERPER_KEY = pesquisa normal do Google (serper.dev) · GOOGLE_PLACES_KEY = API oficial do Google Maps
+const foneDe = v => { const d = normBR(String(v || '').replace(/^\+/, '')); return d.length >= 12 && d.length <= 13 ? d : null; };
+async function telDoGoogle(env, x) {
+  const q = [x.nome, x.endereco || x.cidade].filter(Boolean).join(' ').slice(0, 200);
+  try {
+    if (env.SERPER_KEY) {
+      const h = { 'Content-Type': 'application/json', 'X-API-KEY': env.SERPER_KEY }, corpo = JSON.stringify({ q, gl: 'br', hl: 'pt-br' });
+      const r = await fetch('https://google.serper.dev/places', { method: 'POST', headers: h, body: corpo, signal: AbortSignal.timeout(8000) });
+      const pl = r.ok ? (await r.json()).places?.[0] : null;
+      if (pl && (pl.phoneNumber || pl.website)) return { telefone: foneDe(pl.phoneNumber), site: pl.website || null };
+      const s = await fetch('https://google.serper.dev/search', { method: 'POST', headers: h, body: corpo, signal: AbortSignal.timeout(8000) });
+      const kg = s.ok ? (await s.json()).knowledgeGraph : null; if (!kg) return null;
+      const at = Object.entries(kg.attributes || {}).find(([k]) => /telefone|phone/i.test(k));
+      return { telefone: foneDe(kg.phoneNumber || at?.[1]), site: kg.website || null };
+    }
+    const r = await fetch('https://places.googleapis.com/v1/places:searchText', { method: 'POST', signal: AbortSignal.timeout(8000),
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': env.GOOGLE_PLACES_KEY, 'X-Goog-FieldMask': 'places.internationalPhoneNumber,places.nationalPhoneNumber,places.websiteUri' },
+      body: JSON.stringify({ textQuery: q, languageCode: 'pt-BR', pageSize: 1 }) });
+    const pl = r.ok ? (await r.json()).places?.[0] : null; if (!pl) return null;
+    return { telefone: foneDe(pl.internationalPhoneNumber || pl.nationalPhoneNumber), site: pl.websiteUri || null };
+  } catch { return null; }
+}
+async function enriquece(env, itens) {
+  const google = !!(env.SERPER_KEY || env.GOOGLE_PLACES_KEY);
+  itens = (Array.isArray(itens) ? itens : []).slice(0, 25).filter(x => x && x.id && (urlOk(x.site) || (google && x.nome)));
   const out = {};
-  for (let i = 0; i < itens.length; i += 6) // 6 sites por vez
-    await Promise.all(itens.slice(i, i + 6).map(async x => { const c = await contatosDoSite(urlOk(x.site)); if (c) out[x.id] = c; }));
+  for (let i = 0; i < itens.length; i += 6) // 6 por vez
+    await Promise.all(itens.slice(i, i + 6).map(async x => {
+      let c = urlOk(x.site) ? await contatosDoSite(urlOk(x.site)) : null;
+      if (google && !c?.whatsapp && !c?.celular && x.nome) { // site não tinha celular: pergunta ao Google
+        const g = await telDoGoogle(env, x);
+        const s = g?.site && !urlOk(x.site) ? await contatosDoSite(urlOk(g.site)) : null; // site novo achado pelo Google
+        if (s?.telefone && (s.whatsapp || s.celular || !c?.telefone)) c = { ...c, ...s, google: false };
+        else if (g?.telefone && (!c?.telefone || ehCel(g.telefone))) c = { ...c, telefone: g.telefone, celular: ehCel(g.telefone), whatsapp: false, google: true };
+        if (c && g?.site && !urlOk(x.site)) c.site = g.site;
+      }
+      if (c) out[x.id] = c;
+    }));
   return out;
 }
 

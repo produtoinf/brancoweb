@@ -42,12 +42,20 @@ PROSPECÇÃO COM HERE (grátis, plano Limited, sem cartão)
    3. Worker > Settings > Variables and Secrets > Add > Secret
       Name: HERE_KEY   Value: (a chave)
 
+TELEFONE PELA PESQUISA DO GOOGLE (opcional, recomendado — sem cartão)
+   1. Crie uma conta em serper.dev e copie a "API Key" (vem com créditos grátis)
+   2. Worker branco-admin > Settings > Variables and Secrets > Add > Secret
+      Name: SERPER_KEY   Value: (a chave)
+   Pronto: quem vier sem celular tem o telefone procurado sozinho na pesquisa do Google.
+   (1 a 2 créditos por estabelecimento sem celular)
+
 PROSPECÇÃO COM GOOGLE MAPS (opcional, bem mais completo que o OpenStreetMap)
    1. console.cloud.google.com > crie um projeto > ative "Places API (New)" (precisa de conta de faturamento;
       o Google dá uma cota grátis por mês — crie um alerta de orçamento para não ter surpresa)
    2. APIs e serviços > Credenciais > Criar chave de API > restrinja a chave à "Places API (New)"
    3. Worker branco-admin > Settings > Variables and Secrets > Add > Secret
       Name: GOOGLE_PLACES_KEY   Value: (a chave)
+   Com a chave, quem vier sem celular (TomTom/HERE) tem o telefone completado sozinho pelo Google.
    Sem a chave, a prospecção usa o OpenStreetMap (grátis, mas com menos estabelecimentos).
 
 O QUE O WORKER FAZ
