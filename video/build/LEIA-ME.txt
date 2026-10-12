@@ -3,7 +3,7 @@ COMO GERAR O VÍDEO DO FEED (video/branco-feed.mp4)
 1. Edite as falas em narracao.txt (uma por linha) e gere as vozes em voz/ (Piper, voz pt_BR-faber).
 2. python3 timeline.py   -> calcula o tempo de cada fala (../timeline.js)
 3. node render.mjs       -> grava a animação (../feed.html) em vídeo
-4. python3 audio.py      -> mistura narração + efeitos + música (trilha.wav)
+4. python3 audio.py      -> gera a trilha só com efeitos sonoros (trilha.wav)
 5. ffmpeg -i video_mudo.mp4 -i trilha.wav -map 0:v -map 1:a -c:v copy -af loudnorm=I=-14:TP=-1.5 -c:a aac -b:a 192k -shortest ../branco-feed.mp4
 
 Para ver a animação no navegador: abra ../feed.html (sem som).

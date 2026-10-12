@@ -79,7 +79,7 @@ for e in SFX:
     fn, g = FX[e["type"]]
     add(sfx, fn(), max(0, e["t"]), g * e.get("g", 1))
 
-# ---------- narração ----------
+# ---------- narração (só para os tempos; não entra na mixagem) ----------
 voz = np.zeros(N)
 filtro = "highpass=f=90,equalizer=f=250:t=q:w=1:g=-2,equalizer=f=3500:t=q:w=1.2:g=3,acompressor=threshold=-20dB:ratio=3:attack=5:release=90:makeup=2"
 for i, l in enumerate(TL["lines"]):
@@ -113,9 +113,9 @@ env = np.convolve(np.abs(voz), np.ones(int(.25 * SR)) / int(.25 * SR), mode="sam
 env = np.minimum(env / (env.max() * .25 + 1e-9), 1)
 t = np.arange(N) / SR
 fade = np.minimum(t / 1.0, 1) * np.minimum(np.maximum(TL["dur"] + .3 - t, 0) / 2.5, 1)
-mus *= (1 - .6 * env) * fade
+mus *= fade
 
-mix = voz * 1.0 + mus * .30 + sfx
+mix = sfx  # sem locução e sem música: só efeitos sonoros
 mix /= np.abs(mix).max() / .9
 
 with wave.open(str(here / "trilha.wav"), "wb") as w:

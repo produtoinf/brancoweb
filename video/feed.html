@@ -296,7 +296,7 @@ function caption(t){
   const hide=i===5||i===6||i===7;
   if(i<0||hide){box.style.opacity=0;return}
   const ws=L[i].txt.split(" ");const tot=ws.join("").length;let acc=0;
-  const p=seg(t,L[i].s,L[i].e)*tot;
+  const p=seg(t,L[i].s-.1,L[i].s+(L[i].e-L[i].s)*.55)*tot;
   if(box.dataset.i!=i){box.dataset.i=i;box.innerHTML=ws.map(w=>`<span>${esc(w)}</span>`).join(" ")}
   [...box.children].forEach((s,j)=>{s.className=p>acc?"on":"";acc+=ws[j].length});
   const a=eo(seg(t,L[i].s-.15,L[i].s+.15))*(1-seg(t,L[i].e+.3,L[i].e+.5));box.style.opacity=a;box.style.transform=`translateY(${(1-a)*14}px)`;
