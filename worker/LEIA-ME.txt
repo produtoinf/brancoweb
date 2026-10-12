@@ -30,6 +30,18 @@ COMO COLOCAR NO AR (pelo site da Cloudflare, sem instalar nada)
      const API = 'https://branco-admin.brancowebs.workers.dev';
    pelo endereço do seu Worker novo.
 
+PROSPECÇÃO COM TOMTOM (grátis, 2.500 buscas por dia, sem cartão) — recomendado
+   1. developer.tomtom.com > Register > confirme o e-mail
+   2. No Dashboard, copie a chave "My first API key" (ou crie uma em Keys)
+   3. Worker branco-admin > Settings > Variables and Secrets > Add > Secret
+      Name: TOMTOM_KEY   Value: (a chave)
+
+PROSPECÇÃO COM HERE (grátis, plano Limited, sem cartão)
+   1. platform.here.com > crie a conta (plano gratuito)
+   2. Access Manager > Apps > crie um app > API Keys > Create API key > copie
+   3. Worker > Settings > Variables and Secrets > Add > Secret
+      Name: HERE_KEY   Value: (a chave)
+
 PROSPECÇÃO COM GOOGLE MAPS (opcional, bem mais completo que o OpenStreetMap)
    1. console.cloud.google.com > crie um projeto > ative "Places API (New)" (precisa de conta de faturamento;
       o Google dá uma cota grátis por mês — crie um alerta de orçamento para não ter surpresa)
