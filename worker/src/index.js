@@ -230,6 +230,22 @@ async function api(req, db, env, caminho) {
     return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: c.msg_semsite || '', msg_comsite: c.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY });
   }
 
+  // cidades de um estado (IBGE), guardadas em cache por 30 dias
+  if (rec === 'cidades') {
+    const uf = (new URL(req.url).searchParams.get('uf') || '').toUpperCase();
+    if (!/^[A-Z]{2}$/.test(uf)) return erro('Estado inválido.');
+    const chave = new Request('https://cache.branco/cidades/' + uf), cache = caches.default;
+    let r = await cache.match(chave);
+    if (!r) {
+      const ibge = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`, { signal: AbortSignal.timeout(10000) }).catch(() => null);
+      if (!ibge?.ok) return erro('Não consegui carregar as cidades agora.', 502);
+      const nomes = (await ibge.json()).map(c => c.nome);
+      r = new Response(JSON.stringify(nomes), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=2592000' } });
+      await cache.put(chave, r.clone());
+    }
+    return new Response(r.body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+  }
+
   // prospecção: busca estabelecimentos por nicho e cidade
   if (rec === 'prospeccao') {
     if (seg[1] === 'nichos') return json(NICHOS.map(n => ({ id: n.id, nome: n.nome, grupo: n.grupo })));
@@ -237,7 +253,8 @@ async function api(req, db, env, caminho) {
     if (m === 'GET') {
       if (await excedeu(db, 'busca:' + ip(req), 60, 60)) return erro('Muitas buscas seguidas. Espere alguns minutos.', 429);
       const q = new URL(req.url).searchParams;
-      return json(await buscaProspects(env, { nicho: q.get('nicho'), termo: txt(q.get('termo'), 60), cidade: txt(q.get('cidade'), 80), estado: txt(q.get('estado'), 60), pais: txt(q.get('pais'), 60) || 'Brasil', fonte: q.get('fonte') }));
+      try { return json(await buscaProspects(env, { nicho: q.get('nicho'), termo: txt(q.get('termo'), 60), cidade: txt(q.get('cidade'), 80), estado: txt(q.get('estado'), 60), pais: txt(q.get('pais'), 60) || 'Brasil', fonte: q.get('fonte') })); }
+      catch (e) { return erro(e.message || 'Não foi possível buscar agora.', 502); } // mostra o motivo real no painel
     }
   }
 
@@ -405,7 +422,12 @@ function telefone(t, pais) { // devolve número com DDI e se parece celular (Wha
 }
 async function buscaOSM({ nicho, termo, cidade, estado, pais }) {
   const p = new URLSearchParams({ format: 'jsonv2', limit: '1', country: pais }); if (cidade) p.set('city', cidade); if (estado) p.set('state', estado);
-  const geo = await (await fetch('https://nominatim.openstreetmap.org/search?' + p, { headers: UA })).json().catch(() => []);
+  let geo = [];
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?' + p, { headers: UA, signal: AbortSignal.timeout(12000) });
+    if (!r.ok) throw new Error('Serviço de mapas ocupado (OpenStreetMap). Tente de novo em 1 minuto ou use o Google Maps.');
+    geo = await r.json();
+  } catch (e) { throw new Error(e.message.startsWith('Serviço') ? e.message : 'O OpenStreetMap não respondeu. Tente de novo ou use o Google Maps.'); }
   const g = geo[0]; if (!g) throw new Error('Não encontrei essa cidade. Confira o nome, o estado e o país.');
   const area = g.osm_type === 'relation' ? 3600000000 + Number(g.osm_id) : g.osm_type === 'way' ? 2400000000 + Number(g.osm_id) : null;
   const onde = area ? '(area.a)' : `(around:8000,${g.lat},${g.lon})`;
@@ -415,10 +437,14 @@ async function buscaOSM({ nicho, termo, cidade, estado, pais }) {
   if (!filtros.length) throw new Error('Escolha um nicho ou digite uma palavra.');
   const ql = `[out:json][timeout:25];${area ? `area(id:${area})->.a;` : ''}(${filtros.join('')});out center tags 400;`;
   let dados = null;
-  for (const u of ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter']) {
-    try { const r = await fetch(u, { method: 'POST', headers: { ...UA, 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(ql) }); if (r.ok) { dados = await r.json(); break; } } catch {}
+  // vários servidores públicos: se um recusar ou demorar, tenta o próximo
+  for (const u of ['https://overpass-api.de/api/interpreter', 'https://overpass.private.coffee/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter']) {
+    try {
+      const r = await fetch(u, { method: 'POST', headers: { ...UA, 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(ql), signal: AbortSignal.timeout(15000) });
+      if (r.ok) { dados = await r.json(); break; }
+    } catch {}
   }
-  if (!dados) throw new Error('O serviço de mapas não respondeu agora. Tente de novo em instantes.');
+  if (!dados) throw new Error('Os servidores do OpenStreetMap não responderam agora (eles são gratuitos e às vezes ficam lotados). Tente de novo em 1 minuto ou use o Google Maps.');
   const lugar = g.display_name.split(',').slice(0, 3).join(',');
   const itens = dados.elements.filter(e => e.tags?.name).map(e => {
     const t = e.tags, a = k => t[k] || t['contact:' + k], lat = e.lat ?? e.center?.lat, lon = e.lon ?? e.center?.lon;

@@ -174,6 +174,7 @@ html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-convers
 .tag.hot{background:color-mix(in srgb,#ff7a45 18%,transparent);color:#ff7a45}.tag.ok{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ok)}
 #pRes td{vertical-align:middle}#pRes td small{display:block;color:var(--mute);font:500 .7rem/1.4 var(--mono);margin-top:3px}
 .pchk{width:18px;height:18px;padding:0}
+.pst{margin:16px 0 0;padding:14px 16px;border-radius:14px;background:var(--soft);font:500 .8rem/1.55 var(--mono);color:var(--fg)}.pst.erro{background:color-mix(in srgb,var(--err) 14%,transparent);color:var(--err)}
 .seq{position:fixed;inset:0;z-index:60;background:#000a;display:grid;place-items:center;padding:16px;backdrop-filter:blur(4px)}
 .seq .box{width:min(560px,100%);max-height:92vh;overflow:auto}
 .seq textarea{min-height:150px}
@@ -325,13 +326,14 @@ tr.ign td{opacity:.45}
           <label class="fl"><span>Nicho</span><select name="nicho" id="pNicho"><option value="">— escolha —</option></select></label>
           <label class="fl"><span>ou palavra-chave</span><input name="termo" placeholder="Ex: hamburgueria artesanal" maxlength="60"></label>
           <label class="fl"><span>País</span><input name="pais" value="Brasil" maxlength="60"></label>
-          <label class="fl"><span>Estado</span><input name="estado" list="ufs" placeholder="Ex: Paraná" maxlength="60"></label>
-          <label class="fl"><span>Cidade</span><input name="cidade" placeholder="Ex: Curitiba" maxlength="80"></label>
+          <label class="fl"><span>Estado</span><select id="pUf"></select><input id="pEstadoTxt" placeholder="Estado / província" maxlength="60" hidden></label>
+          <label class="fl"><span>Cidade</span><input name="cidade" id="pCidade" list="pCidades" placeholder="Escolha o estado primeiro" maxlength="80" autocomplete="off"><datalist id="pCidades"></datalist></label>
           <div class="ops"><label class="fl" style="min-width:200px"><span>Fonte dos dados</span><select name="fonte" id="pFonte"><option value="osm">OpenStreetMap (grátis)</option><option value="google">Google Maps</option></select></label>
             <label class="chk"><input type="checkbox" id="pCel"> só com celular/WhatsApp</label><label class="chk"><input type="checkbox" id="pSem"> só sem site próprio</label>
             <button class="solid" id="bBusca" style="margin-left:auto">Buscar estabelecimentos</button></div>
         </form>
-        <datalist id="ufs"><option>Acre</option><option>Alagoas</option><option>Amapá</option><option>Amazonas</option><option>Bahia</option><option>Ceará</option><option>Distrito Federal</option><option>Espírito Santo</option><option>Goiás</option><option>Maranhão</option><option>Mato Grosso</option><option>Mato Grosso do Sul</option><option>Minas Gerais</option><option>Pará</option><option>Paraíba</option><option>Paraná</option><option>Pernambuco</option><option>Piauí</option><option>Rio de Janeiro</option><option>Rio Grande do Norte</option><option>Rio Grande do Sul</option><option>Rondônia</option><option>Roraima</option><option>Santa Catarina</option><option>São Paulo</option><option>Sergipe</option><option>Tocantins</option></datalist>
+        <p class="pst" id="pStatus" hidden></p>
+
       </section>
       <section class="kpis mt" id="kPros"></section>
       <section class="box mt" id="pResBox" hidden><div class="hd"><div><h2 id="pResT">Resultados</h2><p class="label" id="pResS"></p></div>
@@ -664,7 +666,8 @@ function desenhaPros(){
     {l:'sem site próprio',v:T.filter(x=>!x.site).length,s:'oportunidade de venda 🔥',meter:pct(T.filter(x=>!x.site).length,T.length)}].map(kpi).join(''):'';
   $('#pResBox').hidden=!T.length;if(!T.length)return;
   $('#pResT').textContent=(pros.nicho||'Resultados')+' · '+L.length;$('#pResS').textContent='fonte: '+(pros.fonte==='google'?'Google Maps':'OpenStreetMap')+' · '+pros.sel.size+' selecionado'+(pros.sel.size===1?'':'s');
-  $('#pRes').innerHTML=L.length?L.map(x=>{const j=jaSalvo(x);return '<tr><td><input type="checkbox" class="pchk" data-pid="'+esc(x.id)+'"'+(pros.sel.has(x.id)?' checked':'')+'></td>'+
+  if(!L.length&&T.length)$('#pRes').innerHTML='<tr><td colspan="7" class="vazio">'+T.length+' resultado(s) escondido(s) pelos filtros acima.</td></tr>';
+  else $('#pRes').innerHTML=L.length?L.map(x=>{const j=jaSalvo(x);return '<tr><td><input type="checkbox" class="pchk" data-pid="'+esc(x.id)+'"'+(pros.sel.has(x.id)?' checked':'')+'></td>'+
     '<td><b>'+esc(x.nome)+'</b><small>'+esc(x.categoria||'')+(x.avaliacao?' · ★ '+x.avaliacao+' ('+x.avaliacoes+')':'')+'</small>'+(j?'<span class="tag ok">no follow-up</span>':'')+'</td>'+
     '<td>'+(x.telefone?'<span class="money">'+esc(fone(x.telefone))+'</span><br>'+(x.celular||x.whatsapp?'<span class="tag ok">whatsapp</span>':x.celular===false?'<span class="tag">fixo</span>':''):'<span class="label">—</span>')+'</td>'+
     '<td>'+(x.site?'<a class="pill" href="'+esc(x.site)+'" target="_blank" rel="noopener noreferrer">'+esc(host(x.site))+' ↗</a>':'<span class="tag hot">sem site</span>')+'</td>'+
@@ -677,11 +680,35 @@ function desenhaPros(){
 }
 ['pCel','pSem'].forEach(id=>$('#'+id).onchange=desenhaPros);
 const abrirWa=(x,txt)=>window.open('https://api.whatsapp.com/send?phone='+x.telefone+'&text='+encodeURIComponent(txt),'_blank','noopener');
+/* estados e cidades (IBGE) */
+const UFS=[['AC','Acre'],['AL','Alagoas'],['AP','Amapá'],['AM','Amazonas'],['BA','Bahia'],['CE','Ceará'],['DF','Distrito Federal'],['ES','Espírito Santo'],['GO','Goiás'],['MA','Maranhão'],['MT','Mato Grosso'],['MS','Mato Grosso do Sul'],['MG','Minas Gerais'],['PA','Pará'],['PB','Paraíba'],['PR','Paraná'],['PE','Pernambuco'],['PI','Piauí'],['RJ','Rio de Janeiro'],['RN','Rio Grande do Norte'],['RS','Rio Grande do Sul'],['RO','Rondônia'],['RR','Roraima'],['SC','Santa Catarina'],['SP','São Paulo'],['SE','Sergipe'],['TO','Tocantins']];
+$('#pUf').innerHTML='<option value="">— escolha o estado —</option>'+UFS.map(u=>'<option value="'+u[0]+'">'+u[1]+' ('+u[0]+')</option>').join('');
+const cacheCid={};
+async function cidadesDo(uf){const c=$('#pCidade');$('#pCidades').innerHTML='';
+  if(!uf){c.placeholder='Escolha o estado primeiro';return}
+  c.placeholder='Carregando cidades…';
+  try{const L=cacheCid[uf]||(cacheCid[uf]=await api('/api/cidades?uf='+uf));$('#pCidades').innerHTML=L.map(n=>'<option value="'+esc(n)+'">').join('');
+    c.placeholder='Digite para filtrar ('+L.length+' cidades)';
+    if(c.value&&!L.some(n=>semAcento(n)===semAcento(c.value)))c.value='';
+  }catch(e){c.placeholder='Digite a cidade'}}
+$('#pUf').onchange=()=>{try{localStorage.setItem('pUf',$('#pUf').value)}catch(e){}cidadesDo($('#pUf').value)};
+const ehBrasil=()=>/^bra[sz]il$/i.test(semAcento($('#fBusca').pais.value.trim()));
+$('#fBusca').pais.oninput=()=>{const br=ehBrasil();$('#pUf').hidden=!br;$('#pEstadoTxt').hidden=br;if(!br){$('#pCidades').innerHTML='';$('#pCidade').placeholder='Cidade'}else cidadesDo($('#pUf').value)};
+try{const u=localStorage.getItem('pUf');if(u){$('#pUf').value=u;cidadesDo(u)}}catch(e){}
+const estadoAtual=()=>ehBrasil()?(UFS.find(u=>u[0]===$('#pUf').value)||[])[1]||'':$('#pEstadoTxt').value.trim();
+
+const pStatus=(t,erro)=>{const e=$('#pStatus');e.hidden=!t;e.className='pst'+(erro?' erro':'');e.innerHTML=t||''};
 $('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca');b.disabled=true;b.textContent='Buscando…';
-  try{const q=new URLSearchParams({nicho:f.nicho.value,termo:f.termo.value,pais:f.pais.value,estado:f.estado.value,cidade:f.cidade.value,fonte:f.fonte.value});
+  const estado=estadoAtual();
+  if(!f.cidade.value.trim()&&!estado){b.disabled=false;b.textContent='Buscar estabelecimentos';return pStatus('Escolha o estado e a cidade.',true)}
+  pStatus('Buscando '+esc(f.nicho.selectedOptions[0]?.value?f.nicho.selectedOptions[0].textContent:f.termo.value||'')+' em '+esc(f.cidade.value||estado)+'… (pode levar até 30 segundos)');
+  try{const q=new URLSearchParams({nicho:f.nicho.value,termo:f.termo.value,pais:f.pais.value,estado,cidade:f.cidade.value,fonte:f.fonte.value});
     const r=await api('/api/prospeccao?'+q);r.itens.forEach(x=>x.cidade=f.cidade.value||null);pros={...r,sel:new Set()};desenhaPros();
-    toast(r.total?r.total+' estabelecimentos encontrados':'Nada encontrado. Tente outra fonte ou palavra.');
-  }catch(x){toast(x.erro||'Erro na busca')}finally{b.disabled=false;b.textContent='Buscar estabelecimentos'}};
+    const osm=r.fonte==='osm',vis=proFiltrados().length;
+    if(!r.total)pStatus('Nenhum estabelecimento encontrado em '+esc(r.lugar||'')+'.'+(osm?'<br>O OpenStreetMap tem poucos dados em muitas cidades. Com o <b>Google Maps</b> (chave GOOGLE_PLACES_KEY no Worker) a lista fica bem mais completa.':' Tente outra palavra ou um nicho parecido.'),false);
+    else if(!vis)pStatus(r.total+' encontrados, mas <b>todos foram escondidos pelos filtros</b> (“só com WhatsApp” / “só sem site”). Desmarque um filtro para ver.');
+    else pStatus(r.total+' encontrados'+(vis<r.total?' · '+vis+' aparecendo com os filtros':'')+(osm?' · fonte OpenStreetMap (dados limitados; o Google Maps traz bem mais)':' · fonte Google Maps'));
+  }catch(x){pStatus(esc(x.erro||'Erro na busca. Tente de novo.'),true)}finally{b.disabled=false;b.textContent='Buscar estabelecimentos'}};
 $('#pTodos').onclick=()=>{const L=proFiltrados(),todos=L.every(x=>pros.sel.has(x.id));L.forEach(x=>todos?pros.sel.delete(x.id):pros.sel.add(x.id));desenhaPros()};
 const selecionados=()=>{const L=proFiltrados().filter(x=>pros.sel.has(x.id));return L.length?L:[]};
 async function salvarPros(L){const r=await api('/api/prospeccao/salvar',{method:'POST',body:{itens:L.map(x=>({nome:x.nome,telefone:x.telefone,site:x.site,instagram:x.instagram,endereco:x.endereco,cidade:x.cidade,nicho:pros.nicho,maps:x.maps,notas:[x.categoria,x.avaliacao&&'★ '+x.avaliacao+' ('+x.avaliacoes+')',x.email].filter(Boolean).join(' · ')}))}});
@@ -914,6 +941,7 @@ function demoApi(p,o){
   if(p==='/api/vendas')return Promise.resolve({vendas:D.vendas,negociacao:{qtd:D.contatos.filter(c=>c.venda==='proposta').length,total:D.contatos.filter(c=>c.venda==='proposta').reduce((a,c)=>a+c.proposta,0)}});
   if(p==='/api/clientes')return Promise.resolve(D.clientes);
   if(p==='/api/config')return Promise.resolve({manutencao:false,mensagem:'',google:true});
+  if(p.startsWith('/api/cidades'))return Promise.resolve(['Almirante Tamandaré','Araucária','Campo Largo','Colombo','Curitiba','Londrina','Maringá','Ponta Grossa','São José dos Pinhais']);
   if(p==='/api/prospeccao/nichos')return Promise.resolve([{id:'dentista',nome:'Dentista',grupo:'Saúde'},{id:'salao',nome:'Salão de beleza',grupo:'Beleza'},{id:'restaurante',nome:'Restaurante',grupo:'Alimentação'}]);
   if(p.startsWith('/api/prospeccao/salvar'))return Promise.resolve({novos:(o.body?.itens||[]).length,repetidos:0,ids:(o.body?.itens||[]).map((_,i)=>100+i)});
   if(p.startsWith('/api/prospeccao'))return Promise.resolve({fonte:'google',lugar:'Curitiba, Paraná, Brasil',nicho:'Dentista',total:6,itens:[
