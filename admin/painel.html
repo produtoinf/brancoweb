@@ -671,7 +671,9 @@ function desenhaPros(){
   if(!L.length&&T.length)$('#pRes').innerHTML='<tr><td colspan="7" class="vazio">'+T.length+' resultado(s) escondido(s) pelos filtros acima.</td></tr>';
   else $('#pRes').innerHTML=L.length?L.map(x=>{const j=jaSalvo(x);return '<tr><td><input type="checkbox" class="pchk" data-pid="'+esc(x.id)+'"'+(pros.sel.has(x.id)?' checked':'')+'></td>'+
     '<td><b>'+esc(x.nome)+'</b><small>'+esc(x.categoria||'')+(x.avaliacao?' · ★ '+x.avaliacao+' ('+x.avaliacoes+')':'')+'</small>'+(j?'<span class="tag ok">no follow-up</span>':'')+'</td>'+
-    '<td>'+(x.telefone?'<span class="money">'+esc(fone(x.telefone))+'</span><br>'+(x.celular||x.whatsapp?'<span class="tag ok">whatsapp</span>':x.celular===false?'<span class="tag">fixo</span>':''):'<span class="label">—</span>')+'</td>'+
+    '<td>'+(x.telefone?'<span class="money">'+esc(fone(x.telefone))+'</span><br>'+(x.celular||x.whatsapp?'<span class="tag ok">whatsapp</span>':x.celular===false?'<span class="tag">fixo</span>':''):
+      // sem telefone na fonte: atalhos para achar o contato no Google e no Instagram
+      '<a class="pill" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q='+encodeURIComponent(x.nome+' '+(x.cidade||'')+' whatsapp telefone')+'">🔎 achar WhatsApp</a> <a class="pill" target="_blank" rel="noopener noreferrer" href="https://www.google.com/search?q='+encodeURIComponent(x.nome+' '+(x.cidade||'')+' site:instagram.com')+'">insta?</a>')+'</td>'+
     '<td>'+(x.site?'<a class="pill" href="'+esc(x.site)+'" target="_blank" rel="noopener noreferrer">'+esc(host(x.site))+' ↗</a>':'<span class="tag hot">sem site</span>')+'</td>'+
     '<td>'+[x.instagram&&'<a class="pill" href="'+esc(/^https?:/.test(x.instagram)?x.instagram:'https://instagram.com/'+x.instagram.replace('@',''))+'" target="_blank" rel="noopener noreferrer">insta ↗</a>',x.redeSocial&&!x.instagram&&'<a class="pill" href="'+esc(x.redeSocial)+'" target="_blank" rel="noopener noreferrer">rede ↗</a>',x.email&&'<span class="pill">'+esc(x.email)+'</span>'].filter(Boolean).join(' ')+'</td>'+
     '<td><small style="margin:0">'+esc(x.endereco||'—')+'</small></td>'+
@@ -708,7 +710,7 @@ $('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca
     const r=await api('/api/prospeccao?'+q);r.itens.forEach(x=>x.cidade=x.cidade||f.cidade.value||null);pros={...r,sel:new Set()};desenhaPros();
     const osm=r.fonte==='osm',vis=proFiltrados().length;
     if(!r.total)pStatus('Nenhum estabelecimento encontrado em '+esc(r.lugar||'')+'.'+(osm?'<br>O OpenStreetMap tem poucos dados em muitas cidades. Use <b>TomTom</b>, <b>HERE</b> ou <b>Google Maps</b> (chaves no Worker) para listas bem mais completas.':' Tente outra palavra, um nicho parecido ou outra fonte.'),false);
-    else if(!vis)pStatus(r.total+' encontrados, mas <b>todos foram escondidos pelos filtros</b> (“só com WhatsApp” / “só sem site”). Desmarque um filtro para ver.');
+    else if(!vis)pStatus(r.total+' encontrados, mas <b>todos foram escondidos pelos filtros</b> (“só com WhatsApp” / “só sem site”). Desmarque um filtro para ver.'+(r.itens.filter(x=>x.telefone).length<r.total*.2?'<br>Dica: a fonte trouxe poucos telefones. '+(f.termo.value?'Apague a palavra-chave e busque só pelo nicho, ou ':'')+'use o botão “🔎 achar WhatsApp” em cada resultado.':''));
     else pStatus(r.total+' encontrados'+(vis<r.total?' · '+vis+' aparecendo com os filtros':'')+' · fonte '+NOME_FONTE(r.fonte)+(osm?' (dados limitados)':''));
   }catch(x){pStatus(esc(x.erro||'Erro na busca. Tente de novo.'),true)}finally{b.disabled=false;b.textContent='Buscar estabelecimentos'}};
 $('#pTodos').onclick=()=>{const L=proFiltrados(),todos=L.every(x=>pros.sel.has(x.id));L.forEach(x=>todos?pros.sel.delete(x.id):pros.sel.add(x.id));desenhaPros()};
