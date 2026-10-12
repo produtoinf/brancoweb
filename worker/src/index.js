@@ -230,6 +230,22 @@ async function api(req, db, env, caminho) {
     return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: c.msg_semsite || '', msg_comsite: c.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY });
   }
 
+  // cidades de um estado (IBGE), guardadas em cache por 30 dias
+  if (rec === 'cidades') {
+    const uf = (new URL(req.url).searchParams.get('uf') || '').toUpperCase();
+    if (!/^[A-Z]{2}$/.test(uf)) return erro('Estado inválido.');
+    const chave = new Request('https://cache.branco/cidades/' + uf), cache = caches.default;
+    let r = await cache.match(chave);
+    if (!r) {
+      const ibge = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios?orderBy=nome`, { signal: AbortSignal.timeout(10000) }).catch(() => null);
+      if (!ibge?.ok) return erro('Não consegui carregar as cidades agora.', 502);
+      const nomes = (await ibge.json()).map(c => c.nome);
+      r = new Response(JSON.stringify(nomes), { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'max-age=2592000' } });
+      await cache.put(chave, r.clone());
+    }
+    return new Response(r.body, { headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
+  }
+
   // prospecção: busca estabelecimentos por nicho e cidade
   if (rec === 'prospeccao') {
     if (seg[1] === 'nichos') return json(NICHOS.map(n => ({ id: n.id, nome: n.nome, grupo: n.grupo })));
