@@ -41,10 +41,38 @@ const MODELOS_INICIAIS = [
 const ETAPAS_VENDA = ['novo', 'conversando', 'proposta', 'fechou', 'perdido'];
 const LEMBRETES = [2, 7, 15]; // dias até o próximo lembrete depois de cada mensagem
 
+// colunas que cada tabela precisa ter: se o banco veio de uma versão antiga, as que faltam são criadas (nada é apagado)
+const COLUNAS = {
+  eventos: ['tipo', 'v', 'p', 'o', 'd', 'criado_em'],
+  contatos: ['lid', 'v', 'nome', 'telefone', 'empresa', 'projeto', 'mensagem', 'status', 'origem', 'venda', 'contatos INTEGER', 'ultimo_contato', 'proximo_contato', 'notas', 'proposta INTEGER', 'criado_em', 'atualizado_em'],
+  modelos: ['titulo', 'texto', 'criado_em'],
+  vendas: ['cliente', 'servico', 'valor INTEGER', 'mensal INTEGER', 'data', 'fim', 'pago INTEGER', 'notas', 'contato_id INTEGER', 'criado_em'],
+  clientes: ['nome', 'email', 'projeto', 'site_url', 'etapa INTEGER', 'recado', 'site', 'token', 'criado_em'],
+  links: ['cliente_id INTEGER', 'titulo', 'url', 'criado_em'],
+  visitas_cliente: ['site', 'v', 'p', 'o', 'd', 'criado_em'],
+  sessoes: ['token', 'criado_em'],
+};
+async function migra(db) {
+  const tabelas = Object.keys(COLUNAS);
+  const info = await db.batch(tabelas.map(t => db.prepare(`PRAGMA table_info(${t})`)));
+  const alter = [];
+  tabelas.forEach((t, i) => {
+    const tem = new Set(info[i].results.map(c => c.name));
+    COLUNAS[t].forEach(c => { const [nome, tipo = 'TEXT'] = c.split(' '); if (!tem.has(nome)) alter.push(db.prepare(`ALTER TABLE ${t} ADD COLUMN ${nome} ${tipo}`)); });
+  });
+  if (alter.length) await db.batch(alter);
+  // clientes antigos ganham código da área do cliente e do contador
+  const sem = await db.prepare("SELECT id, site, token FROM clientes WHERE token IS NULL OR token = '' OR site IS NULL OR site = ''").all();
+  if (sem.results.length) await db.batch(sem.results.map(c => db.prepare('UPDATE clientes SET token = ?, site = ? WHERE id = ?')
+    .bind(c.token || aleatorio(24), c.site || aleatorio(10), c.id)));
+  await db.prepare('CREATE INDEX IF NOT EXISTS cl_token ON clientes (token)').run();
+}
+
 let pronto = null;
 async function prepara(db) {
   if (!pronto) pronto = (async () => {
     await db.batch(SCHEMA.map(s => db.prepare(s)));
+    await migra(db);
     const { n } = await db.prepare('SELECT COUNT(*) n FROM modelos').first();
     if (!n) await db.batch(MODELOS_INICIAIS.map(m => db.prepare('INSERT INTO modelos (titulo, texto) VALUES (?, ?)').bind(...m)));
   })().catch(e => { pronto = null; throw e; });
@@ -81,7 +109,7 @@ const TIPOS = new Set(['visita', 'whatsapp', 'form_aberto', 'form_enviado', 'cha
 async function rotaEvento(req, db) {
   const b = await corpo(req);
   if (!TIPOS.has(b.tipo)) return new Response(null, { status: 204, headers: CORS });
-  await db.prepare('INSERT INTO eventos (tipo, v, p, o, d) VALUES (?, ?, ?, ?, ?)')
+  await db.prepare("INSERT INTO eventos (tipo, v, p, o, d, criado_em) VALUES (?, ?, ?, ?, ?, datetime('now'))")
     .bind(b.tipo, txt(b.v, 40), txt(b.p, 200), txt(b.o, 60)?.toLowerCase() ?? null, txt(b.d, 20)).run();
   return new Response(null, { status: 204, headers: CORS });
 }
@@ -89,11 +117,12 @@ async function rotaLead(req, db) {
   const b = await corpo(req), lid = txt(b.lid, 40), nome = txt(b.nome, 100);
   if (!lid || !nome) return new Response(null, { status: 204, headers: CORS });
   const status = b.status === 'enviado' ? 'enviado' : 'parcial';
-  await db.prepare(`INSERT INTO contatos (lid, v, nome, telefone, empresa, projeto, mensagem, status, origem) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'site')
-      ON CONFLICT(lid) DO UPDATE SET nome = excluded.nome, telefone = COALESCE(excluded.telefone, contatos.telefone), empresa = COALESCE(excluded.empresa, contatos.empresa),
-      projeto = COALESCE(excluded.projeto, contatos.projeto), mensagem = COALESCE(excluded.mensagem, contatos.mensagem), atualizado_em = datetime('now'),
-      status = CASE WHEN contatos.status = 'enviado' THEN 'enviado' ELSE excluded.status END`)
-    .bind(lid, txt(b.v, 40), nome, digitos(b.telefone), txt(b.empresa, 120), txt(b.projeto, 80), txt(b.mensagem, 2000), status).run();
+  const val = [nome, digitos(b.telefone), txt(b.empresa, 120), txt(b.projeto, 80), txt(b.mensagem, 2000)];
+  const ja = await db.prepare('SELECT id FROM contatos WHERE lid = ?').bind(lid).first();
+  if (ja) await db.prepare(`UPDATE contatos SET nome = ?, telefone = COALESCE(?, telefone), empresa = COALESCE(?, empresa), projeto = COALESCE(?, projeto),
+      mensagem = COALESCE(?, mensagem), atualizado_em = datetime('now'), status = CASE WHEN status = 'enviado' THEN 'enviado' ELSE ? END WHERE id = ?`).bind(...val, status, ja.id).run();
+  else await db.prepare(`INSERT INTO contatos (lid, v, nome, telefone, empresa, projeto, mensagem, status, origem, venda, contatos, criado_em)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'site', 'novo', 0, datetime('now'))`).bind(lid, txt(b.v, 40), ...val, status).run();
   return new Response(null, { status: 204, headers: CORS });
 }
 async function rotaStatus(db) {
@@ -103,11 +132,12 @@ async function rotaStatus(db) {
 }
 const contadorCliente = origem => `(()=>{try{var s=new URL(document.currentScript.src).searchParams.get('s');if(!s||sessionStorage.getItem('bcv'))return;sessionStorage.setItem('bcv','1');
 var v=localStorage.getItem('bcid')||(crypto.randomUUID?crypto.randomUUID():String(Math.random()).slice(2));localStorage.setItem('bcid',v);
-fetch('${origem}/c',{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain'},body:JSON.stringify({s:s,v:v,p:location.pathname})}).catch(function(){})}catch(e){}})();`;
+var r=document.referrer&&document.referrer.indexOf(location.host)<0?new URL(document.referrer).hostname.replace('www.',''):null,q=new URLSearchParams(location.search);
+fetch('${origem}/c',{method:'POST',keepalive:true,headers:{'Content-Type':'text/plain'},body:JSON.stringify({s:s,v:v,p:location.pathname,o:q.get('utm_source')||r,d:/Mobi|Android|iPhone/i.test(navigator.userAgent)?'Celular':'Computador'})}).catch(function(){})}catch(e){}})();`;
 async function rotaVisitaCliente(req, db) {
   const b = await corpo(req), s = txt(b.s, 20);
   if (s && await db.prepare('SELECT 1 FROM clientes WHERE site = ?').bind(s).first())
-    await db.prepare('INSERT INTO visitas_cliente (site, v, p) VALUES (?, ?, ?)').bind(s, txt(b.v, 40), txt(b.p, 200)).run();
+    await db.prepare("INSERT INTO visitas_cliente (site, v, p, o, d, criado_em) VALUES (?, ?, ?, ?, ?, datetime('now'))").bind(s, txt(b.v, 40), txt(b.p, 200), txt(b.o, 60)?.toLowerCase() ?? null, txt(b.d, 20)).run();
   return new Response(null, { status: 204, headers: CORS });
 }
 
@@ -120,8 +150,8 @@ async function dados(db, dias) {
     q(`SELECT date(criado_em) dia, SUM(tipo='visita') visitas, SUM(tipo='whatsapp') whats FROM eventos WHERE criado_em >= datetime('now', ?) GROUP BY dia ORDER BY dia`),
     q(`SELECT COALESCE(o,'direto') origem, COUNT(*) n FROM eventos WHERE tipo='visita' AND criado_em >= datetime('now', ?) GROUP BY origem ORDER BY n DESC LIMIT 12`),
     q(`SELECT COALESCE(d,'—') d, COUNT(*) n FROM eventos WHERE tipo='visita' AND criado_em >= datetime('now', ?) GROUP BY d ORDER BY n DESC`),
-    q(`SELECT COUNT(*) cadastros, SUM(status='enviado') enviados FROM contatos WHERE origem='site' AND criado_em >= datetime('now', ?)`),
-    q(`SELECT id, nome, empresa, telefone, projeto, mensagem, status, criado_em FROM contatos WHERE origem='site' AND criado_em >= datetime('now', ?) ORDER BY criado_em DESC LIMIT 500`),
+    q(`SELECT COUNT(*) cadastros, SUM(COALESCE(status,'enviado')<>'parcial') enviados FROM contatos WHERE COALESCE(origem,'site')='site' AND criado_em >= datetime('now', ?)`),
+    q(`SELECT id, nome, empresa, telefone, projeto, mensagem, COALESCE(status,'enviado') status, criado_em FROM contatos WHERE COALESCE(origem,'site')='site' AND criado_em >= datetime('now', ?) ORDER BY criado_em DESC LIMIT 500`),
   ]);
   const t = tot.results[0] || {}, c = cads.results[0] || {};
   return { dias, visitas: t.visitas || 0, unicos: t.unicos || 0, whatsapp: t.whatsapp || 0, formAberto: t.formAberto || 0, chat: t.chat || 0,
@@ -131,7 +161,7 @@ async function dados(db, dias) {
 /* ---------- painel: clientes ---------- */
 async function listaClientes(db) {
   const [cs, ls] = await db.batch([
-    db.prepare(`SELECT c.*, (SELECT COUNT(*) FROM visitas_cliente v WHERE v.site = c.site AND v.criado_em >= datetime('now','-30 days')) visitas30 FROM clientes c ORDER BY c.criado_em DESC`),
+    db.prepare(`SELECT c.*, COALESCE(c.etapa,1) etapa, (SELECT COUNT(*) FROM visitas_cliente v WHERE v.site = c.site AND v.criado_em >= datetime('now','-30 days')) visitas30 FROM clientes c ORDER BY c.criado_em DESC`),
     db.prepare('SELECT id, cliente_id, titulo, url FROM links ORDER BY id'),
   ]);
   return cs.results.map(c => ({ ...c, links: ls.results.filter(l => l.cliente_id === c.id) }));
@@ -147,7 +177,7 @@ async function api(req, db, env, caminho) {
     if (!env.ADMIN_SENHA) return erro('Configure a variável ADMIN_SENHA no Worker.', 500);
     if (!iguais(String(b.senha || ''), env.ADMIN_SENHA)) { await new Promise(r => setTimeout(r, 600)); return erro('Senha errada.', 401); }
     const t = aleatorio(40);
-    await db.batch([db.prepare('INSERT INTO sessoes (token) VALUES (?)').bind(t), db.prepare("DELETE FROM sessoes WHERE criado_em < datetime('now','-30 days')")]);
+    await db.batch([db.prepare("INSERT INTO sessoes (token, criado_em) VALUES (?, datetime('now'))").bind(t), db.prepare("DELETE FROM sessoes WHERE criado_em < datetime('now','-30 days')")]);
     return json({ ok: true }, 200, { 'Set-Cookie': `bsess=${t}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000` });
   }
   if (rec === 'sessao') return json({ papel: await logado(req, db) ? 'admin' : null });
@@ -173,13 +203,13 @@ async function api(req, db, env, caminho) {
     if (m === 'GET' && !id) return json(await listaClientes(db));
     if (m === 'POST' && !id) {
       const nome = txt(b.nome, 100); if (!nome) return erro('Coloque o nome do cliente.');
-      await db.prepare('INSERT INTO clientes (nome, email, projeto, site_url, site, token) VALUES (?, ?, ?, ?, ?, ?)')
+      await db.prepare("INSERT INTO clientes (nome, email, projeto, site_url, site, token, etapa, criado_em) VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now'))")
         .bind(nome, txt(b.email, 160)?.toLowerCase() ?? null, txt(b.projeto, 120), urlOk(b.site_url), aleatorio(10), aleatorio(24)).run();
       return json({ ok: true });
     }
     if (id && sub === 'links' && m === 'POST') {
       const titulo = txt(b.titulo, 100), url = urlOk(b.url); if (!titulo || !url) return erro('Coloque um título e um link começando com https://');
-      await db.prepare('INSERT INTO links (cliente_id, titulo, url) VALUES (?, ?, ?)').bind(id, titulo, url).run(); return json({ ok: true });
+      await db.prepare("INSERT INTO links (cliente_id, titulo, url, criado_em) VALUES (?, ?, ?, datetime('now'))").bind(id, titulo, url).run(); return json({ ok: true });
     }
     if (id && m === 'PATCH') {
       const campos = [], val = [];
@@ -204,23 +234,23 @@ async function api(req, db, env, caminho) {
   // follow-up
   if (rec === 'followup' && m === 'GET') {
     const [c, mo] = await db.batch([
-      db.prepare(`SELECT id, nome, empresa, telefone, projeto, mensagem, status, origem, venda, contatos, ultimo_contato, proximo_contato, notas, proposta, criado_em
-        FROM contatos ORDER BY (venda IN ('fechou','perdido')), COALESCE(proximo_contato, '0000'), criado_em DESC`),
+      db.prepare(`SELECT id, nome, empresa, telefone, projeto, mensagem, COALESCE(status,'enviado') status, origem, COALESCE(venda,'novo') venda, COALESCE(contatos,0) contatos,
+        ultimo_contato, proximo_contato, notas, proposta, criado_em FROM contatos ORDER BY (COALESCE(venda,'novo') IN ('fechou','perdido')), COALESCE(proximo_contato, '0000'), criado_em DESC`),
       db.prepare('SELECT id, titulo, texto FROM modelos ORDER BY id')]);
     return json({ contatos: c.results, modelos: mo.results });
   }
   if (rec === 'contatos') {
     if (m === 'POST' && !id) {
       const nome = txt(b.nome, 100); if (!nome) return erro('Coloque o nome.');
-      await db.prepare("INSERT INTO contatos (lid, nome, telefone, projeto, notas, status, origem) VALUES (?, ?, ?, ?, ?, 'enviado', 'manual')")
+      await db.prepare("INSERT INTO contatos (lid, nome, telefone, projeto, notas, status, origem, venda, contatos, criado_em) VALUES (?, ?, ?, ?, ?, 'enviado', 'manual', 'novo', 0, datetime('now'))")
         .bind('m-' + aleatorio(16), nome, digitos(b.telefone), txt(b.projeto, 80), txt(b.notas, 2000)).run();
       return json({ ok: true });
     }
     if (id && sub === 'enviei' && m === 'POST') {
       const c = await db.prepare('SELECT contatos FROM contatos WHERE id = ?').bind(id).first(); if (!c) return erro('Contato não encontrado.', 404);
-      const n = c.contatos + 1, hoje = dataOk(b.hoje) || new Date().toISOString().slice(0, 10), dias = LEMBRETES[n - 1];
+      const n = (c.contatos || 0) + 1, hoje = dataOk(b.hoje) || new Date().toISOString().slice(0, 10), dias = LEMBRETES[n - 1];
       await db.prepare(`UPDATE contatos SET contatos = ?, ultimo_contato = datetime('now'), proximo_contato = ${dias ? "date(?, '+' || ? || ' days')" : 'NULL'},
-        venda = CASE WHEN venda = 'novo' THEN 'conversando' ELSE venda END WHERE id = ?`).bind(...(dias ? [n, hoje, dias, id] : [n, id])).run();
+        venda = CASE WHEN COALESCE(venda,'novo') = 'novo' THEN 'conversando' ELSE venda END WHERE id = ?`).bind(...(dias ? [n, hoje, dias, id] : [n, id])).run();
       return json({ ok: true });
     }
     if (id && m === 'PATCH') {
@@ -237,7 +267,7 @@ async function api(req, db, env, caminho) {
   if (rec === 'modelos') {
     if (m === 'GET') return json((await db.prepare('SELECT id, titulo, texto FROM modelos ORDER BY id').all()).results);
     const titulo = txt(b.titulo, 60), texto = txt(b.texto, 1000);
-    if (m === 'POST' && !id) { if (!titulo || !texto) return erro('Coloque título e texto.'); await db.prepare('INSERT INTO modelos (titulo, texto) VALUES (?, ?)').bind(titulo, texto).run(); return json({ ok: true }); }
+    if (m === 'POST' && !id) { if (!titulo || !texto) return erro('Coloque título e texto.'); await db.prepare("INSERT INTO modelos (titulo, texto, criado_em) VALUES (?, ?, datetime('now'))").bind(titulo, texto).run(); return json({ ok: true }); }
     if (id && m === 'PATCH') { if (!titulo || !texto) return erro('Coloque título e texto.'); await db.prepare('UPDATE modelos SET titulo = ?, texto = ? WHERE id = ?').bind(titulo, texto, id).run(); return json({ ok: true }); }
     if (id && m === 'DELETE') { await db.prepare('DELETE FROM modelos WHERE id = ?').bind(id).run(); return json({ ok: true }); }
   }
@@ -246,8 +276,8 @@ async function api(req, db, env, caminho) {
   if (rec === 'vendas') {
     if (m === 'GET') {
       const [v, ng] = await db.batch([db.prepare('SELECT * FROM vendas ORDER BY data DESC, id DESC'),
-        db.prepare("SELECT COUNT(*) qtd, COALESCE(SUM(proposta),0) total FROM contatos WHERE venda = 'proposta'")]);
-      return json({ vendas: v.results.map(x => ({ ...x, pago: !!x.pago })), negociacao: ng.results[0] });
+        db.prepare("SELECT COUNT(*) qtd, COALESCE(SUM(proposta),0) total FROM contatos WHERE COALESCE(venda,'novo') = 'proposta'")]);
+      return json({ vendas: v.results.map(x => ({ ...x, valor: x.valor || 0, mensal: x.mensal || 0, pago: !!x.pago })), negociacao: ng.results[0] });
     }
     if (id && m === 'DELETE') { await db.prepare('DELETE FROM vendas WHERE id = ?').bind(id).run(); return json({ ok: true }); }
     if (id && m === 'PATCH' && Object.keys(b).length === 1 && 'pago' in b) { await db.prepare('UPDATE vendas SET pago = ? WHERE id = ?').bind(b.pago ? 1 : 0, id).run(); return json({ ok: true }); }
@@ -256,7 +286,7 @@ async function api(req, db, env, caminho) {
       if (!cliente) return erro('Coloque o nome do cliente.'); if (!data) return erro('Coloque a data da venda.');
       const val = [cliente, txt(b.servico, 80), inteiro(b.valor, 0, 1e11) || 0, inteiro(b.mensal, 0, 1e11) || 0, data, dataOk(b.fim), b.pago ? 1 : 0, txt(b.notas, 1000), inteiro(b.contato_id, 1, 1e12)];
       if (id) await db.prepare('UPDATE vendas SET cliente=?, servico=?, valor=?, mensal=?, data=?, fim=?, pago=?, notas=?, contato_id=? WHERE id = ?').bind(...val, id).run();
-      else await db.prepare('INSERT INTO vendas (cliente, servico, valor, mensal, data, fim, pago, notas, contato_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').bind(...val).run();
+      else await db.prepare("INSERT INTO vendas (cliente, servico, valor, mensal, data, fim, pago, notas, contato_id, criado_em) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))").bind(...val).run();
       return json({ ok: true });
     }
   }
@@ -264,14 +294,22 @@ async function api(req, db, env, caminho) {
 }
 
 /* ---------- área do cliente (link secreto) ---------- */
-async function apiCliente(db, token) {
-  const c = await db.prepare('SELECT id, nome, projeto, site_url, etapa, recado, site FROM clientes WHERE token = ?').bind(token).first();
+async function apiCliente(db, token, dias) {
+  if (!token || token.length < 10) return erro('Link inválido.', 404);
+  const c = await db.prepare('SELECT id, nome, projeto, site_url, COALESCE(etapa,1) etapa, recado, site FROM clientes WHERE token = ?').bind(token).first();
   if (!c) return erro('Link inválido.', 404);
-  const [ls, dias] = await db.batch([
+  const desde = `-${dias} days`, q = sql => db.prepare(sql).bind(c.site, desde);
+  const [ls, porDia, tot, orig, disp, pag] = await db.batch([
     db.prepare('SELECT titulo, url FROM links WHERE cliente_id = ? ORDER BY id').bind(c.id),
-    db.prepare("SELECT date(criado_em) dia, COUNT(*) visitas, COUNT(DISTINCT v) pessoas FROM visitas_cliente WHERE site = ? AND criado_em >= datetime('now','-30 days') GROUP BY dia ORDER BY dia").bind(c.site)]);
-  const { site, id, ...pub } = c;
-  return json({ ...pub, links: ls.results, porDia: dias.results, visitas30: dias.results.reduce((a, d) => a + d.visitas, 0) });
+    q("SELECT date(criado_em) dia, COUNT(*) visitas, COUNT(DISTINCT v) pessoas FROM visitas_cliente WHERE site = ? AND criado_em >= datetime('now', ?) GROUP BY dia ORDER BY dia"),
+    q("SELECT COUNT(*) visitas, COUNT(DISTINCT v) pessoas FROM visitas_cliente WHERE site = ? AND criado_em >= datetime('now', ?)"),
+    q("SELECT COALESCE(o,'direto') origem, COUNT(*) n FROM visitas_cliente WHERE site = ? AND criado_em >= datetime('now', ?) GROUP BY origem ORDER BY n DESC LIMIT 8"),
+    q("SELECT COALESCE(d,'—') d, COUNT(*) n FROM visitas_cliente WHERE site = ? AND criado_em >= datetime('now', ?) GROUP BY d ORDER BY n DESC"),
+    q("SELECT COALESCE(p,'/') pagina, COUNT(*) n FROM visitas_cliente WHERE site = ? AND criado_em >= datetime('now', ?) GROUP BY pagina ORDER BY n DESC LIMIT 6"),
+  ]);
+  const t = tot.results[0] || {};
+  return json({ nome: c.nome, projeto: c.projeto, site_url: c.site_url, etapa: c.etapa, recado: c.recado, links: ls.results, dias,
+    visitas: t.visitas || 0, pessoas: t.pessoas || 0, porDia: porDia.results, origens: orig.results, dispositivos: disp.results, paginas: pag.results, contador: !!(t.visitas) });
 }
 
 export default {
@@ -288,7 +326,7 @@ export default {
       if (p === '/c.js') return js(contadorCliente(url.origin));
       if (p === '/chat.js') return js('/* assistente: desativado nesta versão */');
       if (p === '/admin') return html(PAINEL_HTML);
-      if (p.startsWith('/api/cliente/')) return await apiCliente(env.DB, p.split('/')[3] || '');
+      if (p.startsWith('/api/cliente/')) return await apiCliente(env.DB, p.split('/')[3] || '', inteiro(url.searchParams.get('dias'), 1, 365) || 30);
       if (p.startsWith('/api/')) return await api(req, env.DB, env, p);
       if (p.startsWith('/cliente/')) return html(CLIENTE_HTML);
       if (p === '/') return Response.redirect(url.origin + '/admin', 302);

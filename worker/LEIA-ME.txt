@@ -34,10 +34,14 @@ O QUE O WORKER FAZ
 - Conta visitas, cliques no WhatsApp, formulário aberto e cadastros do site (track.js)
 - Painel /admin: visão geral com gráficos, follow-up, financeiro, clientes
 - Aviso "site em atualização" (liga/desliga no painel)
-- Área do cliente: cada cliente ganha um link secreto /cliente/... para acompanhar o projeto
+- Área do cliente: cada cliente ganha um link secreto /cliente/... com andamento do projeto,
+  recado, próximo passo, links/arquivos e as visitas do site dele (gráfico, origem, aparelho, páginas)
 - Contador de visitas para sites de clientes (/c.js)
 
+BANCO ANTIGO
+- Pode usar o mesmo banco D1 do painel antigo: o Worker cria sozinho as colunas que faltam
+  (sem apagar nada) e gera o link da área de cada cliente que já existia.
+
 OBSERVAÇÕES
-- Começa zerado: os dados do painel antigo continuam no Worker antigo.
 - O assistente de IA do site (chat.js) não vem nesta versão.
 - Para editar: mexa em admin/painel.html e worker/src/, depois rode  node worker/build.mjs
