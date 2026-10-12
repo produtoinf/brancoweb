@@ -326,7 +326,10 @@ export default {
       if (p === '/c.js') return js(contadorCliente(url.origin));
       if (p === '/chat.js') return js('/* assistente: desativado nesta versão */');
       if (p === '/admin') return html(PAINEL_HTML);
-      if (p.startsWith('/api/cliente/')) return await apiCliente(env.DB, p.split('/')[3] || '', inteiro(url.searchParams.get('dias'), 1, 365) || 30);
+      if (p.startsWith('/api/cliente/')) { // usado também pela área do cliente dentro do site (outro domínio)
+        const r = await apiCliente(env.DB, p.split('/')[3] || '', inteiro(url.searchParams.get('dias'), 1, 365) || 30);
+        Object.entries(CORS).forEach(([k, v]) => r.headers.set(k, v)); return r;
+      }
       if (p.startsWith('/api/')) return await api(req, env.DB, env, p);
       if (p.startsWith('/cliente/')) return html(CLIENTE_HTML);
       if (p === '/') return Response.redirect(url.origin + '/admin', 302);

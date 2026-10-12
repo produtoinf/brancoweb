@@ -313,6 +313,7 @@ html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-convers
 
 <script>
 const DEMO=/[?&]demo\b/.test(location.search);
+const AREA_CLIENTE='https://produtoinf.github.io/brancoweb/cliente/?c='; // área do cliente dentro do site
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=d=>d?new Date(d.replace(' ','T')+'Z').toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):'—';
@@ -544,7 +545,7 @@ function abre(id){
   '<section class="box mt"><div class="hd"><h2>Recado para o cliente</h2></div><textarea id="recado" rows="4" maxlength="3000" placeholder="Ex: Oi! Já subimos a primeira versão do site, dá uma olhada no link de prévia.">'+esc(c.recado||'')+'</textarea><div class="acts mt"><button class="solid" id="sRecado">Salvar recado</button></div></section>'+
   '<section class="box mt"><div class="hd"><h2>Links e arquivos</h2></div><div class="lks">'+(c.links.length?c.links.map(l=>'<div class="lk"><a href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer"><span>'+esc(l.titulo)+'</span> <small>↗</small></a><button class="danger" data-rm="'+l.id+'">Remover</button></div>').join(''):'<p class="vazio">Nenhum link ainda.</p>')+'</div>'+
     '<form class="form mt" id="fLink"><input name="titulo" placeholder="Título (ex: Prévia do site)" maxlength="100"><input name="url" placeholder="https://..."><div class="full acts"><button class="solid">Adicionar link</button><span class="msg-err" id="eLink"></span></div></form></section>'+
-  '<section class="box mt"><div class="hd"><div><h2>Área do cliente</h2><p class="label">envie este link para o cliente acompanhar o projeto (sem senha).</p></div></div><code class="code">'+esc(location.origin+'/cliente/'+(c.token||''))+'</code><div class="acts mt"><button class="ghost" id="copiarArea">Copiar link</button><a class="pill on" href="/cliente/'+esc(c.token||'')+'" target="_blank" rel="noopener">Abrir ↗</a></div></section>'+
+  '<section class="box mt"><div class="hd"><div><h2>Área do cliente</h2><p class="label">envie este link para o cliente acompanhar o projeto pelo seu site (sem senha).</p></div></div><code class="code">'+esc(AREA_CLIENTE+(c.token||''))+'</code><div class="acts mt"><button class="ghost" id="copiarArea">Copiar link</button><a class="pill on" href="'+esc(AREA_CLIENTE+(c.token||''))+'" target="_blank" rel="noopener">Abrir ↗</a></div></section>'+
   '<section class="box mt"><div class="hd"><div><h2>Contador de visitas</h2><p class="label">cole no site do cliente, antes de &lt;/head&gt;. Ele vê as visitas na área dele.</p></div></div><code class="code" id="tag">'+esc(tag)+'</code><div class="acts mt"><button class="ghost" id="copiar">Copiar código</button><span class="pill">'+num(c.visitas30)+' visitas nos últimos 30 dias</span></div></section>'+
   '<section class="box mt"><button class="danger" id="excluir">Excluir cliente</button></section>';
   $('#voltar').onclick=fecha;
@@ -554,7 +555,7 @@ function abre(id){
   $('#sRecado').onclick=()=>patch({recado:$('#recado').value},'Recado salvo ✓');
   $('#fLink').onsubmit=async e=>{e.preventDefault();try{await api('/api/clientes/'+id+'/links',{method:'POST',body:Object.fromEntries(new FormData(e.target))});toast('Link adicionado ✓');carregaClientes()}catch(x){$('#eLink').textContent=x.erro||'Erro'}};
   $$('[data-rm]').forEach(b=>b.onclick=async()=>{await api('/api/links/'+b.dataset.rm,{method:'DELETE'});toast('Link removido');carregaClientes()});
-  $('#copiarArea').onclick=()=>{navigator.clipboard.writeText(location.origin+'/cliente/'+c.token).then(()=>toast('Link copiado ✓'),()=>toast('Selecione e copie o link'))};
+  $('#copiarArea').onclick=()=>{navigator.clipboard.writeText(AREA_CLIENTE+c.token).then(()=>toast('Link copiado ✓'),()=>toast('Selecione e copie o link'))};
   $('#copiar').onclick=()=>{navigator.clipboard.writeText(tag).then(()=>toast('Código copiado ✓'),()=>toast('Selecione e copie o código'))};
   $('#excluir').onclick=async()=>{if(!confirm('Excluir '+c.nome+'? Ele perde o acesso. Isso não pode ser desfeito.'))return;await api('/api/clientes/'+id,{method:'DELETE'});toast('Cliente excluído');fecha();carregaClientes()};
 }
