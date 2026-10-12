@@ -278,8 +278,8 @@ document.addEventListener('DOMContentLoaded',function(){
 <div id="bi" aria-label="Introdução">
   <canvas id="bi-warp" aria-hidden="true"></canvas>
   <div class="stage">
-    <div class="line" data-text="Design com propósito."></div>
-    <div class="line" data-text="Presença com valor."></div>
+    <div class="line" data-text="Design com propósito." data-verde="2"></div>
+    <div class="line" data-text="Presença com valor." data-verde="1"></div>
     <div class="logo" id="bi-logo" aria-label="Branco" role="img">
       <div class="lg">
         <div class="lg__lay lg__lay--halo"><i></i></div>
@@ -467,7 +467,7 @@ document.addEventListener('DOMContentLoaded',function(){
   if(location.hash==='#replay') seen=false;
   if(reduce||seen){intro.className='gone';window.__introDone=true;return;}
   lines.forEach(function(l){
-    l.innerHTML=l.getAttribute('data-text').split(' ').map(function(w){return '<span class="w"><span>'+w+'</span></span>'}).join(' ');
+    l.innerHTML=l.getAttribute('data-text').split(' ').map(function(w,i){var v=l.hasAttribute('data-verde')&&i>=+l.getAttribute('data-verde');return '<span class="w'+(v?' w--v':'')+'"><span>'+w+'</span></span>'}).join(' ');
     [].forEach.call(l.querySelectorAll('.w>span'),function(s,i){s.style.transitionDelay=(i*90)+'ms'});
   });
 
@@ -1195,4 +1195,46 @@ document.addEventListener('DOMContentLoaded',function(){
   st.addEventListener('pointerleave',function(){sc.style.transform=''});
 });
 </script>
+<style id="cp-hover-css">
+/* ===== painel da campanha: animação ao passar o cursor ===== */
+@media (hover:hover) and (pointer:fine){
+.cp__box{transition:transform .5s cubic-bezier(.2,.7,.2,1),box-shadow .4s,border-color .4s,opacity .9s ease}
+.cp.in .cp__box:hover{border-color:rgba(168,255,83,.25);box-shadow:0 40px 100px -40px rgba(0,0,0,.7),0 0 60px -20px rgba(168,255,83,.25)}
+.cp__k{position:relative;overflow:hidden;transition:background .3s}
+.cp__k::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),rgba(168,255,83,.12),transparent 65%)}
+.cp__k:hover::before{opacity:1}
+.cp__k::after{content:"";position:absolute;left:0;top:0;height:2px;width:100%;background:var(--verde,#a8ff53);transform:scaleX(0);transform-origin:left;transition:transform .45s cubic-bezier(.2,.7,.2,1);box-shadow:0 0 12px rgba(168,255,83,.6)}
+.cp__k:hover::after{transform:scaleX(1)}
+.cp__n{display:inline-block;transition:transform .35s cubic-bezier(.2,.7,.2,1),color .3s,text-shadow .3s}
+.cp__k:hover .cp__n{transform:translateY(-4px) scale(1.06);color:var(--verde,#a8ff53);text-shadow:0 0 24px rgba(168,255,83,.35)}
+.cp__k:hover .cp__l{color:var(--fg)}
+.cp.in .cp__k:hover .cp__sp polyline{animation:cp-redesenha 1s cubic-bezier(.6,0,.2,1);stroke-width:2.4;filter:drop-shadow(0 0 6px rgba(168,255,83,.7))}
+.cp.in .cp__k:hover .cp__sp--quente polyline{filter:drop-shadow(0 0 6px rgba(255,106,43,.7))}
+.cp__k:hover .cp__st{color:var(--verde,#a8ff53)}
+.cp__log li{transition:transform .25s,color .25s}
+.cp.in .cp__log li:hover{transform:translateX(8px);color:var(--fg)}
+}
+@keyframes cp-redesenha{0%{stroke-dashoffset:1}100%{stroke-dashoffset:0}}
+</style>
+<script id="cp-hover-js">
+document.addEventListener('DOMContentLoaded',function(){
+  var box=document.querySelector('.cp__box');if(!box||!matchMedia('(hover:hover) and (pointer:fine)').matches)return;
+  box.addEventListener('pointermove',function(e){
+    var r=box.getBoundingClientRect(),x=(e.clientX-r.left)/r.width-.5,y=(e.clientY-r.top)/r.height-.5;
+    box.style.transform='perspective(1200px) rotateX('+(-y*5)+'deg) rotateY('+(x*6)+'deg)';
+    var k=e.target.closest('.cp__k');if(k){var kr=k.getBoundingClientRect();k.style.setProperty('--mx',(e.clientX-kr.left)+'px');k.style.setProperty('--my',(e.clientY-kr.top)+'px')}
+  });
+  box.addEventListener('pointerleave',function(){box.style.transform=''});
+  /* reconta o número ao entrar no quadro */
+  [].forEach.call(box.querySelectorAll('.cp__k'),function(k){
+    var n=k.querySelector('.cp__n[data-to]');if(!n)return;
+    k.addEventListener('mouseenter',function(){
+      var to=+n.dataset.to,f=n.dataset.fmt,pre=n.dataset.pre||'',suf=n.dataset.suf||'',t0=null;
+      function fmt(v){return f==='pt'?pre+Math.round(v).toLocaleString('pt-BR')+suf:f==='brl'?pre+(v/100).toFixed(2).replace('.',',')+suf:pre+Math.round(v)+suf}
+      (function a(ts){if(!t0)t0=ts;var q=Math.min(1,(ts-t0)/700),e=1-Math.pow(1-q,3);n.textContent=fmt(to*(.6+.4*e));if(q<1)requestAnimationFrame(a)})(performance.now());
+    });
+  });
+});
+</script>
+<style id="intro-verde">#bi .w--v>span{color:#a8ff53;text-shadow:0 0 30px rgba(168,255,83,.35)}</style>
 </body></html>
