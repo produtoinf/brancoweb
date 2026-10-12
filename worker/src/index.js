@@ -250,6 +250,10 @@ async function api(req, db, env, caminho) {
   if (rec === 'prospeccao') {
     if (seg[1] === 'nichos') return json(NICHOS.map(n => ({ id: n.id, nome: n.nome, grupo: n.grupo })));
     if (seg[1] === 'salvar' && m === 'POST') return json(await salvaProspects(db, b.itens));
+    if (seg[1] === 'enriquecer' && m === 'POST') {
+      if (await excedeu(db, 'enriq:' + ip(req), 120, 60)) return erro('Muitas consultas seguidas. Espere alguns minutos.', 429);
+      return json(await enriquece(b.itens));
+    }
     if (m === 'GET') {
       if (await excedeu(db, 'busca:' + ip(req), 60, 60)) return erro('Muitas buscas seguidas. Espere alguns minutos.', 429);
       const q = new URL(req.url).searchParams;
@@ -533,6 +537,38 @@ async function buscaProspects(env, f) {
   r.itens.forEach(x => { if (x.site && /instagram\.com|facebook\.com|linktr\.ee|wa\.me|whatsapp/i.test(x.site)) { x.instagram = x.instagram || (/instagram/.test(x.site) ? x.site : null); x.redeSocial = x.site; x.site = null; } });
   return { ...r, nicho: NICHOS.find(x => x.id === f.nicho)?.nome || f.termo, total: r.itens.length };
 }
+// procura WhatsApp/telefone/Instagram/e-mail no site do estabelecimento (só sites próprios; plataformas são ignoradas)
+const PLATAFORMAS = /tuaagenda|booksy|linktr\.ee|wa\.me|whatsapp|instagram\.com|facebook\.com|negocio\.site|ifood|goomer|agendor|calendly|google\.|anota\.ai|cardapioweb|beacons\.ai/i;
+const normBR = d => { d = String(d || '').replace(/\D/g, '').replace(/^0+/, ''); return d.length === 10 || d.length === 11 ? '55' + d : d; };
+const ehCel = d => /^55\d{2}9\d{8}$/.test(d);
+async function contatosDoSite(url) {
+  let h;
+  try {
+    const u = new URL(url);
+    if (!/^https?:$/.test(u.protocol) || /^(localhost|\d+\.\d+\.\d+\.\d+|\[)/i.test(u.hostname) || PLATAFORMAS.test(u.hostname)) return null;
+    const r = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BrancoPainel/1.0)', Accept: 'text/html' }, redirect: 'follow', signal: AbortSignal.timeout(8000), cf: { cacheTtl: 86400 } });
+    if (!r.ok || !/html/i.test(r.headers.get('content-type') || '')) return null;
+    h = (await r.text()).slice(0, 500000);
+  } catch { return null; }
+  const wa = [...h.matchAll(/(?:wa\.me\/|whatsapp\.com\/send\/?\?(?:[^"'\s]*?&(?:amp;)?)?phone=)\+?(\d{10,15})/gi)].map(m => normBR(m[1]));
+  const tel = [...h.matchAll(/href=["']tel:([+\d\s().-]{8,22})/gi)].map(m => normBR(m[1]));
+  const txt = h.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ');
+  const vis = [...txt.matchAll(/(?:\+?55[\s.-]?)?\(?\b([1-9]{2})\)?[\s.-]?(9[\s.-]?\d{4}|[2-5]\d{3})[\s.-]?(\d{4})\b/g)].map(m => normBR(m[1] + m[2] + m[3]));
+  const todos = [...wa, ...tel, ...vis].filter(d => d.length >= 12 && d.length <= 13);
+  const whats = wa.find(d => d.length >= 12), telefone = whats || todos.find(ehCel) || todos[0] || null;
+  const ig = [...h.matchAll(/instagram\.com\/([A-Za-z0-9_.]{2,30})/gi)].map(m => m[1]).find(x => !/^(p|explore|reel|reels|stories|accounts|sharer|tv)$/i.test(x));
+  const email = (h.match(/mailto:([\w.+-]+@[\w-]+\.[\w.-]+)/i) || [])[1] || null;
+  if (!telefone && !ig && !email) return null;
+  return { telefone, celular: telefone ? ehCel(telefone) : null, whatsapp: !!whats, instagram: ig ? 'https://instagram.com/' + ig : null, email };
+}
+async function enriquece(itens) {
+  itens = (Array.isArray(itens) ? itens : []).slice(0, 25).filter(x => x && x.id && urlOk(x.site));
+  const out = {};
+  for (let i = 0; i < itens.length; i += 6) // 6 sites por vez
+    await Promise.all(itens.slice(i, i + 6).map(async x => { const c = await contatosDoSite(urlOk(x.site)); if (c) out[x.id] = c; }));
+  return out;
+}
+
 async function salvaProspects(db, itens) {
   itens = (Array.isArray(itens) ? itens : []).slice(0, 500);
   const ids = [];
