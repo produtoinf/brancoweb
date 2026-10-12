@@ -3,3 +3,4 @@ node_modules/
 *.wav
 !voz/*.wav
 *_sfx.json
+!intro_sfx.json

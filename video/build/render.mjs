@@ -9,7 +9,7 @@ const [page = 'feed.html', W = '1080', H = '1350', nome = 'feed'] = process.argv
 const FPS = 30, here = new URL('.', import.meta.url).pathname;
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: +W, height: +H } });
-await p.goto('file://' + here + '../' + page + '?render');
+await p.goto('file://' + here + '../' + page + (page.includes('?') ? '&' : '?') + 'render');
 await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(800);
 const { DUR, SFX } = await p.evaluate(() => ({ DUR: window.DUR, SFX: window.SFX }));
 writeFileSync(`${here}${nome}_sfx.json`, JSON.stringify({ dur: DUR, sfx: SFX }));

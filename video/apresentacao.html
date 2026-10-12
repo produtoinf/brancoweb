@@ -77,6 +77,19 @@ html,body{height:100%;background:#000;overflow:hidden;cursor:none}
 #cur{position:absolute;left:0;top:0;width:44px;height:44px;z-index:20;pointer-events:none;filter:drop-shadow(0 4px 8px #000a);transform-origin:7px 5px}
 #rip{position:absolute;z-index:19;width:80px;height:80px;margin:-40px 0 0 -40px;border-radius:50%;border:3px solid #fff;opacity:0;pointer-events:none}
 .grain{position:absolute;inset:0;pointer-events:none;z-index:30;opacity:.045;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+/* versão vertical */
+.vert #v{width:1080px;height:1920px}
+.vert .sc{padding:0 70px}
+.vert .h br{display:none}.vert .h{font-size:94px}.vert .h.md{font-size:86px}
+.vert #chip{font-size:62px;margin:24px 0 0}
+.vert #msgs{width:100%}
+.vert #arc{top:1180px}.vert #arc2{top:1480px}
+.vert #logo h2{font-size:132px}
+.vert #s7 .h{font-size:82px}
+.vert #cards{grid-template-columns:1fr 1fr;gap:24px}.vert .cd{height:330px}
+.vert #stats{flex-direction:column;gap:30px}.vert .stt{width:820px;height:250px}
+.vert #steps{width:100%}.vert .stp h5{font-size:32px}.vert .stp p{max-width:280px}
+.vert #s11 h2{font-size:140px}.vert #s11 .ct{font-size:27px}
 #hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);font:500 14px var(--mono);color:#666;z-index:40;transition:opacity .6s}
 </style></head>
 <body>
@@ -141,6 +154,10 @@ html,body{height:100%;background:#000;overflow:hidden;cursor:none}
 </div></div>
 <div id="hint">clique ou aperte espaço para começar · F para tela cheia</div>
 <script>
+// ?vert = versão vertical 1080x1920 (Reels/Stories)
+const VERT=location.search.includes("vert"), W=VERT?1080:1920, H=VERT?1920:1080;
+if(VERT)document.documentElement.classList.add("vert");
+const PARK=[W-220,H+70], PK=[W-420,H-80];
 const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
 const cl=x=>Math.max(0,Math.min(1,x)), seg=(t,a,b)=>cl((t-a)/(b-a));
 const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
@@ -172,15 +189,15 @@ const T_BTN=A.s10+2.9;
 sfx(A.s11+.1,"impact",.6);
 
 const CUR=[
- {t:0,at:[1500,1000]},{t:A.s1+1.2,at:[1500,1000]},
+ {t:0,at:PK},{t:A.s1+1.2,at:PK},
  {t:T_CHIPC,sel:"#chip",dx:.62,dy:.62,click:1},
- {t:A.s2+.4,at:[1700,1150]},
- {t:A.s7+1.0,at:[1700,1150]},
+ {t:A.s2+.4,at:PARK},
+ {t:A.s7+1.0,at:PARK},
  ...T_CD.map(t=>({t,sel:`.cd:nth-child(${T_CD.indexOf(t)+1})`,dx:.55,dy:.7,click:1})),
- {t:A.s8+.3,at:[1700,1150]},
- {t:A.s10+1.4,at:[1700,1150]},
+ {t:A.s8+.3,at:PARK},
+ {t:A.s10+1.4,at:PARK},
  {t:T_BTN,sel:"#btn",dx:.6,dy:.62,click:1},
- {t:A.s11-.2,at:[1750,1150]},{t:DUR,at:[1750,1150]},
+ {t:A.s11-.2,at:PARK},{t:DUR,at:PARK},
 ];
 CUR.forEach(k=>k.click&&sfx(k.t,"click"));
 sfx(T_BTN+.25,"pop",.8);
@@ -202,9 +219,9 @@ function cursor(t){
 
 function render(t){
   // brilho de fundo se mexendo
-  $("g1").style.transform=`translate(${-200+Math.sin(t*.35)*260}px,${-350+Math.cos(t*.27)*160}px)`;
-  $("g2").style.transform=`translate(${1150+Math.cos(t*.3)*240}px,${380+Math.sin(t*.4)*180}px)`;
-  $("g3").style.transform=`translate(${700+Math.sin(t*.22+1)*400}px,${-100+Math.cos(t*.33)*220}px)`;
+  $("g1").style.transform=`translate(${W*-.1+Math.sin(t*.35)*260}px,${H*-.32+Math.cos(t*.27)*160}px)`;
+  $("g2").style.transform=`translate(${W*.6+Math.cos(t*.3)*240}px,${H*.35+Math.sin(t*.4)*180}px)`;
+  $("g3").style.transform=`translate(${W*.36+Math.sin(t*.22+1)*400}px,${H*-.1+Math.cos(t*.33)*220}px)`;
 
   // entrada e saída das cenas (fade + blur)
   SC.forEach(([id,a,b])=>{const el=$(id),i=eo(seg(t,a-.05,a+.45)),o=eio(seg(t,b-.35,b+.05));
@@ -254,7 +271,7 @@ function render(t){
 }
 window.render=render;window.DUR=DUR;window.SFX=SFX;
 
-function fit(){SCALE=Math.min(innerWidth/1920,innerHeight/1080);$("v").style.transform=`scale(${SCALE})`}
+function fit(){SCALE=Math.min(innerWidth/W,innerHeight/H);$("v").style.transform=`scale(${SCALE})`}
 if(location.search.includes("render")){$("hint").remove();render(0)}
 else{
   fit();addEventListener("resize",fit);render(0);
