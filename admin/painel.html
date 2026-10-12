@@ -671,9 +671,9 @@ function desenhaPros(){
   if(!L.length&&T.length)$('#pRes').innerHTML='<tr><td colspan="7" class="vazio">'+T.length+' resultado(s) escondido(s) pelos filtros acima.</td></tr>';
   else $('#pRes').innerHTML=L.length?L.map(x=>{const j=jaSalvo(x);return '<tr><td><input type="checkbox" class="pchk" data-pid="'+esc(x.id)+'"'+(pros.sel.has(x.id)?' checked':'')+'></td>'+
     '<td><b>'+esc(x.nome)+'</b><small>'+esc(x.categoria||'')+(x.avaliacao?' · ★ '+x.avaliacao+' ('+x.avaliacoes+')':'')+'</small>'+(j?'<span class="tag ok">no follow-up</span>':'')+'</td>'+
-    '<td>'+(x.telefone?'<span class="money">'+esc(fone(x.telefone))+'</span><br>'+(x.celular||x.whatsapp?'<span class="tag ok">whatsapp</span>':x.celular===false?'<span class="tag">fixo</span>':'')+(x.telSite?' <span class="tag" title="encontrado no site do estabelecimento">do site</span>':''):
+    '<td>'+(x.telefone?'<span class="money">'+esc(fone(x.telefone))+'</span><br>'+(x.celular||x.whatsapp?'<span class="tag ok">whatsapp</span>':x.celular===false?'<span class="tag">fixo</span>':'')+(x.telSite?' <span class="tag">'+(x.telSite==='google'?'do Google':'do site')+'</span>':''):
       // sem telefone na fonte: atalhos para achar o contato no Google e no Instagram
-      (x.site&&!x.doSite?'<span class="label">procurando…</span>':'<a class="pill" target="_blank" rel="noopener noreferrer" title="buscar o telefone no Google" href="https://www.google.com/search?q='+encodeURIComponent(x.nome+' '+(x.cidade||'')+' telefone')+'">🔎</a>'))+'</td>'+
+      ((x.site||pCfg?.google)&&!x.doSite?'<span class="label">procurando…</span>':'<a class="pill" target="_blank" rel="noopener noreferrer" title="buscar o telefone no Google" href="https://www.google.com/search?q='+encodeURIComponent(x.nome+' '+(x.cidade||'')+' telefone')+'">🔎</a>'))+'</td>'+
     '<td>'+(x.site?'<a class="pill" href="'+esc(x.site)+'" target="_blank" rel="noopener noreferrer">'+esc(host(x.site))+' ↗</a>':'<span class="tag hot">sem site</span>')+'</td>'+
     '<td>'+[x.instagram&&'<a class="pill" href="'+esc(/^https?:/.test(x.instagram)?x.instagram:'https://instagram.com/'+x.instagram.replace('@',''))+'" target="_blank" rel="noopener noreferrer">insta ↗</a>',x.redeSocial&&!x.instagram&&'<a class="pill" href="'+esc(x.redeSocial)+'" target="_blank" rel="noopener noreferrer">rede ↗</a>',x.email&&'<span class="pill">'+esc(x.email)+'</span>'].filter(Boolean).join(' ')+'</td>'+
     '<td><small style="margin:0">'+esc(x.endereco||'—')+'</small></td>'+
@@ -685,16 +685,17 @@ function desenhaPros(){
 ['pCel','pSem'].forEach(id=>$('#'+id).onchange=desenhaPros);
 // abre o site de quem não veio com celular e pega o WhatsApp/telefone/Instagram de lá
 async function enriquecer(){
-  const id=pros.lugar+pros.total,alvo=pros.itens.filter(x=>x.site&&!x.celular&&!x.whatsapp&&!x.doSite);if(!alvo.length)return;
+  const id=pros.lugar+pros.total,alvo=pros.itens.filter(x=>(x.site||pCfg?.google)&&!x.celular&&!x.whatsapp&&!x.doSite);if(!alvo.length)return;
   const base=$('#pStatus').innerHTML;let feitos=0,achou=0;
   for(let i=0;i<alvo.length;i+=20){if(pros.lugar+pros.total!==id)return; // nova busca: para
-    const lote=alvo.slice(i,i+20);$('#pStatus').innerHTML=base+'<br>🔎 procurando WhatsApp nos sites… '+feitos+'/'+alvo.length;
-    try{const r=await api('/api/prospeccao/enriquecer',{method:'POST',body:{itens:lote.map(x=>({id:x.id,site:x.site}))}});
+    const lote=alvo.slice(i,i+20);$('#pStatus').innerHTML=base+'<br>🔎 procurando WhatsApp'+(pCfg?.google?' (sites + Google)':' nos sites')+'… '+feitos+'/'+alvo.length;
+    try{const r=await api('/api/prospeccao/enriquecer',{method:'POST',body:{itens:lote.map(x=>({id:x.id,site:x.site,nome:x.nome,endereco:x.endereco,cidade:x.cidade}))}});
       lote.forEach(x=>{const c=r[x.id];x.doSite=true;if(!c)return;
-        if(c.telefone&&(!x.telefone||(c.celular&&!x.celular))){x.telefone=c.telefone;x.celular=c.celular;x.whatsapp=c.whatsapp;x.telSite=true;achou++}
+        if(c.telefone&&(!x.telefone||(c.celular&&!x.celular))){x.telefone=c.telefone;x.celular=c.celular;x.whatsapp=c.whatsapp;x.telSite=c.google?'google':'site';achou++}
+        x.site=x.site||c.site||null;
         x.instagram=x.instagram||c.instagram;x.email=x.email||c.email})}catch(e){break}
     feitos+=lote.length;desenhaPros()}
-  if(pros.lugar+pros.total===id)$('#pStatus').innerHTML=base+'<br>✓ '+achou+' contato'+(achou===1?'':'s')+' encontrado'+(achou===1?'':'s')+' nos sites dos estabelecimentos';
+  if(pros.lugar+pros.total===id)$('#pStatus').innerHTML=base+'<br>✓ '+achou+' contato'+(achou===1?'':'s')+' encontrado'+(achou===1?'':'s')+(pCfg?.google?' nos sites e no Google':' nos sites dos estabelecimentos');
 }
 const abrirWa=(x,txt)=>window.open('https://api.whatsapp.com/send?phone='+x.telefone+'&text='+encodeURIComponent(txt),'_blank','noopener');
 /* estados e cidades (IBGE) */

@@ -252,7 +252,7 @@ async function api(req, db, env, caminho) {
     if (seg[1] === 'salvar' && m === 'POST') return json(await salvaProspects(db, b.itens));
     if (seg[1] === 'enriquecer' && m === 'POST') {
       if (await excedeu(db, 'enriq:' + ip(req), 120, 60)) return erro('Muitas consultas seguidas. Espere alguns minutos.', 429);
-      return json(await enriquece(b.itens));
+      return json(await enriquece(env, b.itens));
     }
     if (m === 'GET') {
       if (await excedeu(db, 'busca:' + ip(req), 60, 60)) return erro('Muitas buscas seguidas. Espere alguns minutos.', 429);
@@ -561,11 +561,33 @@ async function contatosDoSite(url) {
   if (!telefone && !ig && !email) return null;
   return { telefone, celular: telefone ? ehCel(telefone) : null, whatsapp: !!whats, instagram: ig ? 'https://instagram.com/' + ig : null, email };
 }
-async function enriquece(itens) {
-  itens = (Array.isArray(itens) ? itens : []).slice(0, 25).filter(x => x && x.id && urlOk(x.site));
+// Google Places: pega o telefone (e o site) de um estabelecimento pelo nome + cidade
+async function telDoGoogle(env, x) {
+  try {
+    const r = await fetch('https://places.googleapis.com/v1/places:searchText', { method: 'POST', signal: AbortSignal.timeout(8000),
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': env.GOOGLE_PLACES_KEY, 'X-Goog-FieldMask': 'places.internationalPhoneNumber,places.nationalPhoneNumber,places.websiteUri' },
+      body: JSON.stringify({ textQuery: [x.nome, x.endereco || x.cidade].filter(Boolean).join(' ').slice(0, 200), languageCode: 'pt-BR', pageSize: 1 }) });
+    const pl = r.ok ? (await r.json()).places?.[0] : null; if (!pl) return null;
+    const d = normBR(String(pl.internationalPhoneNumber || pl.nationalPhoneNumber || '').replace(/^\+/, ''));
+    return { telefone: d.length >= 12 && d.length <= 13 ? d : null, site: pl.websiteUri || null };
+  } catch { return null; }
+}
+async function enriquece(env, itens) {
+  const google = !!env.GOOGLE_PLACES_KEY;
+  itens = (Array.isArray(itens) ? itens : []).slice(0, 25).filter(x => x && x.id && (urlOk(x.site) || (google && x.nome)));
   const out = {};
-  for (let i = 0; i < itens.length; i += 6) // 6 sites por vez
-    await Promise.all(itens.slice(i, i + 6).map(async x => { const c = await contatosDoSite(urlOk(x.site)); if (c) out[x.id] = c; }));
+  for (let i = 0; i < itens.length; i += 6) // 6 por vez
+    await Promise.all(itens.slice(i, i + 6).map(async x => {
+      let c = urlOk(x.site) ? await contatosDoSite(urlOk(x.site)) : null;
+      if (google && !c?.whatsapp && !c?.celular && x.nome) { // site não tinha celular: pergunta ao Google
+        const g = await telDoGoogle(env, x);
+        const s = g?.site && !urlOk(x.site) ? await contatosDoSite(urlOk(g.site)) : null; // site novo achado pelo Google
+        if (s?.telefone && (s.whatsapp || s.celular || !c?.telefone)) c = { ...c, ...s, google: false };
+        else if (g?.telefone && (!c?.telefone || ehCel(g.telefone))) c = { ...c, telefone: g.telefone, celular: ehCel(g.telefone), whatsapp: false, google: true };
+        if (c && g?.site && !urlOk(x.site)) c.site = g.site;
+      }
+      if (c) out[x.id] = c;
+    }));
   return out;
 }
 

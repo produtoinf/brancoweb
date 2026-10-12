@@ -48,6 +48,7 @@ PROSPECÇÃO COM GOOGLE MAPS (opcional, bem mais completo que o OpenStreetMap)
    2. APIs e serviços > Credenciais > Criar chave de API > restrinja a chave à "Places API (New)"
    3. Worker branco-admin > Settings > Variables and Secrets > Add > Secret
       Name: GOOGLE_PLACES_KEY   Value: (a chave)
+   Com a chave, quem vier sem celular (TomTom/HERE) tem o telefone completado sozinho pelo Google.
    Sem a chave, a prospecção usa o OpenStreetMap (grátis, mas com menos estabelecimentos).
 
 O QUE O WORKER FAZ
