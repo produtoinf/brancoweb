@@ -801,7 +801,7 @@ main,.ct,.foot{position:relative;z-index:1}
 
   /* 3) túnel de estrelas que acelera com a rolagem */
   var cv=document.getElementById('warp'), ctx=cv.getContext('2d'), W, Hc, dpr, stars=[], N=window.innerWidth<700?140:260;
-  function size(){dpr=Math.min(devicePixelRatio||1,2);W=innerWidth;Hc=innerHeight;cv.width=W*dpr;cv.height=Hc*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
+  function size(){dpr=Math.min(devicePixelRatio||1,1.5);W=innerWidth;Hc=innerHeight;cv.width=W*dpr;cv.height=Hc*dpr;ctx.setTransform(dpr,0,0,dpr,0,0)}
   function star(far){return {x:(Math.random()-.5)*2,y:(Math.random()-.5)*2,z:far?1:Math.random()*.95+.05,pz:0}}
   size(); addEventListener('resize',size);
   for(var i=0;i<N;i++){var s=star(false);s.pz=s.z;stars.push(s)}
@@ -813,15 +813,16 @@ main,.ct,.foot{position:relative;z-index:1}
       speed+=(target-speed)*.08; vel*=.9;
       ctx.clearRect(0,0,W,Hc);
       var cx=W/2, cy=Hc/2, k=Math.max(W,Hc)*.5;
+      /* desenha em 6 grupos (menos trocas de pincel = bem mais leve) */
+      var G=6, paths=[]; for(var g=0;g<G;g++) paths.push(new Path2D());
       for(var j=0;j<stars.length;j++){
         var s=stars[j]; s.pz=s.z; s.z-=speed*dt/16;
         if(s.z<=.02){stars[j]=s=star(true); s.pz=s.z; continue;}
         var sx=cx+s.x/s.z*k, sy=cy+s.y/s.z*k, px=cx+s.x/s.pz*k, py=cy+s.y/s.pz*k;
         if(sx<-50||sx>W+50||sy<-50||sy>Hc+50){stars[j]=star(true);continue;}
-        var a=clamp((1-s.z)*.55,0,.55), w=clamp((1-s.z)*1.6,.3,1.6);
-        ctx.strokeStyle='rgba(236,236,238,'+a.toFixed(3)+')'; ctx.lineWidth=w;
-        ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(sx+.01,sy+.01); ctx.stroke();
+        var gi=Math.max(0,Math.min(G-1,Math.floor((1-s.z)*G)))|0; paths[gi].moveTo(px,py); paths[gi].lineTo(sx+.01,sy+.01);
       }
+      for(var g=0;g<G;g++){var f=(g+.5)/G; ctx.strokeStyle='rgba(236,236,238,'+(f*.55).toFixed(3)+')'; ctx.lineWidth=clamp(f*1.6,.3,1.6); ctx.stroke(paths[g]);}
     }
     requestAnimationFrame(loop);
   })(last);
@@ -1186,7 +1187,7 @@ document.addEventListener('DOMContentLoaded',function(){
     ed.innerHTML='';var L=F[i],els=L.map(function(l,k){var d=document.createElement('div');d.className='cx__ln';d.innerHTML='<span class="cx__n">'+String(k+1).padStart(2,'0')+'</span>';var c=document.createElement('span');c.className='cx__c '+l[0];d.appendChild(c);ed.appendChild(d);return c});
     if(reduce){els.forEach(function(e,k){e.textContent=L[k][1]});return}
     var r=0,c=0,cu=document.createElement('i');cu.className='cx__cur';
-    (function t(){if(my!==tok)return;
+    (function t(){if(my!==tok)return;if(st.classList.contains('off')){setTimeout(t,500);return}
       if(r>=L.length){els[L.length-1].appendChild(cu);setTimeout(function(){if(my===tok)abre((cur+1)%3)},5000);return}
       els[r].textContent=L[r][1].slice(0,c++);els[r].appendChild(cu);
       if(c>L[r][1].length){r++;c=0;setTimeout(t,110)}else setTimeout(t,24+Math.random()*30)})();
@@ -1194,9 +1195,7 @@ document.addEventListener('DOMContentLoaded',function(){
   tabs.forEach(function(t,k){t.addEventListener('click',function(){abre(k)})});
   var io=new IntersectionObserver(function(es){if(es[0].isIntersecting){io.disconnect();abre(0)}},{threshold:.3});io.observe(st);
   /* interação: inclina com o mouse / dedo */
-  function mexe(x,y){var r=st.getBoundingClientRect(),px=(x-r.left)/r.width-.5,py=(y-r.top)/r.height-.5;sc.style.transform='rotateX('+(6-py*16)+'deg) rotateY('+(-10+px*24)+'deg)'}
-  st.addEventListener('pointermove',function(e){mexe(e.clientX,e.clientY)});
-  st.addEventListener('pointerleave',function(){sc.style.transform=''});
+
 });
 </script>
 <style id="cp-hover-css">
@@ -1297,9 +1296,7 @@ document.addEventListener('DOMContentLoaded',function(){
   pn.addEventListener('click',toggle);
   pn.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();toggle()}});
   /* inclinação com o mouse por variáveis (não sobrescreve a vista explodida) */
-  st.addEventListener('pointermove',function(e){var r=st.getBoundingClientRect(),px=(e.clientX-r.left)/r.width-.5,py=(e.clientY-r.top)/r.height-.5;
-    sc.style.setProperty('--rx',(-py*14)+'deg');sc.style.setProperty('--ry',(px*22)+'deg');sc.style.transform=''},true);
-  st.addEventListener('pointerleave',function(){sc.style.setProperty('--rx','0deg');sc.style.setProperty('--ry','0deg')});
+
 });
 </script>
 <style id="cx3d2-css">
@@ -1343,4 +1340,39 @@ document.addEventListener('DOMContentLoaded',function(){
 .cx__lay{display:none}
 @media (max-width:760px){.cx__pc.scr::before{opacity:.7}.cx.boom .cx__pc{transform:translate3d(calc(var(--x)*.6),calc(var(--y)*.6),calc(var(--z)*.7))}}
 </style>
+<style id="cx-perf-css">
+/* ===== desempenho do editor 3D ===== */
+.cx__scene{transform:scale(var(--s)) rotateX(var(--bx)) rotateY(var(--by)) rotateZ(var(--bz))!important;will-change:transform}
+.cx__float{will-change:transform;transform:rotateX(var(--tx,0deg)) rotateY(var(--ty,0deg))}
+.cx .pc{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:rgba(22,24,27,.96)}
+.cx .pc.cx__b{will-change:transform}
+.cx__pc,.cx__base,.cx__chip,.cx__rail{backface-visibility:hidden}
+.cx.off .cx__float,.cx.off .cx__sym,.cx.off .cx__cur{animation-play-state:paused}
+@media (hover:none),(pointer:coarse),(max-width:760px){
+  .cx__pc.glass,.cx__pc.metal,.cx__pc.grid,.cx__pc.gedge{box-shadow:0 10px 24px rgba(0,0,0,.45)}
+  .cx__pc.gbar::after{box-shadow:0 0 10px #a8ff53}
+  .cx .pc.cx__b{box-shadow:0 14px 30px rgba(0,0,0,.5)!important}
+  .cx.boom .cx__pc:nth-child(n+8){display:none}
+  .cx__float{animation:none}
+}
+</style>
+<script id="cx-perf-js">
+document.addEventListener('DOMContentLoaded',function(){
+  var st=document.getElementById('cx-stage');if(!st)return;
+  var fl=st.querySelector('.cx__float');if(!fl)return;
+  var fino=matchMedia('(hover:hover) and (pointer:fine)').matches;
+  var tx=0,ty=0,gx=0,gy=0,raf=0,r=null;
+  function passo(){tx+=(gx-tx)*.12;ty+=(gy-ty)*.12;fl.style.setProperty('--tx',tx.toFixed(2)+'deg');fl.style.setProperty('--ty',ty.toFixed(2)+'deg');
+    raf=(Math.abs(gx-tx)>.02||Math.abs(gy-ty)>.02)?requestAnimationFrame(passo):0}
+  function vai(){if(!raf)raf=requestAnimationFrame(passo)}
+  if(fino){
+    st.addEventListener('pointerenter',function(){r=st.getBoundingClientRect()});
+    st.addEventListener('pointermove',function(e){if(!r)r=st.getBoundingClientRect();gx=-((e.clientY-r.top)/r.height-.5)*12;gy=((e.clientX-r.left)/r.width-.5)*18;vai()},{passive:true});
+    st.addEventListener('pointerleave',function(){gx=0;gy=0;r=null;vai()});
+    addEventListener('scroll',function(){r=null},{passive:true});
+  }
+  /* pausa animações quando a seção sai da tela */
+  new IntersectionObserver(function(es){st.classList.toggle('off',!es[0].isIntersecting)},{rootMargin:'100px'}).observe(st);
+});
+</script>
 </body></html>
