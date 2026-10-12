@@ -495,7 +495,7 @@ async function buscaTomTom(env, f) {
     const d = await pega(`https://api.tomtom.com/search/2/search/${encodeURIComponent(q)}.json?key=${k}&lat=${pos.lat}&lon=${pos.lon}&radius=${raioBusca(f)}&limit=100&ofs=${ofs}&idxSet=POI&language=pt-BR${cc ? '&countrySet=' + cc : ''}`);
     for (const x of d.results || []) {
       const p = x.poi || {}, a = x.address || {}, tel = telefone(p.phone, f.pais);
-      itens.push({ id: 't:' + x.id, nome: p.name, categoria: p.classifications?.[0]?.names?.[0]?.name || p.categories?.[0] || n?.nome || '', telefone: tel?.num || null, celular: tel?.cel ?? null,
+      itens.push({ id: 't:' + x.id, nome: p.name, categoria: n?.nome || p.classifications?.[0]?.names?.[0]?.name || p.categories?.[0] || '', // nicho em português; a categoria da TomTom vem em inglês telefone: tel?.num || null, celular: tel?.cel ?? null,
         whatsapp: false, site: p.url ? (/^https?:/i.test(p.url) ? p.url : 'https://' + p.url) : null, instagram: null, email: null,
         endereco: a.freeformAddress || null, cidade: a.municipality || null, maps: mapaLink(p.name, x.position?.lat, x.position?.lon) });
     }

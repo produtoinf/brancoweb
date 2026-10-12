@@ -724,12 +724,16 @@ function sequencia(L){let i=0;const el=document.createElement('div');el.classNam
   const mostra=()=>{if(i>=L.length){toast('Sequência concluída 🎉');return fim()}const x=L[i];
     el.innerHTML='<div class="box"><div class="top"><span class="label">'+(i+1)+' de '+L.length+'</span><button class="ghost" data-s="parar">Parar ✕</button></div><div class="bar"><i style="width:'+(i/L.length*100)+'%"></i></div>'+
       '<h2 style="font-size:1.3rem">'+esc(x.nome)+'</h2><p class="label" style="margin:6px 0 14px">'+esc(fone(x.telefone))+(x.celular===false?' · telefone fixo, pode não ter WhatsApp':'')+' · '+(x.site?esc(host(x.site)):'sem site')+'</p>'+
-      '<textarea id="seqTxt">'+esc(msgPara(x))+'</textarea><div class="acts mt"><button class="solid" data-s="abrir">1. Abrir WhatsApp ↗</button><button class="ghost" data-s="enviei">2. Enviei → próximo</button><button class="ghost" data-s="pular">Pular</button></div>'+
-      '<p class="dica mt">Ao marcar “enviei”, o contato vai para o follow-up com lembretes em 2, 7 e 15 dias.</p></div>';
+      '<textarea id="seqTxt">'+esc(msgPara(x))+'</textarea><div class="acts mt"><button class="solid" data-s="ir">Enviar no WhatsApp e próximo → <span class="label" style="color:inherit;opacity:.6">(Enter)</span></button><button class="ghost" data-s="pular">Pular</button></div>'+
+      '<p class="dica mt">Cada envio vai para o follow-up com lembretes em 2, 7 e 15 dias. Enter = enviar e próximo · Esc = parar.</p></div>';
     el.querySelector('[data-s=parar]').onclick=fim;
     el.querySelector('[data-s=pular]').onclick=()=>{i++;mostra()};
-    el.querySelector('[data-s=abrir]').onclick=()=>abrirWa(x,$('#seqTxt').value);
-    el.querySelector('[data-s=enviei]').onclick=async()=>{try{let id=jaSalvo(x);if(!id){const r=await salvarPros([x]);id=r.ids[0]}if(id)await api('/api/contatos/'+id+'/enviei',{method:'POST',body:{hoje:hojeL()}});}catch(e){toast(e.erro||'Erro ao registrar')}i++;mostra()};
+    // um clique: abre o WhatsApp com a mensagem, registra no follow-up e já mostra o próximo
+    const ir=async()=>{abrirWa(x,$('#seqTxt').value);i++;mostra();
+      try{let id=jaSalvo(x);if(!id){const r=await salvarPros([x]);id=r.ids[0]}if(id)await api('/api/contatos/'+id+'/enviei',{method:'POST',body:{hoje:hojeL()}})}catch(e){toast(e.erro||'Erro ao registrar '+x.nome)}};
+    el.querySelector('[data-s=ir]').onclick=ir;
+    el.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&e.target.id!=='seqTxt'){e.preventDefault();ir()}if(e.key==='Escape')fim()};
+    el.querySelector('[data-s=ir]').focus();
   };mostra()}
 
 /* ---------- FOLLOW-UP ---------- */
