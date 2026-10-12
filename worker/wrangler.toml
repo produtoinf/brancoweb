@@ -1,0 +1,9 @@
+# Para quem usa a linha de comando (wrangler). Pelo painel da Cloudflare não precisa deste arquivo.
+name = "branco-admin"
+main = "worker.js"
+compatibility_date = "2025-07-18"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "branco"
+database_id = "COLOQUE-AQUI-O-ID-DO-BANCO"

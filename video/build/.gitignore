@@ -1,0 +1,6 @@
+node_modules/
+*_mudo.mp4
+*.wav
+!voz/*.wav
+*_sfx.json
+!intro_sfx.json

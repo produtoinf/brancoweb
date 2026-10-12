@@ -1,0 +1,14 @@
+VÍDEOS DA BRANCO
+
+video/apresentacao.html   apresentação 16:9 (no estilo do vídeo de referência)
+                          -> abra no notebook, aperte F (tela cheia) e depois ESPAÇO para começar, e filme a tela.
+video/feed.html           versão 4:5 para o feed
+video/index.html          versão 9:16 para Reels/Stories
+
+Para gerar os MP4 de novo:  sh video/build/make.sh
+(os textos do feed ficam em narracao.txt; depois de mudar, rode python3 timeline.py)
+
+REELS COM A SUA FILMAGEM (video/branco-reels.mp4)
+  node render.mjs "apresentacao.html?vert" 1080 1920 vertical && python3 sfx.py vertical && python3 sfx.py intro && node legenda.mjs
+  sh reel.sh <sua-filmagem.mp4>
+  (em reel.sh: CX/CY = centro da tela do notebook no vídeo; Z0 = quando o zoom começa)

@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Branco — Apresentação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050506;--fg:#f2f2f4;--mute:#8e8e96;--line:#ffffff1a;--ok:#5fe39a;
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#000;overflow:hidden;cursor:none}
+#wrap{position:fixed;inset:0;display:grid;place-items:center}
+#v{position:relative;width:1920px;height:1080px;flex:none;overflow:hidden;color:var(--fg);font-family:var(--display);background:var(--bg)}
+.glow{position:absolute;border-radius:50%;pointer-events:none;will-change:transform}
+#g1{width:1300px;height:1300px;background:radial-gradient(circle,#9aa3c455 0,#5d647e22 35%,transparent 68%)}
+#g2{width:1100px;height:1100px;background:radial-gradient(circle,#ffffff2e 0,#9a9aa814 40%,transparent 70%)}
+#g3{width:900px;height:900px;background:radial-gradient(circle,#6f78993a 0,transparent 65%)}
+.sc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;will-change:opacity,filter,transform}
+.h{font:800 104px/1.04 var(--display);letter-spacing:-.045em}
+.h.md{font-size:88px}
+.hl{background:linear-gradient(92deg,#ffffff 0%,#a9adbb 60%,#6d7080 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.wd{display:inline-block;will-change:transform,opacity,filter}
+.label{font:600 22px var(--mono);letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+.glass{background:linear-gradient(160deg,#ffffff14,#ffffff06);border:1px solid var(--line);border-radius:26px;backdrop-filter:blur(6px);box-shadow:0 30px 80px #0008}
+
+/* 1 */
+#chip{display:inline-flex;align-items:center;gap:16px;margin-left:22px;padding:14px 34px 14px 26px;border-radius:999px;border:1.5px solid #ffffff40;font:800 64px var(--display);letter-spacing:-.03em;vertical-align:middle;transform-origin:center}
+#chip svg{width:46px;height:46px}
+/* 2 */
+#msgs{margin-top:60px;display:grid;gap:22px;width:860px}
+.msg{display:flex;align-items:center;gap:24px;padding:24px 30px;text-align:left}
+.av{flex:none;width:68px;height:68px;border-radius:50%;display:grid;place-items:center;background:#ffffff1c;font:700 24px var(--mono)}
+.msg .tx{flex:1}.msg .tx b{display:flex;justify-content:space-between;font:700 25px var(--display)}.msg .tx b i{font:500 19px var(--mono);font-style:normal;color:var(--mute)}
+.msg .tx span{display:block;margin-top:4px;font:500 25px var(--display);color:#c9cad1}
+.msg .dt{flex:none;width:18px;height:18px;border-radius:50%;background:var(--ok);box-shadow:0 0 18px var(--ok)}
+/* 6 · logo */
+#arc,#arc2{position:absolute;left:50%;top:640px;width:2600px;height:1400px;margin-left:-1300px;border-radius:50%;
+  border-top:3px solid #ffffffd0;box-shadow:0 -30px 120px #ffffff40,inset 0 40px 120px #ffffff22;background:radial-gradient(60% 40% at 50% 0,#9aa3c42a,transparent 70%)}
+#logo{display:flex;flex-direction:column;align-items:center;gap:26px;margin-top:-120px}
+#logo img{width:190px}
+#logo h2{font:800 150px/1 var(--display);letter-spacing:.2em;margin-right:-.2em}
+#logo p{font:600 24px var(--mono);letter-spacing:.3em;color:#c9cad1}
+/* 7 · cards */
+#s7{align-items:flex-start;text-align:left;padding:0 140px}
+#s7 .h{font-size:84px;margin-top:20px}
+#cards{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;margin-top:70px;width:100%}
+.cd{height:380px;padding:34px;display:flex;flex-direction:column;justify-content:space-between;transition:none}
+.cd small{font:600 20px var(--mono);color:var(--mute)}
+.cd h4{margin-top:14px;font:800 40px/1.05 var(--display);letter-spacing:-.03em}
+.cd p{font:500 21px/1.4 var(--display);color:#b9bac2}
+.cd.on{background:linear-gradient(160deg,#f2f2f4,#c9cad1);color:#0a0a0b;border-color:#fff;box-shadow:0 30px 100px #ffffff30}
+.cd.on small,.cd.on p{color:#3a3a40}
+/* 8 · números */
+#stats{display:flex;gap:40px}
+.stt{width:460px;height:300px;padding:40px;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left}
+.stt b{font:800 130px/1 var(--display);letter-spacing:-.05em}
+.stt span{margin-top:14px;font:500 26px var(--display);color:#b9bac2}
+/* 9 · passos */
+#steps{position:relative;margin-top:90px;width:1300px;display:grid;grid-template-columns:repeat(3,1fr)}
+#track{position:absolute;left:16.6%;right:16.6%;top:38px;height:4px;background:#ffffff1f;border-radius:4px}
+#track i{display:block;height:100%;width:0;background:#fff;border-radius:4px;box-shadow:0 0 20px #fffa}
+.stp{position:relative;display:flex;flex-direction:column;align-items:center;gap:22px}
+.stp .n{width:80px;height:80px;border-radius:50%;display:grid;place-items:center;font:800 32px var(--display);background:#141418;border:2px solid #ffffff30}
+.stp.on .n{background:#fff;color:#0a0a0b;border-color:#fff;box-shadow:0 0 50px #ffffff70}
+.stp h5{font:800 36px var(--display);letter-spacing:-.02em}
+.stp p{font:500 22px/1.4 var(--display);color:#a9aab2;max-width:330px}
+#arc2{top:860px}
+/* 10 · cta */
+#s10 .sub{margin-top:40px;font:500 32px var(--display);color:#b9bac2}
+#btn{margin-top:46px;display:inline-flex;align-items:center;gap:18px;padding:30px 56px;border-radius:999px;background:#fff;color:#0a0a0b;font:700 32px var(--display);box-shadow:0 0 70px #ffffff40}
+/* 11 · final */
+#s11{background:#f2f2f4;color:#0a0a0b}
+#s11 img{width:200px;filter:invert(1) brightness(.15)}
+#s11 h2{margin-top:30px;font:800 160px/1 var(--display);letter-spacing:.2em;margin-right:-.2em}
+#s11 p{margin-top:24px;font:600 26px var(--mono);letter-spacing:.24em;color:#55555c}
+#s11 .ct{margin-top:60px;font:600 30px var(--mono);letter-spacing:.04em;color:#0a0a0b}
+
+#cur{position:absolute;left:0;top:0;width:44px;height:44px;z-index:20;pointer-events:none;filter:drop-shadow(0 4px 8px #000a);transform-origin:7px 5px}
+#rip{position:absolute;z-index:19;width:80px;height:80px;margin:-40px 0 0 -40px;border-radius:50%;border:3px solid #fff;opacity:0;pointer-events:none}
+.grain{position:absolute;inset:0;pointer-events:none;z-index:30;opacity:.045;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+/* versão vertical */
+.vert #v{width:1080px;height:1920px}
+.vert .sc{padding:0 70px}
+.vert .h br{display:none}.vert .h{font-size:94px}.vert .h.md{font-size:86px}
+.vert #chip{font-size:62px;margin:24px 0 0}
+.vert #msgs{width:100%}
+.vert #arc{top:1180px}.vert #arc2{top:1480px}
+.vert #logo h2{font-size:132px}
+.vert #s7 .h{font-size:82px}
+.vert #cards{grid-template-columns:1fr 1fr;gap:24px}.vert .cd{height:330px}
+.vert #stats{flex-direction:column;gap:30px}.vert .stt{width:820px;height:250px}
+.vert #steps{width:100%}.vert .stp h5{font-size:32px}.vert .stp p{max-width:280px}
+.vert #s11 h2{font-size:140px}.vert #s11 .ct{font-size:27px}
+#hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);font:500 14px var(--mono);color:#666;z-index:40;transition:opacity .6s}
+</style></head>
+<body>
+<div id="wrap"><div id="v">
+  <div id="g1" class="glow"></div><div id="g2" class="glow"></div><div id="g3" class="glow"></div>
+
+  <section id="s1" class="sc"><h1 class="h md"><span class="split" data-d="0">Todo cliente começa com uma</span><span id="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>busca</span></h1></section>
+
+  <section id="s2" class="sc">
+    <h1 class="h"><span class="split" data-d="0">E se ele te encontrasse</span><br><span class="split" data-d=".35"><span class="hl">todos os dias?</span></span></h1>
+    <div id="msgs">
+      <div class="msg glass"><span class="av">JA</span><div class="tx"><b>Novo contato <i>agora</i></b><span>Oi! Vi seu site, vocês atendem no sábado?</span></div><span class="dt"></span></div>
+      <div class="msg glass"><span class="av">RM</span><div class="tx"><b>Novo contato <i>agora</i></b><span>Boa tarde! Quanto fica o orçamento?</span></div><span class="dt"></span></div>
+      <div class="msg glass"><span class="av">CS</span><div class="tx"><b>Novo contato <i>agora</i></b><span>Vi o anúncio no Instagram, quero agendar.</span></div><span class="dt"></span></div>
+    </div>
+  </section>
+
+  <section id="s3" class="sc"><h1 class="h"><span class="split" data-d="0">Tem Instagram, mas ninguém</span><br><span class="split" data-d=".3"><span class="hl">te acha no Google.</span></span></h1></section>
+  <section id="s4" class="sc"><h1 class="h"><span class="split" data-d="0">Impulsionou o post e</span><br><span class="split" data-d=".3"><span class="hl">não vendeu nada.</span></span></h1></section>
+  <section id="s5" class="sc"><h1 class="h"><span class="split" data-d="0">O problema não é anunciar.</span><br><span class="split" data-d="1.0">É anunciar <span class="hl">sem um site que vende.</span></span></h1></section>
+
+  <section id="s6" class="sc"><div id="arc"></div>
+    <div id="logo"><img src="logo.png" alt=""><h2>BRANCO</h2><p>SITES · VÍDEOS · TRÁFEGO PAGO</p></div></section>
+
+  <section id="s7" class="sc">
+    <span class="label split" data-d="0">( o que você ganha )</span>
+    <h1 class="h"><span class="split" data-d=".15">Mais clientes, com uma</span><br><span class="split" data-d=".4"><span class="hl">presença que vende.</span></span></h1>
+    <div id="cards">
+      <div class="cd glass"><div><small>01</small><h4>Site sob<br>medida</h4></div><p>Rápido, bonito e perfeito no celular.</p></div>
+      <div class="cd glass"><div><small>02</small><h4>Contato no<br>WhatsApp</h4></div><p>Um toque e o cliente já está falando com você.</p></div>
+      <div class="cd glass"><div><small>03</small><h4>Anúncios para<br>quem compra</h4></div><p>Instagram e Google mostrando seu negócio ao público certo.</p></div>
+      <div class="cd glass"><div><small>04</small><h4>Relatórios<br>claros</h4></div><p>Você vê de onde vem cada contato.</p></div>
+    </div>
+  </section>
+
+  <section id="s8" class="sc"><div id="stats">
+    <div class="stt glass"><b id="n1">+0</b><span>projetos no ar</span></div>
+    <div class="stt glass"><b id="n2">0%</b><span>pensado para o celular</span></div>
+    <div class="stt glass"><b id="n3">0h</b><span>seu site trabalhando</span></div>
+  </div></section>
+
+  <section id="s9" class="sc">
+    <h1 class="h md"><span class="split" data-d="0">Simples assim, em <span class="hl">3 passos.</span></span></h1>
+    <div id="steps"><div id="track"><i></i></div>
+      <div class="stp"><span class="n">1</span><h5>Uma boa conversa</h5><p>Entendemos seu negócio e o seu cliente.</p></div>
+      <div class="stp"><span class="n">2</span><h5>Site no ar</h5><p>Criamos o site com a cara da sua marca.</p></div>
+      <div class="stp"><span class="n">3</span><h5>Anúncios rodando</h5><p>Levamos o público certo até você.</p></div>
+    </div>
+  </section>
+
+  <section id="s10" class="sc"><div id="arc2"></div>
+    <h1 class="h"><span class="split" data-d="0">Seu próximo cliente está</span><br><span class="split" data-d=".3">procurando você <span class="hl">agora.</span></span></h1>
+    <p class="sub split" data-d=".9">Vamos fazer ele te encontrar.</p>
+    <span id="btn">Quero meu orçamento <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+  </section>
+
+  <section id="s11" class="sc"><img src="logo.png" alt=""><h2>BRANCO</h2><p>SITES · VÍDEOS · TRÁFEGO PAGO</p><span class="ct">@brancoweb · WhatsApp (41) 99899-9574</span></section>
+
+  <div id="rip"></div>
+  <svg id="cur" viewBox="0 0 32 32"><path d="M6 3l18 13.5-8.2 1.3 4.8 9.6-3.6 1.8-4.8-9.7L6 25z" fill="#fff" stroke="#000" stroke-width="1.6" stroke-linejoin="round"/></svg>
+  <div class="grain"></div>
+</div></div>
+<div id="hint">clique ou aperte espaço para começar · F para tela cheia</div>
+<script>
+// ?vert = versão vertical 1080x1920 (Reels/Stories)
+const VERT=location.search.includes("vert"), W=VERT?1080:1920, H=VERT?1920:1080;
+if(VERT)document.documentElement.classList.add("vert");
+const PARK=[W-220,H+70], PK=[W-420,H-80];
+const $=id=>document.getElementById(id), $$=s=>[...document.querySelectorAll(s)];
+const cl=x=>Math.max(0,Math.min(1,x)), seg=(t,a,b)=>cl((t-a)/(b-a));
+const eo=x=>1-Math.pow(1-x,3), eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const back=x=>{const c=1.6;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2)};
+const SFX=[];const sfx=(t,type,g=1)=>SFX.push({t:+t.toFixed(3),type,g});
+
+/* cenas: [id, início, fim] */
+const SC=[["s1",.2,4.3],["s2",4.3,8.8],["s3",8.8,11.3],["s4",11.3,13.8],["s5",13.8,17.6],["s6",17.6,21.2],
+          ["s7",21.2,26.4],["s8",26.4,29.6],["s9",29.6,33.4],["s10",33.4,37.6],["s11",37.6,99]];
+const DUR=41;
+const A=Object.fromEntries(SC.map(s=>[s[0],s[1]]));
+SC.slice(1).forEach(s=>sfx(s[1]-.08,"whoosh",.55));
+
+/* separa as frases em palavras para animar uma a uma */
+$$(".split").forEach(el=>{const d=+el.dataset.d||0;let i=0;const sc=el.closest(".sc").id;
+  const wrap=(txt,cls)=>txt.split(/(\s+)/).map(w=>w.trim()?`<span class="wd ${cls}" data-i="${i++}">${w}</span>`:w).join("");
+  el.innerHTML=[...el.childNodes].map(n=>n.nodeType===3?wrap(n.textContent,""):wrap(n.textContent,n.className)).join("");
+  el.querySelectorAll(".wd").forEach(w=>{w.dataset.t=A[sc]+.15+d+(+w.dataset.i)*.075});
+});
+
+/* momentos */
+const T_CHIP=A.s1+1.5, T_CHIPC=A.s1+2.7;
+const T_MSG=[A.s2+1.3,A.s2+2.05,A.s2+2.8]; T_MSG.forEach(t=>sfx(t,"pop",.75));
+const T_LOGO=A.s6+.25; sfx(T_LOGO,"impact",.9);
+const T_CD=[A.s7+1.5,A.s7+2.3,A.s7+3.1,A.s7+3.9];
+const T_N0=A.s8+.35,T_N1=A.s8+2.1; sfx(T_N1,"ding",.7);
+const T_ST=[A.s9+1.0,A.s9+1.8,A.s9+2.6]; T_ST.forEach(t=>sfx(t,"pop",.6));
+const T_BTN=A.s10+2.9;
+sfx(A.s11+.1,"impact",.6);
+
+const CUR=[
+ {t:0,at:PK},{t:A.s1+1.2,at:PK},
+ {t:T_CHIPC,sel:"#chip",dx:.62,dy:.62,click:1},
+ {t:A.s2+.4,at:PARK},
+ {t:A.s7+1.0,at:PARK},
+ ...T_CD.map(t=>({t,sel:`.cd:nth-child(${T_CD.indexOf(t)+1})`,dx:.55,dy:.7,click:1})),
+ {t:A.s8+.3,at:PARK},
+ {t:A.s10+1.4,at:PARK},
+ {t:T_BTN,sel:"#btn",dx:.6,dy:.62,click:1},
+ {t:A.s11-.2,at:PARK},{t:DUR,at:PARK},
+];
+CUR.forEach(k=>k.click&&sfx(k.t,"click"));
+sfx(T_BTN+.25,"pop",.8);
+
+let SCALE=1;
+function rel(sel,dx=.5,dy=.5){const r=document.querySelector(sel).getBoundingClientRect(),v=$("v").getBoundingClientRect();
+  return[(r.left-v.left+r.width*dx)/SCALE,(r.top-v.top+r.height*dy)/SCALE]}
+const kp=k=>k.at||rel(k.sel,k.dx,k.dy);
+function cursor(t){
+  let i=CUR.findIndex(k=>k.t>t);if(i<0)i=CUR.length;
+  const a=CUR[Math.max(0,i-1)],b=CUR[Math.min(i,CUR.length-1)];
+  const mv=Math.min(.8,(b.t-a.t)*.85),p=eio(seg(t,b.t-mv,b.t));
+  const P=kp(a),Q=kp(b),x=P[0]+(Q[0]-P[0])*p,y=P[1]+(Q[1]-P[1])*p-Math.sin(p*Math.PI)*50;
+  let sc=1,rp=null,r=0;
+  for(const k of CUR)if(k.click&&t>=k.t-.08&&t<k.t+.5){const d=t-k.t;sc=d<.12?.8:.8+.2*eo(seg(d,.12,.25));r=d>=0?seg(d,0,.45):0;rp=kp(k)}
+  $("cur").style.transform=`translate(${x-7}px,${y-5}px) scale(${sc})`;
+  if(rp&&r>0&&r<1){Object.assign($("rip").style,{left:rp[0]+"px",top:rp[1]+"px",opacity:(1-r)*.7,transform:`scale(${.3+r*.9})`})}else $("rip").style.opacity=0;
+}
+
+function render(t){
+  // brilho de fundo se mexendo
+  $("g1").style.transform=`translate(${W*-.1+Math.sin(t*.35)*260}px,${H*-.32+Math.cos(t*.27)*160}px)`;
+  $("g2").style.transform=`translate(${W*.6+Math.cos(t*.3)*240}px,${H*.35+Math.sin(t*.4)*180}px)`;
+  $("g3").style.transform=`translate(${W*.36+Math.sin(t*.22+1)*400}px,${H*-.1+Math.cos(t*.33)*220}px)`;
+
+  // entrada e saída das cenas (fade + blur)
+  SC.forEach(([id,a,b])=>{const el=$(id),i=eo(seg(t,a-.05,a+.45)),o=eio(seg(t,b-.35,b+.05));
+    const v=id==="s11"?eio(seg(t,a-.1,a+.5)):i*(1-o);
+    el.style.opacity=v;el.style.visibility=v<=0.001?"hidden":"visible";
+    el.style.filter=id==="s11"?"none":`blur(${o*14}px)`;el.style.transform=`scale(${1+o*.04})`});
+  // palavras
+  $$(".wd").forEach(w=>{const a=eo(seg(t,+w.dataset.t,+w.dataset.t+.6));w.style.opacity=a;w.style.filter=`blur(${(1-a)*14}px)`;w.style.transform=`translateY(${(1-a)*34}px)`});
+
+  // 1 · chip "busca"
+  const c=back(seg(t,T_CHIP,T_CHIP+.55)),on=t>=T_CHIPC;
+  $("chip").style.opacity=cl(c*2);$("chip").style.transform=`scale(${(.6+.4*c)*(t>=T_CHIPC&&t<T_CHIPC+.14?.93:1)})`;
+  $("chip").style.background=on?"#fff":"#ffffff10";$("chip").style.color=on?"#0a0a0b":"";$("chip").style.boxShadow=on?"0 0 60px #ffffff60":"none";
+
+  // 2 · mensagens
+  $$(".msg").forEach((m,i)=>{const a=back(seg(t,T_MSG[i],T_MSG[i]+.5));m.style.opacity=cl(a*2);m.style.transform=`translateY(${(1-a)*40}px) scale(${.92+.08*a})`});
+
+  // 6 · logo
+  const l=eo(seg(t,T_LOGO-.1,T_LOGO+.9));const lg=$("logo");
+  lg.querySelector("img").style.cssText=`opacity:${l};transform:scale(${.7+.3*l});filter:blur(${(1-l)*16}px)`;
+  const l2=eo(seg(t,T_LOGO+.3,T_LOGO+1.3));lg.querySelector("h2").style.cssText=`opacity:${l2};letter-spacing:${.6-.4*l2}em;filter:blur(${(1-l2)*12}px)`;
+  lg.querySelector("p").style.opacity=eo(seg(t,T_LOGO+1,T_LOGO+1.6));
+  const ar=eio(seg(t,A.s6,A.s6+1.4));$("arc").style.transform=`translateY(${(1-ar)*420}px)`;$("arc").style.opacity=ar;
+
+  // 7 · cards
+  $$(".cd").forEach((d,i)=>{const a=eo(seg(t,A.s7+.7+i*.1,A.s7+1.3+i*.1));const act=t>=T_CD[i]&&(i===3||t<T_CD[i+1]);
+    d.classList.toggle("on",act);d.style.opacity=a;d.style.transform=`translateY(${(1-a)*50-(act?14:0)}px) scale(${act?1.03:1})`});
+
+  // 8 · números
+  const n=eio(seg(t,T_N0,T_N1));$("n1").textContent="+"+Math.round(5*n);$("n2").textContent=Math.round(100*n)+"%";$("n3").textContent=Math.round(24*n)+"h";
+  $$(".stt").forEach((s,i)=>{const a=back(seg(t,A.s8+.1+i*.15,A.s8+.7+i*.15));s.style.opacity=cl(a*2);s.style.transform=`translateY(${(1-a)*60}px)`});
+
+  // 9 · passos
+  $$(".stp").forEach((s,i)=>{s.classList.toggle("on",t>=T_ST[i]);const a=eo(seg(t,A.s9+.5,A.s9+1));s.style.opacity=a});
+  $("track").firstChild.style.width=(eio(seg(t,T_ST[0],T_ST[2]))*100)+"%";
+
+  // 10 · botão
+  const bt=back(seg(t,A.s10+1.2,A.s10+1.8));$("btn").style.opacity=cl(bt*2);
+  $("btn").style.transform=`translateY(${(1-bt)*30}px) scale(${t>=T_BTN&&t<T_BTN+.14?.94:1})`;
+
+  const a2=eio(seg(t,A.s10,A.s10+1.4));$("arc2").style.transform=`translateY(${(1-a2)*300}px)`;$("arc2").style.opacity=a2;
+
+  // 11 · final
+  $$("#s11>*").forEach((e,i)=>{const a=eo(seg(t,A.s11+.2+i*.12,A.s11+.8+i*.12));e.style.opacity=a;e.style.transform=`translateY(${(1-a)*30}px)`});
+
+  cursor(t);
+}
+window.render=render;window.DUR=DUR;window.SFX=SFX;
+
+function fit(){SCALE=Math.min(innerWidth/W,innerHeight/H);$("v").style.transform=`scale(${SCALE})`}
+if(location.search.includes("render")){$("hint").remove();render(0)}
+else{
+  fit();addEventListener("resize",fit);render(0);
+  let t0=null;
+  const start=()=>{t0=performance.now();$("hint").style.opacity=0};
+  addEventListener("click",start);
+  addEventListener("keydown",e=>{if(e.code==="Space")start();if(e.key==="f"||e.key==="F")document.documentElement.requestFullscreen?.()});
+  (function loop(now){if(t0!==null)render(Math.min((now-t0)/1000,DUR));requestAnimationFrame(loop)})(performance.now());
+}
+</script>
+</body></html>
