@@ -671,9 +671,9 @@ function desenhaPros(){
   if(!L.length&&T.length)$('#pRes').innerHTML='<tr><td colspan="7" class="vazio">'+T.length+' resultado(s) escondido(s) pelos filtros acima.</td></tr>';
   else $('#pRes').innerHTML=L.length?L.map(x=>{const j=jaSalvo(x);return '<tr><td><input type="checkbox" class="pchk" data-pid="'+esc(x.id)+'"'+(pros.sel.has(x.id)?' checked':'')+'></td>'+
     '<td><b>'+esc(x.nome)+'</b><small>'+esc(x.categoria||'')+(x.avaliacao?' · ★ '+x.avaliacao+' ('+x.avaliacoes+')':'')+'</small>'+(j?'<span class="tag ok">no follow-up</span>':'')+'</td>'+
-    '<td>'+(x.telefone?'<span class="money">'+esc(fone(x.telefone))+'</span><br>'+(x.celular||x.whatsapp?'<span class="tag ok">whatsapp</span>':x.celular===false?'<span class="tag">fixo</span>':'')+(x.telSite?' <span class="tag">'+(x.telSite==='google'?'do Google':'do site')+'</span>':''):
+    '<td>'+(x.telefone?'<span class="money">'+esc(fone(x.telefone))+'</span><br>'+(x.celular||x.whatsapp?'<span class="tag ok">whatsapp</span>':x.celular===false?'<span class="tag">fixo</span>':'')+(x.telSite?' <span class="tag">'+({google:'do Google',manual:'manual'}[x.telSite]||'do site')+'</span>':'')+' <button class="pill" data-pnum="'+esc(x.id)+'" title="corrigir o número">✏️</button>':
       // sem telefone na fonte: atalhos para achar o contato no Google e no Instagram
-      ((x.site||(pCfg?.google||pCfg?.serper))&&!x.doSite?'<span class="label">procurando…</span>':'<a class="pill" target="_blank" rel="noopener noreferrer" title="buscar o telefone no Google" href="https://www.google.com/search?q='+encodeURIComponent(x.nome+' '+(x.cidade||'')+' telefone')+'">🔎</a>'))+'</td>'+
+      ((x.site||(pCfg?.google||pCfg?.serper))&&!x.doSite?'<span class="label">procurando…</span>':'<a class="pill" target="_blank" rel="noopener noreferrer" title="buscar o telefone no Google" href="https://www.google.com/search?q='+encodeURIComponent(x.nome+' '+(x.cidade||'')+' telefone')+'">🔎</a> <button class="pill" data-pnum="'+esc(x.id)+'" title="colar o número manualmente">+ número</button>'))+'</td>'+
     '<td>'+(x.site?'<a class="pill" href="'+esc(x.site)+'" target="_blank" rel="noopener noreferrer">'+esc(host(x.site))+' ↗</a>':'<span class="tag hot">sem site</span>')+'</td>'+
     '<td>'+[x.instagram&&'<a class="pill" href="'+esc(/^https?:/.test(x.instagram)?x.instagram:'https://instagram.com/'+x.instagram.replace('@',''))+'" target="_blank" rel="noopener noreferrer">insta ↗</a>',x.redeSocial&&!x.instagram&&'<a class="pill" href="'+esc(x.redeSocial)+'" target="_blank" rel="noopener noreferrer">rede ↗</a>',x.email&&'<span class="pill">'+esc(x.email)+'</span>'].filter(Boolean).join(' ')+'</td>'+
     '<td><small style="margin:0">'+esc(x.endereco||'—')+'</small></td>'+
@@ -681,7 +681,15 @@ function desenhaPros(){
     :'<tr><td colspan="7" class="vazio">Nenhum resultado com esses filtros.</td></tr>';
   $$('[data-pid]').forEach(c=>c.onchange=()=>{c.checked?pros.sel.add(c.dataset.pid):pros.sel.delete(c.dataset.pid);$('#pResS').textContent='fonte: '+NOME_FONTE(pros.fonte)+' · '+pros.sel.size+' selecionados'});
   $$('[data-pwa]').forEach(b=>b.onclick=()=>{const x=pros.itens.find(i=>i.id===b.dataset.pwa);abrirWa(x,msgPara(x))});
+  $$('[data-pnum]').forEach(b=>b.onclick=()=>numManual(pros.itens.find(i=>i.id===b.dataset.pnum)));
 }
+// anexa/corrige o número na mão (ex.: achou no Google ou no Instagram)
+function numManual(x){if(!x)return;
+  const v=prompt('WhatsApp de '+x.nome+' (com DDD):',x.telefone?fone(x.telefone):'');if(v===null)return;
+  let d=v.replace(/\D/g,'').replace(/^0+/,'');if(d.length===10||d.length===11)d='55'+d;
+  if(!d){x.telefone=null;x.celular=null;x.whatsapp=false;x.telSite=null;return desenhaPros()}
+  if(d.length<12||d.length>13)return toast('Número inválido. Use DDD + número, ex.: (41) 99999-9999');
+  x.telefone=d;x.celular=/^55\d{2}9\d{8}$/.test(d);x.whatsapp=x.celular;x.telSite='manual';desenhaPros();toast('Número anexado ✓')}
 ['pCel','pSem'].forEach(id=>$('#'+id).onchange=desenhaPros);
 // abre o site de quem não veio com celular e pega o WhatsApp/telefone/Instagram de lá
 async function enriquecer(){
