@@ -60,7 +60,7 @@ const ETAPAS_VENDA = ['novo', 'enviada', 'conversando', 'proposta', 'fechou', 'p
 const LEMBRETES = [2, 7, 15]; // dias até o próximo lembrete depois de cada mensagem
 const CONTA_SITE = 1; // conta da Branco: dona do site, dos eventos (/t) e dos leads (/lead)
 // planos: empresas encontradas por mês (a etapa dos planos deixa isso editável no painel admin)
-const PLANOS = { teste: { nome: 'Teste grátis', empresas: 30 }, start: { nome: 'Branco Start', empresas: 200 }, pro: { nome: 'Branco Pro', empresas: 1500 }, agency: { nome: 'Branco Agency', empresas: 4000 } };
+const PLANOS = { teste: { nome: 'Teste grátis', empresas: 30, preco: 0 }, start: { nome: 'Branco Start', empresas: 200, preco: 2990 }, pro: { nome: 'Branco Pro', empresas: 1500, preco: 5990 }, agency: { nome: 'Branco Agency', empresas: 4000, preco: 11990 } };
 const TESTE_DIAS = 7;
 
 // colunas que cada tabela precisa ter: se o banco veio de uma versão antiga, as que faltam são criadas (nada é apagado)
@@ -337,7 +337,10 @@ async function api(req, db, env, caminho) {
   // conta: criar, verificar e-mail, recuperar senha (sem estar logado)
   if (rec === 'conta' && m === 'POST' && ['cadastro', 'verificar', 'esqueci', 'redefinir'].includes(seg[1])) return await rotaConta(req, db, env, seg[1], S, cadastroAberto);
   if (!S) return erro('Faça login.', 401);
+  if (S.status === 'bloqueada' && S.conta !== CONTA_SITE) return erro('Esta conta está bloqueada. Fale com o suporte.', 403);
   const conta = S.conta, b = ['POST', 'PATCH', 'PUT'].includes(m) ? await corpo(req) : {};
+  // painel do dono do SaaS (só admin): assinantes, planos, consumo, log
+  if (rec === 'saas') return S.admin ? await rotaSaas(req, db, env, m, seg, b) : erro('Só o administrador do Branco pode ver isso.', 403);
 
   // conta: dados, equipe, trocar senha, criar o login do dono
   if (rec === 'conta') {
@@ -421,13 +424,13 @@ async function api(req, db, env, caminho) {
       return json(await enriquece(env, b.itens));
     }
     if (m === 'GET') {
-      if (await excedeu(db, 'busca:' + ip(req), 60, 60)) return erro('Muitas buscas seguidas. Espere alguns minutos.', 429);
+      if (await excedeu(db, 'busca:' + ip(req), 60, 60)) { await registra(db, 'aviso', conta, 'limite de buscas por minuto atingido'); return erro('Muitas buscas seguidas. Espere alguns minutos.', 429); }
       const q = new URL(req.url).searchParams;
       try {
         const r = await buscaProspects(env, { nicho: q.get('nicho'), termo: txt(q.get('termo'), 60), cidade: txt(q.get('cidade'), 80), estado: txt(q.get('estado'), 60), pais: txt(q.get('pais'), 60) || 'Brasil', fonte: q.get('fonte') });
         r.itens = await descontaEmpresas(db, S, r.itens); r.total = r.itens.length; r.uso = await consumo(db, S); r.aviso = r.itens.aviso || null;
         return json(r);
-      } catch (e) { return erro(e.message || 'Não foi possível buscar agora.', e.status || 502); } // mostra o motivo real no painel
+      } catch (e) { await registra(db, e.status === 402 ? 'aviso' : 'erro', conta, 'busca: ' + e.message); return erro(e.message || 'Não foi possível buscar agora.', e.status || 502); } // mostra o motivo real no painel
     }
   }
 
@@ -595,6 +598,59 @@ async function rotaConta(req, db, env, acao, S, cadastroAberto) {
     if (!t) return erro('Link inválido ou vencido. Peça outro em "Esqueci a senha".');
     await db.batch([db.prepare('UPDATE usuarios SET senha = ?, verificado = 1 WHERE id = ?').bind(await hashSenha(b.senha), t.usuario_id),
       db.prepare('DELETE FROM tokens_email WHERE usuario_id = ?').bind(t.usuario_id), db.prepare('DELETE FROM sessoes WHERE usuario_id = ?').bind(t.usuario_id)]);
+    return json({ ok: true });
+  }
+  return erro('Rota não encontrada.', 404);
+}
+
+/* ---------- painel do SaaS (só para o administrador do Branco) ---------- */
+async function rotaSaas(req, db, env, m, seg, b) {
+  const id = seg[1] === 'contas' && seg[2] ? Number(seg[2]) : null, ciclo = cicloAtual();
+  if (m === 'GET' && !seg[1]) {
+    const [cs, lg] = await db.batch([
+      db.prepare(`SELECT c.id, c.nome, c.plano, c.status, c.teste_ate, c.criado_em, u.email dono_email, u.nome dono_nome,
+          (SELECT encontradas FROM uso WHERE conta_id = c.id AND ciclo = ?) usado,
+          (SELECT COUNT(*) FROM contatos WHERE conta_id = c.id) contatos,
+          (SELECT COUNT(*) FROM membros WHERE conta_id = c.id) usuarios,
+          (SELECT MAX(criado_em) FROM sessoes WHERE conta_id = c.id) ultimo_login
+        FROM contas c LEFT JOIN membros mb ON mb.conta_id = c.id AND mb.papel = 'dono' LEFT JOIN usuarios u ON u.id = mb.usuario_id
+        WHERE c.id <> ? GROUP BY c.id ORDER BY c.criado_em DESC`).bind(ciclo, CONTA_SITE),
+      db.prepare('SELECT nivel, conta_id, texto, criado_em FROM log ORDER BY id DESC LIMIT 60')]);
+    const contas = cs.results.map(c => ({ ...c, usado: c.usado || 0, limite: (PLANOS[c.plano] || PLANOS.teste).empresas, preco: (PLANOS[c.plano] || PLANOS.teste).preco }));
+    const agora = new Date().toISOString().slice(0, 19).replace('T', ' ');
+    const ativas = contas.filter(c => c.status === 'ativa'), pagantes = ativas.filter(c => c.plano !== 'teste'), teste = ativas.filter(c => c.plano === 'teste');
+    return json({ ciclo, planos: PLANOS, kpis: { contas: contas.length, pagantes: pagantes.length, teste: teste.filter(c => !c.teste_ate || c.teste_ate >= agora).length, testeVencido: teste.filter(c => c.teste_ate && c.teste_ate < agora).length,
+      bloqueadas: contas.filter(c => c.status === 'bloqueada').length, mrr: pagantes.reduce((a, c) => a + c.preco, 0), buscasMes: contas.reduce((a, c) => a + c.usado, 0) }, contas, log: lg.results });
+  }
+  if (seg[1] === 'contas' && m === 'POST' && !id) { // criar conta na mão (ex.: cliente que pagou por fora)
+    const email = emailOk(b.email), nome = txt(b.nome, 80), plano = PLANOS[b.plano] ? b.plano : 'start', senha = txt(b.senha, 80) || aleatorio(10);
+    if (!email || !nome) return erro('Coloque o nome da conta e o e-mail do dono.');
+    if (await db.prepare('SELECT 1 FROM usuarios WHERE email = ?').bind(email).first()) return erro('Este e-mail já tem conta.');
+    const c = await db.prepare("INSERT INTO contas (nome, plano, status, criado_em, teste_ate) VALUES (?, ?, 'ativa', datetime('now'), ?)").bind(nome, plano, plano === 'teste' ? new Date(Date.now() + TESTE_DIAS * 864e5).toISOString().slice(0, 19).replace('T', ' ') : null).run();
+    const u = await db.prepare("INSERT INTO usuarios (email, senha, nome, verificado, admin_saas, criado_em) VALUES (?, ?, ?, 1, 0, datetime('now'))").bind(email, await hashSenha(senha), txt(b.dono, 80) || nome).run();
+    await db.batch([db.prepare("INSERT INTO membros (conta_id, usuario_id, papel, criado_em) VALUES (?, ?, 'dono', datetime('now'))").bind(c.meta.last_row_id, u.meta.last_row_id),
+      ...MODELOS_INICIAIS.map(x => db.prepare("INSERT INTO modelos (titulo, texto, conta_id, criado_em) VALUES (?, ?, ?, datetime('now'))").bind(...x, c.meta.last_row_id))]);
+    const enviado = await enviaEmail(env, email, 'Seu acesso ao Branco', `Olá! Sua conta "${nome}" está pronta.\n\nAcesse: ${new URL(req.url).origin}/admin\nE-mail: ${email}\nSenha: ${senha}\n\nTroque a senha em Conta > Trocar senha.`);
+    await registra(db, 'info', c.meta.last_row_id, `conta criada pelo admin: ${email} (${plano})`);
+    return json({ ok: true, id: c.meta.last_row_id, senha: enviado ? undefined : senha }); // sem e-mail configurado, mostra a senha para você repassar
+  }
+  if (id && id === CONTA_SITE) return erro('A conta da Branco não pode ser alterada por aqui.');
+  if (id && m === 'PATCH') {
+    const q = [];
+    if (b.plano && PLANOS[b.plano]) q.push(db.prepare('UPDATE contas SET plano = ? WHERE id = ?').bind(b.plano, id));
+    if (['ativa', 'bloqueada'].includes(b.status)) q.push(db.prepare('UPDATE contas SET status = ? WHERE id = ?').bind(b.status, id));
+    if (b.teste_mais_dias) q.push(db.prepare("UPDATE contas SET plano = 'teste', status = 'ativa', teste_ate = datetime(MAX(COALESCE(teste_ate, datetime('now')), datetime('now')), ?) WHERE id = ?").bind(`+${inteiro(b.teste_mais_dias, 1, 365)} days`, id));
+    if (b.zerar_uso) q.push(db.prepare('DELETE FROM uso WHERE conta_id = ? AND ciclo = ?').bind(id, ciclo));
+    if (!q.length) return erro('Nada para alterar.');
+    await db.batch(q); await registra(db, 'info', id, 'admin alterou a conta: ' + JSON.stringify(b).slice(0, 200));
+    return json({ ok: true });
+  }
+  if (id && m === 'DELETE') { // apaga a conta e tudo dela
+    const us = (await db.prepare('SELECT usuario_id FROM membros WHERE conta_id = ?').bind(id).all()).results.map(x => x.usuario_id);
+    await db.batch([...['contatos', 'modelos', 'vendas', 'clientes', 'links', 'extrato', 'eventos', 'visitas_cliente', 'sessoes', 'config_conta', 'uso', 'empresas_vistas', 'membros'].map(t => db.prepare(`DELETE FROM ${t} WHERE conta_id = ?`).bind(id)),
+      ...us.map(u => db.prepare('DELETE FROM usuarios WHERE id = ? AND NOT EXISTS (SELECT 1 FROM membros WHERE usuario_id = ? AND conta_id <> ?)').bind(u, u, id)),
+      ...us.map(u => db.prepare('DELETE FROM tokens_email WHERE usuario_id = ?').bind(u)), db.prepare('DELETE FROM contas WHERE id = ?').bind(id)]);
+    await registra(db, 'aviso', id, 'conta excluída pelo admin');
     return json({ ok: true });
   }
   return erro('Rota não encontrada.', 404);

@@ -172,5 +172,22 @@ ok('teste vencido bloqueia a busca (402)', (await CB2.get('/api/prospeccao?nicho
 ok('teste vencido ainda deixa ver o follow-up (dados não somem)', (await CB2.get('/api/followup')).status === 200);
 globalThis.fetch = fetchReal;
 
+// ---- 9) painel do SaaS: só o admin ----
+console.log('• painel do SaaS');
+ok('assinante não vê o painel do SaaS (403)', (await CB2.get('/api/saas')).status === 403);
+const sa = (await A.get('/api/saas')).dados;
+ok('admin vê as contas (sem a dele) e os indicadores', sa.kpis.contas === 2 && sa.contas.every(c => c.id !== 1) && sa.contas.find(c => c.dono_email === 'bia@beta.com')?.usado === 30 && typeof sa.kpis.mrr === 'number');
+const idB = sa.contas.find(c => c.dono_email === 'bia@beta.com').id;
+ok('admin troca o plano', (await A.patch('/api/saas/contas/' + idB, { plano: 'pro' })).status === 200 && (await CB2.get('/api/sessao')).dados.uso.limite === 1500);
+ok('conta bloqueada não entra', (await A.patch('/api/saas/contas/' + idB, { status: 'bloqueada' })).status === 200 && (await CB2.get('/api/followup')).status === 403);
+ok('liberar volta a funcionar', (await A.patch('/api/saas/contas/' + idB, { status: 'ativa' })).status === 200 && (await CB2.get('/api/followup')).status === 200);
+ok('+7 dias de teste reativa o teste', (await A.patch('/api/saas/contas/' + idB, { teste_mais_dias: 7 })).status === 200 && (await CB2.get('/api/sessao')).dados.uso.testeAcabou === false);
+ok('conta 1 não pode ser alterada por aqui', (await A.patch('/api/saas/contas/1', { status: 'bloqueada' })).status === 400);
+const nova = (await A.post('/api/saas/contas', { nome: 'Agência Pixel', email: 'ana@pixel.com', plano: 'start' })).dados;
+ok('admin cria conta na mão e recebe a senha (sem e-mail configurado)', nova.ok && typeof nova.senha === 'string');
+ok('a conta criada na mão entra', (await chama('POST', '/api/login', { corpo: { email: 'ana@pixel.com', senha: nova.senha } })).status === 200);
+ok('admin exclui uma conta e os dados dela somem', (await A.del('/api/saas/contas/' + nova.id)).status === 200 && !d1._db.prepare('SELECT 1 FROM usuarios WHERE email = ?').get('ana@pixel.com') && !d1._db.prepare('SELECT 1 FROM modelos WHERE conta_id = ?').get(nova.id));
+ok('o log registra as ações', (await A.get('/api/saas')).dados.log.some(l => /excluída/.test(l.texto)));
+
 console.log(`\n${passou} ok, ${falhou} falhou`);
 process.exit(falhou ? 1 : 0);
