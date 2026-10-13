@@ -23,12 +23,20 @@ COMO COLOCAR NO AR (pelo site da Cloudflare, sem instalar nada)
    (essa senha entra na conta 1, a da Branco, sem e-mail — como sempre foi)
 
 CONTAS E E-MAIL (SaaS)
-   O painel agora é multi-conta: cada conta só vê os próprios dados. A sua é a conta 1.
-   - Dentro do painel você pode criar seu login por e-mail (Conta > "criar meu login").
-   - Envio de e-mail (verificação e "esqueci a senha"): crie uma conta em resend.com, verifique seu
-     domínio e adicione os secrets   RESEND_KEY = (a chave)   e   EMAIL_DE = Branco <nao-responda@seudominio.com.br>
-     Sem RESEND_KEY nenhum e-mail sai (o cadastro ainda funciona, sem confirmação).
-   - Para liberar que outras pessoas criem conta: variável  CADASTRO_ABERTO = 1   (deixe desligado até os planos e a cobrança estarem prontos).
+   O painel é multi-conta: cada conta só vê os próprios dados. A sua é a conta 1 (tem tudo).
+   Quem cria conta pelo "Criar conta" entra em teste grátis (7 dias, 30 empresas) e vê só Follow-up e Prospecção.
+   - Dentro do painel você pode criar seu login por e-mail (menu > Conta > "Criar meu login").
+   - Para fechar o cadastro de contas novas: variável  CADASTRO_ABERTO = 0
+
+   E-MAIL (confirmação de cadastro e "esqueci a senha") usando o brancowebs@gmail.com:
+   1. brevo.com > crie a conta grátis (300 e-mails/dia)
+   2. Senders & IP > Senders > Add a sender > e-mail: brancowebs@gmail.com > confirme pelo código que chega no Gmail
+   3. SMTP & API > API Keys > Generate a new API key > copie
+   4. Worker > Settings > Variables and Secrets > Add:
+        Secret   BREVO_KEY = (a chave)
+        Text     EMAIL_DE  = Branco <brancowebs@gmail.com>
+   Sem BREVO_KEY nenhum e-mail sai (o cadastro funciona, mas sem confirmação e sem "esqueci a senha").
+   Dica: quando tiver domínio próprio, troque o remetente para ele — e-mail saindo de @gmail.com por outro serviço cai mais no spam.
 
 TESTE AUTOMÁTICO (no seu computador, precisa só do Node 22+)
    node worker/test/isolamento.test.mjs

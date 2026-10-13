@@ -195,6 +195,7 @@ html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-enviada
 .sug{font:500 .66rem var(--mono);color:var(--ok)}
 tr.ign td{opacity:.45}
 .chk{display:flex;align-items:center;gap:8px;font:500 .78rem var(--mono);color:var(--mute)}.chk input{width:18px;height:18px;padding:0}
+.uso{margin:10px 0 0;font:500 .72rem var(--mono);color:var(--mute)}.uso b{color:var(--fg)}.uso i{display:inline-block;width:120px;height:4px;border-radius:2px;background:var(--soft);vertical-align:middle;margin:0 8px;overflow:hidden}.uso i::after{content:"";display:block;height:100%;width:var(--p,0%);background:var(--fg)}
 .aviso{margin:0 0 14px;padding:10px 14px;border:1px solid var(--warn);border-radius:10px;color:var(--warn);font:500 .8rem var(--mono);display:flex;gap:12px;align-items:center;justify-content:space-between}.aviso button{padding:6px 10px;font-size:.75rem}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg);font:500 .8rem var(--mono);padding:11px 20px;border-radius:999px;z-index:40;box-shadow:0 10px 30px #0005;animation:tin .25s ease}
 @keyframes tin{from{opacity:0;transform:translate(-50%,10px)}}
@@ -351,6 +352,7 @@ tr.ign td{opacity:.45}
             <button class="solid" id="bBusca" style="margin-left:auto">Buscar estabelecimentos</button></div>
         </form>
         <p class="pst" id="pStatus" hidden></p>
+        <p class="uso" id="pUso" hidden></p>
 
       </section>
       <section class="kpis mt" id="kPros"></section>
@@ -433,7 +435,7 @@ function telaLogin(s){
   $('#login').hidden=false;mar();
   const L=$('#login'),err=x=>{$('#erroLogin').textContent=x?.erro||'Não deu certo. Tente de novo.';L.classList.remove('erro');void L.offsetWidth;L.classList.add('erro')};
   const mostra=id=>{['fSenha','fCadastro','fEsqueci','fRedefinir'].forEach(f=>$('#'+f).hidden=f!==id);$('#erroLogin').textContent='';$('#'+id).querySelector('input')?.focus()};
-  $('#lCriar').hidden=!s?.cadastro;
+  $('#lCriar').hidden=s?.cadastro===false;
   $('#lCriar').onclick=e=>{e.preventDefault();mostra('fCadastro')};$('#lEsqueci').onclick=e=>{e.preventDefault();mostra('fEsqueci')};
   $('#lVoltar').onclick=$('#lVoltar2').onclick=e=>{e.preventDefault();mostra('fSenha')};
   $('#fSenha').onsubmit=async ev=>{ev.preventDefault();
@@ -629,7 +631,7 @@ function telaAdmin(){
   $('#admin').hidden=false;document.body.classList.add('logado');
   const S=window.SESSAO||{};
   if(S.conta){$('.brand small').textContent=S.conta.nome;$('#aSub').textContent='( painel de '+S.conta.nome+' )'}
-  if(!S.site){$('[data-tab="site"]').hidden=true} // só a conta dona do site tem a visão geral do site
+  if(!S.site){['site','financeiro','clientes'].forEach(t=>$('[data-tab="'+t+'"]').hidden=true);document.body.classList.add('assinante')} // assinantes: só follow-up e prospecção
   if(S.usuario&&!S.usuario.verificado)$('#avisoEmail').hidden=false;
   $('#reenviar').onclick=async()=>{try{await api('/api/conta/reenviar',{method:'POST'});toast('E-mail reenviado ✓')}catch(x){toast(x.erro||'Erro')}};
   const D=[['1','Hoje'],['7','7d'],['30','30d'],['90','90d'],['365','1 ano']];
@@ -676,7 +678,11 @@ $('#bConta').onclick=telaConta;
 const MSG_SEM='Oi! Tudo bem? Encontrei a {nome} aqui em {cidade} e vi que vocês ainda não têm um site próprio. Sou da Branco, a gente cria sites profissionais e faz tráfego pago para {nicho}, para aparecer no Google e receber clientes direto no WhatsApp. Posso te mostrar alguns exemplos rapidinho?';
 const MSG_COM='Oi! Tudo bem? Vi o site da {nome} ({site}). Sou da Branco, a gente ajuda {nicho} em {cidade} a atrair mais clientes com tráfego pago e páginas que convertem. Posso te mandar 2 ideias rápidas do que daria para melhorar?';
 let pros={itens:[],sel:new Set()},pCfg=null,pJaSalvos=new Map();
+function mostraUso(u){const el=$('#pUso');if(!u||u.limite==null){el.hidden=true;return}el.hidden=false;
+  const fim=u.testeAte?new Date(u.testeAte.replace(' ','T')+'Z'):null,dias=fim?Math.max(0,Math.ceil((fim-Date.now())/864e5)):null;
+  el.innerHTML='<b>'+u.usado+'</b> de <b>'+u.limite+'</b> empresas neste mês <i style="--p:'+Math.min(100,u.usado/u.limite*100)+'%"></i>'+esc(u.planoNome)+(u.plano==='teste'?(u.testeAcabou?' · <span class="tag hot">teste encerrado</span>':' · teste grátis: '+(dias===0?'termina hoje':'faltam '+dias+' dia'+(dias===1?'':'s'))):'')}
 async function carregaProspec(){
+  mostraUso(window.SESSAO?.uso);
   if(!$('#pNicho').options[1]){const N=await api('/api/prospeccao/nichos').catch(()=>[]);const g={};N.forEach(n=>(g[n.grupo]=g[n.grupo]||[]).push(n));
     $('#pNicho').innerHTML='<option value="">— escolha —</option>'+Object.entries(g).map(([k,v])=>'<optgroup label="'+esc(k)+'">'+v.map(n=>'<option value="'+n.id+'">'+esc(n.nome)+'</option>').join('')+'</optgroup>').join('')}
   pCfg=await api('/api/config').catch(()=>({}));
@@ -760,12 +766,12 @@ $('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca
   if(!f.cidade.value.trim()&&!estado){b.disabled=false;b.textContent='Buscar estabelecimentos';return pStatus('Escolha o estado e a cidade.',true)}
   pStatus('Buscando '+esc(f.nicho.selectedOptions[0]?.value?f.nicho.selectedOptions[0].textContent:f.termo.value||'')+' em '+esc(f.cidade.value||estado)+'… (pode levar até 30 segundos)');
   try{const q=new URLSearchParams({nicho:f.nicho.value,termo:f.termo.value,pais:f.pais.value,estado,cidade:f.cidade.value,fonte:f.fonte.value});
-    const r=await api('/api/prospeccao?'+q);r.itens.forEach(x=>x.cidade=x.cidade||f.cidade.value||null);pros={...r,sel:new Set()};desenhaPros();
+    const r=await api('/api/prospeccao?'+q);r.itens.forEach(x=>x.cidade=x.cidade||f.cidade.value||null);pros={...r,sel:new Set()};desenhaPros();if(r.uso){window.SESSAO.uso=r.uso;mostraUso(r.uso)}
     enriquecer();
     const osm=r.fonte==='osm',vis=proFiltrados().length;
     if(!r.total)pStatus('Nenhum estabelecimento encontrado em '+esc(r.lugar||'')+'.'+(osm?'<br>O OpenStreetMap tem poucos dados em muitas cidades. Use <b>TomTom</b>, <b>HERE</b> ou <b>Google Maps</b> (chaves no Worker) para listas bem mais completas.':' Tente outra palavra, um nicho parecido ou outra fonte.'),false);
     else if(!vis)pStatus(r.total+' encontrados, mas <b>todos foram escondidos pelos filtros</b> (“só com WhatsApp” / “só sem site”). Desmarque um filtro para ver.'+(r.itens.filter(x=>x.telefone).length<r.total*.2?'<br>Dica: a fonte trouxe poucos telefones. '+(f.termo.value?'Apague a palavra-chave e busque só pelo nicho, ou ':'')+'use o botão “🔎 achar WhatsApp” em cada resultado.':''));
-    else pStatus(r.total+' encontrados'+(vis<r.total?' · '+vis+' aparecendo com os filtros':'')+' · fonte '+NOME_FONTE(r.fonte)+(osm?' (dados limitados)':''));
+    else pStatus(r.total+' encontrados'+(vis<r.total?' · '+vis+' aparecendo com os filtros':'')+' · fonte '+NOME_FONTE(r.fonte)+(osm?' (dados limitados)':'')+(r.aviso?'<br>⚠️ '+esc(r.aviso):''));
   }catch(x){pStatus(esc(x.erro||'Erro na busca. Tente de novo.'),true)}finally{b.disabled=false;b.textContent='Buscar estabelecimentos'}};
 $('#pTodos').onclick=()=>{const L=proFiltrados(),todos=L.every(x=>pros.sel.has(x.id));L.forEach(x=>todos?pros.sel.delete(x.id):pros.sel.add(x.id));desenhaPros()};
 const selecionados=()=>{const L=proFiltrados().filter(x=>pros.sel.has(x.id));return L.length?L:[]};
@@ -815,7 +821,7 @@ function cardFu(c,destaque){
     '<label class="fl"><span>Valor da proposta (R$)</span><input data-prop inputmode="decimal" placeholder="Ex: 1.500,00" value="'+(c.proposta?esc(reais(c.proposta)):'')+'"></label>'+
     '<label class="fl full"><span>Anotações</span><textarea data-notas rows="2" maxlength="2000" placeholder="Ex: pediu orçamento de site + 3 vídeos, volta a falar em novembro">'+esc(c.notas||'')+'</textarea></label>'+
     (c.mensagem?'<p class="dica full">mensagem do formulário: '+esc(c.mensagem)+'</p>':'')+
-    '<div class="full fc__row"><button class="solid" data-salvar>Salvar</button>'+(c.venda==='fechou'?'<button class="ghost" data-rv>Registrar venda →</button><button class="ghost" data-virar>Virar cliente →</button>':'')+'<button class="danger" data-del>Excluir</button></div></div></details>'+(!destaque?'</div>':'')+'</div>';
+    '<div class="full fc__row"><button class="solid" data-salvar>Salvar</button>'+(c.venda==='fechou'&&window.SESSAO?.site!==false?'<button class="ghost" data-rv>Registrar venda →</button><button class="ghost" data-virar>Virar cliente →</button>':'')+'<button class="danger" data-del>Excluir</button></div></div></details>'+(!destaque?'</div>':'')+'</div>';
 }
 function ligaCards(root){
   root.querySelectorAll('[data-c]').forEach(el=>{
@@ -995,7 +1001,7 @@ function demoApi(p,o){
       .map((v,i)=>({id:i+1,cliente:v[0],servico:v[1],valor:v[2],mensal:v[3],data:dia(v[4]),fim:null,pago:i!==4,notas:''})),
     clientes:[{id:1,nome:'Clínica Bella',email:'contato@bella.com',projeto:'Site institucional',etapa:5,visitas30:1240,site:'a1',token:'demo1',links:[],recado:''},{id:2,nome:'JP Burger',email:'jp@burger.com',projeto:'Loja virtual',etapa:3,visitas30:310,site:'b2',links:[],recado:''},{id:3,nome:'Studio RS',email:'rs@studio.com',projeto:'Site + vídeo',etapa:4,visitas30:520,site:'c3',links:[],recado:''}]};
   const D=window._demo;
-  if(p==='/api/sessao')return Promise.resolve({papel:'admin',conta:{id:1,nome:'Branco'},usuario:null,site:true,admin:true,cadastro:false});
+  if(p==='/api/sessao')return Promise.resolve({papel:'admin',conta:{id:1,nome:'Branco'},usuario:null,site:true,admin:true,cadastro:true,uso:{usado:0,limite:null}});
   if(p.startsWith('/api/conta'))return Promise.resolve({ok:true,conta:{id:1,nome:'Branco'},usuario:null,meuPapel:'dono',equipe:[]});
   if(p.startsWith('/api/dados')){const n=+p.split('=')[1],k=n>60?1:1;const porDia=[];let V=0,W=0;
     for(let i=0;i<Math.min(n,366);i++){const base=60+Math.sin(i/5)*20+(n-i)*.4,v=Math.max(0,Math.round(base+r(-15,25))),w=Math.round(v*(.05+Math.random()*.05));porDia.push({dia:dia(i),visitas:v,whats:w});V+=v;W+=w}
