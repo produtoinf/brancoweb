@@ -3,7 +3,7 @@
  * Precisa de:
  *   - banco D1 ligado com o nome  DB
  *   - variável secreta            ADMIN_SENHA   (senha do dono: entra na conta 1 sem e-mail)
- *   - opcionais: RESEND_KEY + EMAIL_DE (envio de e-mail), CADASTRO_ABERTO=1 (libera criar conta)
+ *   - opcionais: BREVO_KEY (ou RESEND_KEY) + EMAIL_DE para enviar e-mails; CADASTRO_ABERTO=0 fecha o cadastro
  * As tabelas são criadas sozinhas no primeiro acesso.
  *
  * Multi-conta: cada registro tem conta_id e toda consulta do painel filtra pela conta da sessão.
@@ -45,6 +45,9 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS tokens_email (token TEXT PRIMARY KEY, usuario_id INTEGER NOT NULL, tipo TEXT NOT NULL, expira TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS config_conta (conta_id INTEGER NOT NULL, chave TEXT NOT NULL, valor TEXT, PRIMARY KEY (conta_id, chave))`,
   `CREATE TABLE IF NOT EXISTS log (id INTEGER PRIMARY KEY, nivel TEXT NOT NULL, conta_id INTEGER, texto TEXT NOT NULL, criado_em TEXT NOT NULL DEFAULT (datetime('now')))`,
+  // consumo: empresas encontradas por conta e por ciclo (mês), e quais já foram contadas (não cobra 2x a mesma empresa)
+  `CREATE TABLE IF NOT EXISTS uso (conta_id INTEGER NOT NULL, ciclo TEXT NOT NULL, encontradas INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (conta_id, ciclo))`,
+  `CREATE TABLE IF NOT EXISTS empresas_vistas (conta_id INTEGER NOT NULL, chave TEXT NOT NULL, criado_em TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY (conta_id, chave))`,
   `CREATE INDEX IF NOT EXISTS ex_data ON extrato (data)`,
 ];
 const MODELOS_INICIAIS = [
@@ -56,6 +59,9 @@ const MODELOS_INICIAIS = [
 const ETAPAS_VENDA = ['novo', 'enviada', 'conversando', 'proposta', 'fechou', 'perdido']; // conversando = respondeu
 const LEMBRETES = [2, 7, 15]; // dias até o próximo lembrete depois de cada mensagem
 const CONTA_SITE = 1; // conta da Branco: dona do site, dos eventos (/t) e dos leads (/lead)
+// planos: empresas encontradas por mês (a etapa dos planos deixa isso editável no painel admin)
+const PLANOS = { teste: { nome: 'Teste grátis', empresas: 30 }, start: { nome: 'Branco Start', empresas: 200 }, pro: { nome: 'Branco Pro', empresas: 1500 }, agency: { nome: 'Branco Agency', empresas: 4000 } };
+const TESTE_DIAS = 7;
 
 // colunas que cada tabela precisa ter: se o banco veio de uma versão antiga, as que faltam são criadas (nada é apagado)
 const COLUNAS = {
@@ -69,7 +75,7 @@ const COLUNAS = {
   visitas_cliente: ['site', 'v', 'p', 'o', 'd', 'criado_em', 'conta_id INTEGER'],
   extrato: ['ext_id', 'data', 'valor INTEGER', 'descricao', 'venda_id INTEGER', 'ignorar INTEGER', 'criado_em', 'conta_id INTEGER'],
   sessoes: ['token', 'criado_em', 'usuario_id INTEGER', 'conta_id INTEGER'],
-  contas: ['nome', 'plano', 'status', 'criado_em'],
+  contas: ['nome', 'plano', 'status', 'criado_em', 'teste_ate'],
   usuarios: ['email', 'senha', 'nome', 'verificado INTEGER', 'admin_saas INTEGER', 'criado_em'],
   membros: ['conta_id INTEGER', 'usuario_id INTEGER', 'papel', 'criado_em'],
 };
@@ -150,11 +156,17 @@ async function confereSenha(senha, guardada) {
   return iguais(await hashSenha(senha, sal, Number(voltas)), guardada);
 }
 const senhaFraca = s => !s || s.length < 8 ? 'A senha precisa ter pelo menos 8 caracteres.' : null;
-// e-mail transacional (Resend). Sem RESEND_KEY só registra no log do Worker.
+// e-mail transacional: Brevo (BREVO_KEY — aceita remetente Gmail) ou Resend (RESEND_KEY — precisa de domínio próprio).
+// EMAIL_DE = 'Branco <brancowebs@gmail.com>'. Sem chave nenhuma, só registra no log do Worker.
 async function enviaEmail(env, para, assunto, texto) {
-  if (!env.RESEND_KEY) { console.log('[e-mail não enviado — falta RESEND_KEY]', para, assunto, texto); return false; }
-  const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
+  const de = (env.EMAIL_DE || 'Branco <brancowebs@gmail.com>').match(/^(.*?)\s*<([^>]+)>$/) || [null, 'Branco', env.EMAIL_DE || 'brancowebs@gmail.com'];
+  let r = null;
+  if (env.BREVO_KEY) r = await fetch('https://api.brevo.com/v3/smtp/email', { method: 'POST', headers: { 'api-key': env.BREVO_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sender: { name: de[1].trim() || 'Branco', email: de[2].trim() }, to: [{ email: para }], subject: assunto, textContent: texto }), signal: AbortSignal.timeout(10000) }).catch(() => null);
+  else if (env.RESEND_KEY) r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: 'Bearer ' + env.RESEND_KEY, 'Content-Type': 'application/json' },
     body: JSON.stringify({ from: env.EMAIL_DE || 'Branco <onboarding@resend.dev>', to: [para], subject: assunto, text: texto }), signal: AbortSignal.timeout(10000) }).catch(() => null);
+  else { console.log('[e-mail não enviado — falta BREVO_KEY ou RESEND_KEY]', para, assunto, texto); return false; }
+  if (!r?.ok) console.error('[e-mail falhou]', r?.status, await r?.text().catch(() => ''));
   return !!r?.ok;
 }
 async function novoToken(db, usuarioId, tipo, horas) {
@@ -184,14 +196,41 @@ const SEGURANCA = { 'Content-Security-Policy': CSP_PAINEL, 'X-Content-Type-Optio
 // quem está logado: usuário (ou o dono via ADMIN_SENHA, sem usuário) + a conta em que está + o papel
 async function sessao(req, db) {
   const t = cookie(req, 'bsess'); if (!t || t.length !== 40) return null;
-  const s = await db.prepare(`SELECT s.usuario_id, s.conta_id, u.email, u.nome unome, u.admin_saas, u.verificado, m.papel, c.nome cnome, c.plano, c.status
+  const s = await db.prepare(`SELECT s.usuario_id, s.conta_id, u.email, u.nome unome, u.admin_saas, u.verificado, m.papel, c.nome cnome, c.plano, c.status, c.teste_ate
     FROM sessoes s LEFT JOIN usuarios u ON u.id = s.usuario_id LEFT JOIN membros m ON m.usuario_id = s.usuario_id AND m.conta_id = s.conta_id LEFT JOIN contas c ON c.id = s.conta_id
     WHERE s.token = ? AND s.criado_em > datetime('now','-30 days')`).bind(t).first();
   if (!s || !s.conta_id || !s.cnome) return null;
   if (s.usuario_id && !s.papel) return null; // usuário removido da conta
   const dono = !s.usuario_id; // sessão antiga pela ADMIN_SENHA: dono da conta 1
-  return { conta: s.conta_id, contaNome: s.cnome, plano: s.plano, status: s.status, usuario: s.usuario_id, email: s.email, nome: s.unome,
+  return { conta: s.conta_id, contaNome: s.cnome, plano: s.plano, status: s.status, testeAte: s.teste_ate, usuario: s.usuario_id, email: s.email, nome: s.unome,
     papel: dono ? 'dono' : s.papel, admin: dono ? s.conta_id === CONTA_SITE : !!s.admin_saas, verificado: dono ? true : !!s.verificado };
+}
+const cicloAtual = () => new Date().toISOString().slice(0, 7); // 'AAAA-MM'
+// quanto a conta já usou no ciclo e qual é o limite (a conta da Branco não tem limite)
+async function consumo(db, S) {
+  const r = await db.prepare('SELECT encontradas FROM uso WHERE conta_id = ? AND ciclo = ?').bind(S.conta, cicloAtual()).first();
+  const plano = PLANOS[S.plano] || PLANOS.teste, testeAcabou = S.plano === 'teste' && S.testeAte && S.testeAte < new Date().toISOString().slice(0, 19).replace('T', ' ');
+  return { usado: r?.encontradas || 0, limite: S.conta === CONTA_SITE ? null : plano.empresas, plano: S.plano, planoNome: S.conta === CONTA_SITE ? 'Branco' : plano.nome, testeAte: S.testeAte, testeAcabou: !!testeAcabou };
+}
+// desconta do plano só as empresas que a conta ainda não tinha visto (chave: telefone, senão nome+cidade)
+async function descontaEmpresas(db, S, itens) {
+  if (S.conta === CONTA_SITE) return itens;
+  const c = await consumo(db, S);
+  if (c.testeAcabou) throw Object.assign(new Error('Seu teste grátis terminou. Assine um plano para continuar buscando.'), { status: 402 });
+  const chave = x => 'e:' + (digitos(x.telefone) || (String(x.nome || '').toLowerCase().trim() + '|' + String(x.cidade || '').toLowerCase().trim()));
+  const novos = [], vistas = new Set();
+  for (const x of itens) { const k = chave(x); if (vistas.has(k)) continue; vistas.add(k);
+    if (!await db.prepare('SELECT 1 FROM empresas_vistas WHERE conta_id = ? AND chave = ?').bind(S.conta, k).first()) novos.push([x, k]); }
+  const restante = Math.max(0, c.limite - c.usado), conhecidas = itens.length - novos.length;
+  // nada cabe e nada já era conhecido: avisa. Se tem conhecidas, devolve só elas (sem cobrar) com um aviso.
+  if (novos.length && !restante && !conhecidas) throw Object.assign(new Error(`Você já usou as ${c.limite} empresas do seu plano neste mês. Faça upgrade para continuar.`), { status: 402 });
+  const cabem = new Set(novos.slice(0, restante).map(n => n[1]));
+  itens.aviso = novos.length > cabem.size ? `${novos.length - cabem.size} empresa(s) nova(s) ficaram de fora: o limite do seu plano neste mês acabou.` : null;
+  if (cabem.size) await db.batch([
+    ...[...cabem].map(k => db.prepare("INSERT OR IGNORE INTO empresas_vistas (conta_id, chave, criado_em) VALUES (?, ?, datetime('now'))").bind(S.conta, k)),
+    db.prepare('INSERT INTO uso (conta_id, ciclo, encontradas) VALUES (?, ?, ?) ON CONFLICT(conta_id, ciclo) DO UPDATE SET encontradas = encontradas + excluded.encontradas').bind(S.conta, cicloAtual(), cabem.size)]);
+  // devolve o que já era conhecido + o que coube no plano
+  const out = itens.filter(x => { const k = chave(x); return !novos.some(n => n[1] === k) || cabem.has(k); }); out.aviso = itens.aviso; return out;
 }
 async function abreSessao(db, usuarioId, contaId) {
   const t = aleatorio(40);
@@ -268,7 +307,7 @@ async function api(req, db, env, caminho) {
   const m = req.method, seg = caminho.split('/').filter(Boolean).slice(1); // ['clientes','3','links']
   const [rec, id, sub] = [seg[0], seg[1] ? Number(seg[1]) : null, seg[2]];
 
-  const cadastroAberto = env.CADASTRO_ABERTO === '1';
+  const cadastroAberto = env.CADASTRO_ABERTO !== '0'; // CADASTRO_ABERTO=0 fecha o cadastro
   // login: com e-mail + senha (usuário) ou só a senha do Worker (dono da conta 1, como antes)
   if (rec === 'login' && m === 'POST') {
     const b = await corpo(req), email = emailOk(b.email), senha = String(b.senha || '');
@@ -290,7 +329,7 @@ async function api(req, db, env, caminho) {
   }
   const S = await sessao(req, db);
   if (rec === 'sessao') return json(S ? { papel: 'admin', conta: { id: S.conta, nome: S.contaNome, plano: S.plano }, usuario: S.usuario ? { nome: S.nome, email: S.email, verificado: S.verificado } : null,
-    meuPapel: S.papel, site: S.conta === CONTA_SITE, admin: S.admin, cadastro: cadastroAberto } : { papel: null, cadastro: cadastroAberto });
+    meuPapel: S.papel, site: S.conta === CONTA_SITE, admin: S.admin, cadastro: cadastroAberto, uso: await consumo(db, S) } : { papel: null, cadastro: cadastroAberto });
   if (rec === 'sair') {
     const t = cookie(req, 'bsess'); if (t) await db.prepare('DELETE FROM sessoes WHERE token = ?').bind(t).run();
     return json({ ok: true }, 200, { 'Set-Cookie': 'bsess=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0' });
@@ -304,7 +343,7 @@ async function api(req, db, env, caminho) {
   if (rec === 'conta') {
     if (m === 'GET' && !seg[1]) {
       const eq = await db.prepare('SELECT u.id, u.nome, u.email, u.verificado, m.papel FROM membros m JOIN usuarios u ON u.id = m.usuario_id WHERE m.conta_id = ? ORDER BY m.criado_em').bind(conta).all();
-      return json({ conta: { id: conta, nome: S.contaNome, plano: S.plano, status: S.status }, usuario: S.usuario ? { id: S.usuario, nome: S.nome, email: S.email, verificado: S.verificado } : null, meuPapel: S.papel, equipe: eq.results });
+      return json({ conta: { id: conta, nome: S.contaNome, plano: S.plano, status: S.status }, uso: await consumo(db, S), usuario: S.usuario ? { id: S.usuario, nome: S.nome, email: S.email, verificado: S.verificado } : null, meuPapel: S.papel, equipe: eq.results });
     }
     if (seg[1] === 'dono' && m === 'POST') { // dono entrou pela ADMIN_SENHA e quer um login por e-mail
       if (S.usuario || S.papel !== 'dono') return erro('Você já tem um login por e-mail.');
@@ -335,7 +374,8 @@ async function api(req, db, env, caminho) {
     return erro('Rota não encontrada.', 404);
   }
 
-  // números do site (só a conta dona do site tem)
+  // assinantes usam só Follow-up e Prospecção; números do site, clientes e financeiro são da conta da Branco
+  if (['dados', 'clientes', 'links', 'vendas', 'extrato'].includes(rec) && conta !== CONTA_SITE) return erro('Essa parte não faz parte do seu plano.', 403);
   if (rec === 'dados') return json(await dados(db, conta, inteiro(new URL(req.url).searchParams.get('dias'), 1, 730) || 30));
 
   // configurações: mensagens de prospecção são por conta; o aviso de manutenção é do site da Branco (conta 1)
@@ -374,6 +414,7 @@ async function api(req, db, env, caminho) {
   // prospecção: busca estabelecimentos por nicho e cidade
   if (rec === 'prospeccao') {
     if (seg[1] === 'nichos') return json(NICHOS.map(n => ({ id: n.id, nome: n.nome, grupo: n.grupo })));
+    if (seg[1] === 'uso') return json(await consumo(db, S));
     if (seg[1] === 'salvar' && m === 'POST') return json(await salvaProspects(db, conta, b.itens, S.usuario));
     if (seg[1] === 'enriquecer' && m === 'POST') {
       if (await excedeu(db, 'enriq:' + ip(req), 120, 60)) return erro('Muitas consultas seguidas. Espere alguns minutos.', 429);
@@ -382,8 +423,11 @@ async function api(req, db, env, caminho) {
     if (m === 'GET') {
       if (await excedeu(db, 'busca:' + ip(req), 60, 60)) return erro('Muitas buscas seguidas. Espere alguns minutos.', 429);
       const q = new URL(req.url).searchParams;
-      try { return json(await buscaProspects(env, { nicho: q.get('nicho'), termo: txt(q.get('termo'), 60), cidade: txt(q.get('cidade'), 80), estado: txt(q.get('estado'), 60), pais: txt(q.get('pais'), 60) || 'Brasil', fonte: q.get('fonte') })); }
-      catch (e) { return erro(e.message || 'Não foi possível buscar agora.', 502); } // mostra o motivo real no painel
+      try {
+        const r = await buscaProspects(env, { nicho: q.get('nicho'), termo: txt(q.get('termo'), 60), cidade: txt(q.get('cidade'), 80), estado: txt(q.get('estado'), 60), pais: txt(q.get('pais'), 60) || 'Brasil', fonte: q.get('fonte') });
+        r.itens = await descontaEmpresas(db, S, r.itens); r.total = r.itens.length; r.uso = await consumo(db, S); r.aviso = r.itens.aviso || null;
+        return json(r);
+      } catch (e) { return erro(e.message || 'Não foi possível buscar agora.', e.status || 502); } // mostra o motivo real no painel
     }
   }
 
@@ -521,7 +565,7 @@ async function rotaConta(req, db, env, acao, S, cadastroAberto) {
     const email = emailOk(b.email), nome = txt(b.nome, 80), empresa = txt(b.empresa, 80) || nome, f = senhaFraca(b.senha);
     if (!email) return erro('Coloque um e-mail válido.'); if (!nome) return erro('Coloque seu nome.'); if (f) return erro(f);
     if (await db.prepare('SELECT 1 FROM usuarios WHERE email = ?').bind(email).first()) return erro('Este e-mail já tem conta. Faça login ou recupere a senha.');
-    const c = await db.prepare("INSERT INTO contas (nome, plano, status, criado_em) VALUES (?, 'start', 'ativa', datetime('now'))").bind(empresa).run();
+    const c = await db.prepare("INSERT INTO contas (nome, plano, status, criado_em, teste_ate) VALUES (?, 'teste', 'ativa', datetime('now'), datetime('now', ?))").bind(empresa, `+${TESTE_DIAS} days`).run();
     const u = await db.prepare("INSERT INTO usuarios (email, senha, nome, verificado, admin_saas, criado_em) VALUES (?, ?, ?, 0, 0, datetime('now'))").bind(email, await hashSenha(b.senha), nome).run();
     const contaId = c.meta.last_row_id, usuarioId = u.meta.last_row_id;
     await db.batch([db.prepare("INSERT INTO membros (conta_id, usuario_id, papel, criado_em) VALUES (?, ?, 'dono', datetime('now'))").bind(contaId, usuarioId),
@@ -529,7 +573,7 @@ async function rotaConta(req, db, env, acao, S, cadastroAberto) {
     const t = await novoToken(db, usuarioId, 'verificar', 48);
     await enviaEmail(env, email, 'Confirme seu e-mail no Branco', `Olá, ${nome}! Confirme seu e-mail abrindo este link:\n${origem}/admin?verificar=${t}\n\nSe não foi você, ignore esta mensagem.`);
     await registra(db, 'info', contaId, 'conta criada: ' + email);
-    return json({ ok: true, verificar: !env.RESEND_KEY ? t : undefined }, 200, await abreSessao(db, usuarioId, contaId)); // sem e-mail configurado, devolve o código para testes
+    return json({ ok: true, verificar: !env.RESEND_KEY && !env.BREVO_KEY ? t : undefined }, 200, await abreSessao(db, usuarioId, contaId)); // sem e-mail configurado, devolve o código para testes
   }
   if (acao === 'verificar') {
     const t = await db.prepare("SELECT usuario_id FROM tokens_email WHERE token = ? AND tipo = 'verificar' AND expira > datetime('now')").bind(String(b.token || '')).first();

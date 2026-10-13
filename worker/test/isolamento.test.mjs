@@ -76,49 +76,41 @@ ok('C tem conta própria (nome = nome da pessoa)', sC.conta.nome === 'Caio' && s
 ok('conta nova começa sem contatos', (await B.get('/api/followup')).dados.contatos.length === 0);
 ok('conta nova recebe os modelos iniciais', (await B.get('/api/followup')).dados.modelos.length >= 1);
 
-// ---- 4) cada conta cria seus dados ----
+// ---- 4) cada conta cria seus dados (assinantes só têm follow-up e prospecção) ----
 console.log('• dados de cada conta');
 for (const [X, n] of [[B, 'B'], [C, 'C']]) {
   await X.post('/api/contatos', { nome: 'Contato ' + n, telefone: '5541988880000' });
-  await X.post('/api/clientes', { nome: 'Cliente ' + n, email: n.toLowerCase() + '@cliente.com' });
-  await X.post('/api/vendas', { cliente: 'Venda ' + n, valor: 100000, data: '2026-02-01' });
   await X.post('/api/modelos', { titulo: 'Modelo ' + n, texto: 'Texto ' + n });
-  await X.post('/api/extrato', { itens: [{ ext_id: 'nu-1', data: '2026-02-02', valor: 100000, descricao: 'PIX ' + n }] }); // mesmo id do banco nas 2 contas
   await X.put('/api/config', { msg_semsite: 'Mensagem de ' + n });
   await X.post('/api/prospeccao/salvar', { itens: [{ nome: 'Barbearia ' + n, telefone: '554199999' + (n === 'B' ? '1111' : '2222'), cidade: 'Curitiba', nicho: 'Barbearia' }] });
 }
+await A.post('/api/clientes', { nome: 'Cliente A', email: 'a@cliente.com' });
+await A.post('/api/vendas', { cliente: 'Venda A', valor: 100000, data: '2026-02-01' });
+await A.post('/api/extrato', { itens: [{ ext_id: 'nu-2', data: '2026-02-02', valor: 100000, descricao: 'PIX A' }] });
 const fuB = (await B.get('/api/followup')).dados, fuC = (await C.get('/api/followup')).dados, fuA2 = (await A.get('/api/followup')).dados;
 ok('B vê só os contatos de B', fuB.contatos.length === 2 && fuB.contatos.every(c => /B$/.test(c.nome)));
 ok('C vê só os contatos de C', fuC.contatos.length === 2 && fuC.contatos.every(c => /C$/.test(c.nome)));
 ok('conta 1 não vê os contatos de B e C', fuA2.contatos.length === 1);
 ok('modelos não vazam', fuB.modelos.some(m => m.titulo === 'Modelo B') && !fuB.modelos.some(m => m.titulo === 'Modelo C'));
-const clB = (await B.get('/api/clientes')).dados, clC = (await C.get('/api/clientes')).dados;
-ok('clientes isolados', clB.length === 1 && clB[0].nome === 'Cliente B' && clC.length === 1 && clC[0].nome === 'Cliente C');
-const vB = (await B.get('/api/vendas')).dados, vC = (await C.get('/api/vendas')).dados;
-ok('vendas isoladas', vB.vendas.length === 1 && vB.vendas[0].cliente === 'Venda B' && vC.vendas.length === 1 && vC.vendas[0].cliente === 'Venda C');
-const exB = (await B.get('/api/extrato')).dados, exC = (await C.get('/api/extrato')).dados;
-ok('extrato: o mesmo id do banco entra nas duas contas', exB.length === 1 && exB[0].descricao === 'PIX B' && exC.length === 1 && exC[0].descricao === 'PIX C');
 ok('mensagens de prospecção por conta', (await B.get('/api/config')).dados.msg_semsite === 'Mensagem de B' && (await C.get('/api/config')).dados.msg_semsite === 'Mensagem de C');
 ok('dedupe da prospecção é por conta (mesmo nome em 2 contas = 2 registros)', fuB.contatos.some(c => c.nome === 'Barbearia B') && fuC.contatos.some(c => c.nome === 'Barbearia C'));
+const clA = (await A.get('/api/clientes')).dados, vA = (await A.get('/api/vendas')).dados, exA = (await A.get('/api/extrato')).dados;
+ok('clientes, vendas e extrato da conta 1 continuam funcionando', clA.length === 2 && vA.vendas.length === 2 && exA.length === 2);
 
 // ---- 5) uma conta tenta mexer nos dados da outra ----
 console.log('• tentativas de acesso cruzado');
-const ctB = fuB.contatos.find(c => c.nome === 'Contato B').id, cliB = clB[0].id, venB = vB.vendas[0].id, exIdB = exB[0].id, modB = fuB.modelos.find(m => m.titulo === 'Modelo B').id;
+const ctB = fuB.contatos.find(c => c.nome === 'Contato B').id, modB = fuB.modelos.find(m => m.titulo === 'Modelo B').id;
+const cliA = clA.find(c => c.nome === 'Cliente A').id, venA = vA.vendas.find(v => v.cliente === 'Venda A').id, exIdA = exA.find(e => e.descricao === 'PIX A').id;
 ok('C não altera contato de B (404)', (await C.patch('/api/contatos/' + ctB, { notas: 'hackeado' })).status === 404);
 ok('C não registra envio no contato de B (404)', (await C.post('/api/contatos/' + ctB + '/enviei', {})).status === 404);
 await C.del('/api/contatos/' + ctB);
 ok('C não apaga contato de B', (await B.get('/api/followup')).dados.contatos.some(c => c.id === ctB && c.notas !== 'hackeado'));
-ok('C não põe link no cliente de B (404)', (await C.post('/api/clientes/' + cliB + '/links', { titulo: 'x', url: 'https://x.com' })).status === 404);
-ok('C não edita cliente de B (404)', (await C.patch('/api/clientes/' + cliB, { nome: 'hackeado' })).status === 404);
-await C.del('/api/clientes/' + cliB);
-ok('C não apaga cliente de B', (await B.get('/api/clientes')).dados.length === 1 && (await B.get('/api/clientes')).dados[0].nome === 'Cliente B');
-await C.patch('/api/vendas/' + venB, { pago: true }); await C.del('/api/vendas/' + venB);
-ok('C não marca nem apaga venda de B', (await B.get('/api/vendas')).dados.vendas[0]?.pago === false);
-await C.patch('/api/extrato/' + exIdB, { ignorar: true }); await C.del('/api/extrato/' + exIdB);
-ok('C não mexe no extrato de B', (await B.get('/api/extrato')).dados[0]?.ignorar === 0);
+ok('conta 1 não altera contato de B (404)', (await A.patch('/api/contatos/' + ctB, { notas: 'hackeado' })).status === 404);
 await C.patch('/api/modelos/' + modB, { titulo: 'hack', texto: 'hack' }); await C.del('/api/modelos/' + modB);
 ok('C não mexe nos modelos de B', (await B.get('/api/followup')).dados.modelos.some(m => m.id === modB && m.titulo === 'Modelo B'));
-ok('conta sem visão do site não vê dados do site de outra', (await B.get('/api/dados?dias=30')).dados.visitas === 0);
+ok('assinante não põe link no cliente da conta 1 (403)', (await C.post('/api/clientes/' + cliA + '/links', { titulo: 'x', url: 'https://x.com' })).status === 403);
+await C.del('/api/clientes/' + cliA); await C.patch('/api/vendas/' + venA, { pago: true }); await C.del('/api/vendas/' + venA); await C.patch('/api/extrato/' + exIdA, { ignorar: true });
+ok('assinante não mexe em clientes, vendas e extrato da conta 1', (await A.get('/api/clientes')).dados.length === 2 && (await A.get('/api/vendas')).dados.vendas.find(v => v.id === venA)?.pago === false && (await A.get('/api/extrato')).dados.find(e => e.id === exIdA)?.ignorar === 0);
 
 // ---- 6) rotas públicas do site continuam caindo na conta 1 ----
 console.log('• site da Branco');
@@ -149,6 +141,36 @@ ok('dono por e-mail entra na conta 1 como admin do SaaS', sD.conta.id === 1 && s
 ok('trocar senha exige a atual', (await api(lgD.cookie).patch('/api/conta', { senha_atual: 'errada', senha_nova: 'outra-senha-99' })).status === 400);
 ok('cadastro fechado dá 403', (await worker.fetch(new Request(BASE + '/api/conta/cadastro', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: 'Z', email: 'z@z.com', senha: 'senha-zzz-123' }) }), { ...env, CADASTRO_ABERTO: '0' })).status === 403);
 ok('pedido vindo de outro site é recusado', (await chama('POST', '/api/contatos', { corpo: { nome: 'x' }, cookie: cb.cookie, origem: 'https://outro.site' })).status === 403);
+
+// ---- 8) assinante só tem follow-up e prospecção; teste grátis de 30 empresas ----
+console.log('• acesso do assinante e limite do teste grátis');
+const CB2 = api((await chama('POST', '/api/login', { corpo: { email: 'bia@beta.com', senha: 'senha-bia-123' } })).cookie);
+for (const rota of ['/api/dados?dias=30', '/api/clientes', '/api/vendas', '/api/extrato']) ok('assinante não acessa ' + rota + ' (403)', (await CB2.get(rota)).status === 403);
+ok('conta da Branco continua com tudo', (await A.get('/api/vendas')).status === 200 && (await A.get('/api/clientes')).status === 200);
+ok('cadastro vem aberto por padrão', (await chama('GET', '/api/sessao')).dados.cadastro === true);
+const sB2 = (await CB2.get('/api/sessao')).dados;
+ok('conta nova entra em teste grátis de 30 empresas', sB2.uso.limite === 30 && sB2.uso.usado === 0 && sB2.uso.plano === 'teste' && !!sB2.uso.testeAte && sB2.conta.plano === 'teste');
+ok('a conta da Branco não tem limite', sA.uso?.limite === null || (await A.get('/api/sessao')).dados.uso.limite === null);
+// OpenStreetMap de mentira: 40 barbearias em Curitiba
+const fetchReal = globalThis.fetch;
+globalThis.fetch = async (u) => { u = String(u);
+  if (u.includes('nominatim')) return Response.json([{ osm_type: 'relation', osm_id: 1, lat: -25.4, lon: -49.3, display_name: 'Curitiba, Paraná, Brasil' }]);
+  if (u.includes('overpass')) return Response.json({ elements: Array.from({ length: 40 }, (_, i) => ({ type: 'node', id: i + 1, lat: -25.4, lon: -49.3, tags: { name: 'Barbearia ' + (i + 1), shop: 'hairdresser', phone: '+55 41 9' + String(1000000 + i).padStart(8, '0') } })) });
+  return new Response('', { status: 404 }); };
+const b1 = (await CB2.get('/api/prospeccao?nicho=barbearia&cidade=Curitiba&estado=Paraná&fonte=osm')).dados;
+ok('1ª busca devolve só o que cabe no teste (30 de 40)', b1.total === 30 && b1.uso.usado === 30);
+const b2 = await CB2.get('/api/prospeccao?nicho=barbearia&cidade=Curitiba&estado=Paraná&fonte=osm');
+ok('repetir a mesma busca não cobra de novo (as 30 já vistas voltam)', b2.status === 200 && b2.dados.total === 30 && b2.dados.uso.usado === 30);
+globalThis.fetch = async (u) => { u = String(u);
+  if (u.includes('nominatim')) return Response.json([{ osm_type: 'relation', osm_id: 1, lat: -25.4, lon: -49.3, display_name: 'Curitiba, Paraná, Brasil' }]);
+  if (u.includes('overpass')) return Response.json({ elements: [{ type: 'node', id: 999, lat: -25.4, lon: -49.3, tags: { name: 'Nova Barbearia', shop: 'hairdresser', phone: '+55 41 988887777' } }] });
+  return new Response('', { status: 404 }); };
+ok('empresa nova com o limite cheio é bloqueada (402)', (await CB2.get('/api/prospeccao?nicho=barbearia&cidade=Curitiba&estado=Paraná&fonte=osm')).status === 402);
+ok('a conta da Branco busca sem limite', (await A.get('/api/prospeccao?nicho=barbearia&cidade=Curitiba&estado=Paraná&fonte=osm')).dados.total === 1);
+d1._db.prepare("UPDATE contas SET teste_ate = datetime('now', '-1 day') WHERE id = ?").run(sB2.conta.id);
+ok('teste vencido bloqueia a busca (402)', (await CB2.get('/api/prospeccao?nicho=barbearia&cidade=Curitiba&estado=Paraná&fonte=osm')).status === 402);
+ok('teste vencido ainda deixa ver o follow-up (dados não somem)', (await CB2.get('/api/followup')).status === 200);
+globalThis.fetch = fetchReal;
 
 console.log(`\n${passou} ok, ${falhou} falhou`);
 process.exit(falhou ? 1 : 0);
