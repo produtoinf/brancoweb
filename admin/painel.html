@@ -117,7 +117,8 @@ tbody tr:hover td{background:color-mix(in srgb,var(--soft) 60%,transparent)}
 #login .rod i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--ok);margin-right:6px;box-shadow:0 0 8px var(--ok);animation:pisca 2s infinite}
 @keyframes pisca{50%{opacity:.35}}
 @media(max-width:480px){#login{margin:10vh 16px;padding:24px 18px 18px}}
-#fSenha{display:grid;gap:10px;margin-top:8px}#fSenha input,#fSenha button{width:100%;padding:13px 16px;border-radius:4px}
+#login form{display:grid;gap:10px;margin-top:8px}#login form input,#login form button{width:100%;padding:13px 16px;border-radius:4px}
+#login .rodl{display:flex;justify-content:space-between;margin:2px 0 0;font:500 .72rem var(--mono)}#login .rodl a{color:var(--mute)}#login .rodl a:hover{color:var(--fg)}#login .dica{margin:0}
 #mar{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block;pointer-events:none}
 #mar[hidden]{display:none}
 #login{transition:transform .5s cubic-bezier(.7,0,.3,1),opacity .4s ease}
@@ -194,6 +195,7 @@ html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-enviada
 .sug{font:500 .66rem var(--mono);color:var(--ok)}
 tr.ign td{opacity:.45}
 .chk{display:flex;align-items:center;gap:8px;font:500 .78rem var(--mono);color:var(--mute)}.chk input{width:18px;height:18px;padding:0}
+.aviso{margin:0 0 14px;padding:10px 14px;border:1px solid var(--warn);border-radius:10px;color:var(--warn);font:500 .8rem var(--mono);display:flex;gap:12px;align-items:center;justify-content:space-between}.aviso button{padding:6px 10px;font-size:.75rem}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg);font:500 .8rem var(--mono);padding:11px 20px;border-radius:999px;z-index:40;box-shadow:0 10px 30px #0005;animation:tin .25s ease}
 @keyframes tin{from{opacity:0;transform:translate(-50%,10px)}}
 .demo{position:fixed;left:50%;top:10px;transform:translateX(-50%);z-index:50;background:var(--warn);color:#1a1300;font:600 .72rem var(--mono);padding:6px 14px;border-radius:999px}
@@ -223,7 +225,12 @@ tr.ign td{opacity:.45}
   <span class="cnt a"></span><span class="cnt b"></span>
   <p class="label">( área restrita )</p><h1>Branco<br><span>Painel.</span></h1>
   <p class="msg-err" id="erroLogin"></p>
-  <form id="fSenha"><input type="password" id="senha" placeholder="Sua senha" autocomplete="current-password" autofocus><button class="solid">Entrar →</button></form>
+  <form id="fSenha"><input type="email" id="lemail" placeholder="E-mail" autocomplete="username" autofocus><input type="password" id="senha" placeholder="Senha" autocomplete="current-password"><button class="solid">Entrar →</button>
+    <p class="rodl"><a href="#" id="lEsqueci">Esqueci a senha</a><a href="#" id="lCriar" hidden>Criar conta</a></p></form>
+  <form id="fCadastro" hidden><input name="nome" placeholder="Seu nome" required maxlength="80"><input name="empresa" placeholder="Nome da empresa (opcional)" maxlength="80"><input type="email" name="email" placeholder="E-mail" required autocomplete="email"><input type="password" name="senha" placeholder="Senha (mínimo 8)" required minlength="8" autocomplete="new-password"><button class="solid">Criar minha conta →</button>
+    <p class="rodl"><a href="#" id="lVoltar">Já tenho conta</a></p></form>
+  <form id="fEsqueci" hidden><p class="dica">Digite seu e-mail. Se ele tiver conta, mandamos um link para criar uma senha nova.</p><input type="email" name="email" placeholder="E-mail" required><button class="solid">Enviar link →</button><p class="rodl"><a href="#" id="lVoltar2">Voltar</a></p></form>
+  <form id="fRedefinir" hidden><p class="dica">Crie sua senha nova.</p><input type="password" name="senha" placeholder="Senha nova (mínimo 8)" required minlength="8" autocomplete="new-password"><button class="solid">Salvar senha →</button></form>
   <div class="rod"><span><i></i>conexão segura</span><span>branco.admin</span></div>
 </section>
 
@@ -240,11 +247,13 @@ tr.ign td{opacity:.45}
     </nav>
     <div class="foot">
       <button type="button" id="tema2" title="Claro / escuro"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg><span>Tema</span></button>
+      <button type="button" id="bConta" title="Minha conta"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Conta</span></button>
       <button type="button" data-sair title="Sair"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/></svg><span>Sair</span></button>
     </div>
   </aside>
 
   <main class="main">
+    <p class="aviso" id="avisoEmail" hidden>Confirme seu e-mail pelo link que enviamos. <button type="button" class="ghost" id="reenviar">Reenviar</button></p>
     <header class="topbar">
       <div><p class="label" id="aSub">( painel da branco )</p><h1 id="aTitulo">Visão<br><span>geral.</span></h1></div>
       <div class="acts">
@@ -420,11 +429,23 @@ function kpi(o){return '<div class="kpi fade"><div class="top"><span class="labe
   (o.spark?'<div class="spark">'+o.spark+'</div>':o.meter!=null?'<div class="meter"><span><i style="width:'+Math.min(100,o.meter)+'%"></i></span></div>':'')+'</div>'}
 
 /* ---------- LOGIN + fundo "grade de dados" ---------- */
-function telaLogin(){
+function telaLogin(s){
   $('#login').hidden=false;mar();
-  $('#fSenha').onsubmit=async ev=>{ev.preventDefault();const L=$('#login');
-    try{await api('/api/login',{method:'POST',body:{senha:$('#senha').value}});mergulhar(()=>location.href='/admin')}
-    catch(x){$('#erroLogin').textContent='Senha errada.';L.classList.remove('erro');void L.offsetWidth;L.classList.add('erro')}};
+  const L=$('#login'),err=x=>{$('#erroLogin').textContent=x?.erro||'Não deu certo. Tente de novo.';L.classList.remove('erro');void L.offsetWidth;L.classList.add('erro')};
+  const mostra=id=>{['fSenha','fCadastro','fEsqueci','fRedefinir'].forEach(f=>$('#'+f).hidden=f!==id);$('#erroLogin').textContent='';$('#'+id).querySelector('input')?.focus()};
+  $('#lCriar').hidden=!s?.cadastro;
+  $('#lCriar').onclick=e=>{e.preventDefault();mostra('fCadastro')};$('#lEsqueci').onclick=e=>{e.preventDefault();mostra('fEsqueci')};
+  $('#lVoltar').onclick=$('#lVoltar2').onclick=e=>{e.preventDefault();mostra('fSenha')};
+  $('#fSenha').onsubmit=async ev=>{ev.preventDefault();
+    try{await api('/api/login',{method:'POST',body:{email:$('#lemail').value.trim(),senha:$('#senha').value}});mergulhar(()=>location.href='/admin')}catch(x){err(x)}};
+  $('#fCadastro').onsubmit=async ev=>{ev.preventDefault();
+    try{await api('/api/conta/cadastro',{method:'POST',body:Object.fromEntries(new FormData(ev.target))});mergulhar(()=>location.href='/admin')}catch(x){err(x)}};
+  $('#fEsqueci').onsubmit=async ev=>{ev.preventDefault();
+    try{await api('/api/conta/esqueci',{method:'POST',body:{email:ev.target.email.value}});ev.target.innerHTML='<p class="dica">Se este e-mail tiver conta, o link já foi enviado. Confira a caixa de entrada e o spam.</p>'}catch(x){err(x)}};
+  // links que chegam por e-mail: ?verificar=... e ?redefinir=...
+  const q=new URLSearchParams(location.search);
+  if(q.get('redefinir')){mostra('fRedefinir');$('#fRedefinir').onsubmit=async ev=>{ev.preventDefault();
+    try{await api('/api/conta/redefinir',{method:'POST',body:{token:q.get('redefinir'),senha:ev.target.senha.value}});history.replaceState(null,'','/admin');mostra('fSenha');toast('Senha salva ✓ agora é só entrar')}catch(x){err(x)}}}
 }
 const PARADO=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const claroT=()=>document.documentElement.dataset.theme==='light';
@@ -606,6 +627,11 @@ const TITULOS={site:['( como o seu site está indo )','Visão<br><span>geral.</s
 function redesenha(){if(telaAtual==='site')desenhaSite();if(telaAtual==='follow'&&fu.contatos)desenhaFollow();if(telaAtual==='financeiro')desenhaFin()}
 function telaAdmin(){
   $('#admin').hidden=false;document.body.classList.add('logado');
+  const S=window.SESSAO||{};
+  if(S.conta){$('.brand small').textContent=S.conta.nome;$('#aSub').textContent='( painel de '+S.conta.nome+' )'}
+  if(!S.site){$('[data-tab="site"]').hidden=true} // só a conta dona do site tem a visão geral do site
+  if(S.usuario&&!S.usuario.verificado)$('#avisoEmail').hidden=false;
+  $('#reenviar').onclick=async()=>{try{await api('/api/conta/reenviar',{method:'POST'});toast('E-mail reenviado ✓')}catch(x){toast(x.erro||'Erro')}};
   const D=[['1','Hoje'],['7','7d'],['30','30d'],['90','90d'],['365','1 ano']];
   $('#segDias').innerHTML=D.map(x=>'<button type="button" data-d="'+x[0]+'" aria-pressed="'+(x[0]===$('#dias').value)+'">'+x[1]+'</button>').join('');
   $$('[data-d]').forEach(b=>b.onclick=()=>{$('#dias').value=b.dataset.d;$$('[data-d]').forEach(x=>x.setAttribute('aria-pressed',x===b));carregaSite()});
@@ -618,12 +644,33 @@ function telaAdmin(){
   $$('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
   $('#recarregar').onclick=()=>tab(telaAtual);
   $('#fNovo').onsubmit=async e=>{e.preventDefault();$('#eNovo').textContent='';try{await api('/api/clientes',{method:'POST',body:Object.fromEntries(new FormData(e.target))});e.target.reset();toast('Cliente cadastrado ✓');carregaClientes()}catch(x){$('#eNovo').textContent=x.erro||'Erro'}};
-  tab('site');
+  tab(S.site===false?'follow':'site');
   // número de quem chamar hoje no menu
   api('/api/followup').then(x=>{fu=x;badge()}).catch(()=>{});
   // atualiza sozinho a cada 2 minutos na visão geral
   setInterval(()=>{if(telaAtual==='site'&&!document.hidden)carregaSite().catch(()=>{})},120000);
 }
+
+/* ---------- MINHA CONTA ---------- */
+async function telaConta(){
+  const el=document.createElement('div');el.className='seq';document.body.appendChild(el);const fecha=()=>el.remove();
+  const desenha=async()=>{let c;try{c=await api('/api/conta')}catch(x){fecha();return toast(x.erro||'Erro')}
+    const u=c.usuario,dono=c.meuPapel==='dono';
+    el.innerHTML='<div class="box"><div class="hd"><div><h2>Minha conta</h2><p class="label">'+esc(c.conta.nome)+' · plano '+esc(c.conta.plano||'')+' · você é '+(dono?'dono':'membro')+'</p></div><button class="ghost" data-x>Fechar ✕</button></div>'+
+      (dono?'<form class="form" data-f="nome"><label class="fl full"><span>Nome da conta / empresa</span><input name="nome_conta" value="'+esc(c.conta.nome)+'" maxlength="80" required></label><div class="full"><button class="ghost">Salvar nome</button></div></form>':'')+
+      (u?'<section class="mt"><p class="label">seu login</p><p style="margin:4px 0 10px"><b>'+esc(u.email)+'</b>'+(u.verificado?' <span class="tag ok">confirmado</span>':' <span class="tag">e-mail não confirmado</span> <button class="ghost" data-reenv style="padding:4px 8px">reenviar</button>')+'</p>'+
+        '<form class="form" data-f="senha"><label class="fl"><span>Senha atual</span><input type="password" name="senha_atual" autocomplete="current-password" required></label><label class="fl"><span>Senha nova (mínimo 8)</span><input type="password" name="senha_nova" minlength="8" autocomplete="new-password" required></label><div class="full"><button class="ghost">Trocar senha</button></div></form></section>'
+        :'<section class="mt"><p class="label">seu login</p><p class="dica" style="margin:4px 0 10px">Você entra com a senha do Worker. Crie um login com e-mail e senha para poder recuperar a senha por e-mail e, depois, convidar sua equipe.</p>'+
+        '<form class="form" data-f="dono"><label class="fl"><span>Seu nome</span><input name="nome" maxlength="80" required></label><label class="fl"><span>E-mail</span><input type="email" name="email" required></label><label class="fl full"><span>Senha (mínimo 8)</span><input type="password" name="senha" minlength="8" autocomplete="new-password" required></label><div class="full"><button class="solid">Criar meu login</button></div></form></section>')+
+      '<section class="mt"><p class="label">equipe ('+c.equipe.length+')</p>'+(c.equipe.length?'<ul style="margin:6px 0 0;padding-left:18px">'+c.equipe.map(m=>'<li>'+esc(m.nome||m.email)+' <small class="label">'+esc(m.email)+' · '+m.papel+'</small></li>').join('')+'</ul>':'<p class="dica" style="margin:4px 0 0">Convites para a equipe chegam na etapa dos planos.</p>')+'</section></div>';
+    el.querySelector('[data-x]').onclick=fecha;
+    el.querySelector('[data-reenv]')&&(el.querySelector('[data-reenv]').onclick=async()=>{try{await api('/api/conta/reenviar',{method:'POST'});toast('E-mail reenviado ✓')}catch(x){toast(x.erro||'Erro')}});
+    el.querySelectorAll('form').forEach(f=>f.onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f));
+      try{if(f.dataset.f==='dono'){await api('/api/conta/dono',{method:'POST',body:d});toast('Login criado ✓');location.reload();return}
+        await api('/api/conta',{method:'PATCH',body:d});toast('Salvo ✓');if(f.dataset.f==='nome'){$('.brand small').textContent=d.nome_conta}desenha()}catch(x){toast(x.erro||'Erro')}})};
+  el.onclick=e=>{if(e.target===el)fecha()};desenha();
+}
+$('#bConta').onclick=telaConta;
 
 /* ---------- PROSPECÇÃO ---------- */
 const MSG_SEM='Oi! Tudo bem? Encontrei a {nome} aqui em {cidade} e vi que vocês ainda não têm um site próprio. Sou da Branco, a gente cria sites profissionais e faz tráfego pago para {nicho}, para aparecer no Google e receber clientes direto no WhatsApp. Posso te mostrar alguns exemplos rapidinho?';
@@ -948,7 +995,8 @@ function demoApi(p,o){
       .map((v,i)=>({id:i+1,cliente:v[0],servico:v[1],valor:v[2],mensal:v[3],data:dia(v[4]),fim:null,pago:i!==4,notas:''})),
     clientes:[{id:1,nome:'Clínica Bella',email:'contato@bella.com',projeto:'Site institucional',etapa:5,visitas30:1240,site:'a1',token:'demo1',links:[],recado:''},{id:2,nome:'JP Burger',email:'jp@burger.com',projeto:'Loja virtual',etapa:3,visitas30:310,site:'b2',links:[],recado:''},{id:3,nome:'Studio RS',email:'rs@studio.com',projeto:'Site + vídeo',etapa:4,visitas30:520,site:'c3',links:[],recado:''}]};
   const D=window._demo;
-  if(p==='/api/sessao')return Promise.resolve({papel:'admin'});
+  if(p==='/api/sessao')return Promise.resolve({papel:'admin',conta:{id:1,nome:'Branco'},usuario:null,site:true,admin:true,cadastro:false});
+  if(p.startsWith('/api/conta'))return Promise.resolve({ok:true,conta:{id:1,nome:'Branco'},usuario:null,meuPapel:'dono',equipe:[]});
   if(p.startsWith('/api/dados')){const n=+p.split('=')[1],k=n>60?1:1;const porDia=[];let V=0,W=0;
     for(let i=0;i<Math.min(n,366);i++){const base=60+Math.sin(i/5)*20+(n-i)*.4,v=Math.max(0,Math.round(base+r(-15,25))),w=Math.round(v*(.05+Math.random()*.05));porDia.push({dia:dia(i),visitas:v,whats:w});V+=v;W+=w}
     const cad=Math.round(V*.02),env=Math.round(cad*.75);
@@ -976,6 +1024,9 @@ function demoApi(p,o){
 if(DEMO){const b=document.createElement('div');b.className='demo';b.textContent='modo demonstração · dados de exemplo';document.body.appendChild(b)}
 
 /* início */
-api('/api/sessao').then(s=>{if(s.papel==='admin'){emergir();telaAdmin()}else{try{sessionStorage.removeItem('bm')}catch(x){}telaLogin()}});
+api('/api/sessao').then(s=>{window.SESSAO=s;if(s.papel==='admin'){emergir();telaAdmin()}else{try{sessionStorage.removeItem('bm')}catch(x){}telaLogin(s)}});
+// link de verificação de e-mail (funciona logado ou não)
+(()=>{const q=new URLSearchParams(location.search),t=q.get('verificar');if(!t)return;
+  api('/api/conta/verificar',{method:'POST',body:{token:t}}).then(()=>toast('E-mail confirmado ✓')).catch(x=>toast(x.erro||'Link inválido')).finally(()=>history.replaceState(null,'','/admin'))})();
 </script>
 </body></html>
