@@ -20,6 +20,19 @@ COMO COLOCAR NO AR (pelo site da Cloudflare, sem instalar nada)
 4) Criar a senha do painel
    Worker branco-admin > Settings > Variables and Secrets > Add
    Type: Secret     Name: ADMIN_SENHA     Value: (sua senha)   > Save
+   (essa senha entra na conta 1, a da Branco, sem e-mail — como sempre foi)
+
+CONTAS E E-MAIL (SaaS)
+   O painel agora é multi-conta: cada conta só vê os próprios dados. A sua é a conta 1.
+   - Dentro do painel você pode criar seu login por e-mail (Conta > "criar meu login").
+   - Envio de e-mail (verificação e "esqueci a senha"): crie uma conta em resend.com, verifique seu
+     domínio e adicione os secrets   RESEND_KEY = (a chave)   e   EMAIL_DE = Branco <nao-responda@seudominio.com.br>
+     Sem RESEND_KEY nenhum e-mail sai (o cadastro ainda funciona, sem confirmação).
+   - Para liberar que outras pessoas criem conta: variável  CADASTRO_ABERTO = 1   (deixe desligado até os planos e a cobrança estarem prontos).
+
+TESTE AUTOMÁTICO (no seu computador, precisa só do Node 22+)
+   node worker/test/isolamento.test.mjs
+   Cria contas de mentira, enche de dados e confere que uma conta não vê nem mexe na outra.
 
 5) Abrir o painel
    https://branco-admin.SEU-USUARIO.workers.dev/admin
