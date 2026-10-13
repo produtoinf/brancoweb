@@ -161,14 +161,14 @@ details form{display:grid;gap:10px;margin-top:12px}
 .fc__msg{display:grid;gap:8px}.fc__msg textarea{min-height:76px}
 .fc__row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .fc details summary{text-align:left}
-.st-novo{color:#4ea1ff;border-color:currentColor}.st-conversando{color:#e5b84e;border-color:currentColor}.st-proposta{color:#b38cff;border-color:currentColor}.st-fechou{color:var(--ok);border-color:currentColor}.st-perdido{color:var(--mute)}
-html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-conversando{color:#a87a00}html[data-theme=light] .st-proposta{color:#7a4fd6}
+.st-novo{color:#4ea1ff;border-color:currentColor}.st-enviada{color:#8fa3b8;border-color:currentColor}.st-conversando{color:#e5b84e;border-color:currentColor}.st-proposta{color:#b38cff;border-color:currentColor}.st-fechou{color:var(--ok);border-color:currentColor}.st-perdido{color:var(--mute)}
+html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-enviada{color:#56697d}html[data-theme=light] .st-conversando{color:#a87a00}html[data-theme=light] .st-proposta{color:#7a4fd6}
 .filtros{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.filtros button{padding:7px 12px;font-size:.75rem}.filtros button[aria-pressed=true]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .mod{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:12px;margin-top:12px}.mod:first-child{border:0;margin:0;padding:0}
 .dica{font:500 .72rem/1.5 var(--mono);color:var(--mute);margin:0}
 .pipe{display:flex;height:22px;border-radius:8px;overflow:hidden;background:var(--soft);gap:2px}
 .pipe i{display:block;height:100%}
-.pipeleg{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:16px}
+.pipeleg{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;margin-top:16px}
 .pipeleg div{border-left:3px solid var(--c);padding-left:10px}.pipeleg b{display:block;font:800 1.5rem Archivo;letter-spacing:-.03em}.pipeleg small{font:500 .7rem var(--mono);color:var(--mute)}
 /* financeiro */
 .kpi b.money{font-size:clamp(1.15rem,1.55vw,1.55rem);letter-spacing:-.03em;white-space:nowrap}
@@ -746,8 +746,8 @@ function sequencia(L){let i=0;const el=document.createElement('div');el.classNam
   };mostra()}
 
 /* ---------- FOLLOW-UP ---------- */
-const VENDAS=[['novo','Novo'],['conversando','Conversando'],['proposta','Proposta enviada'],['fechou','Fechou'],['perdido','Perdido']];
-const COR_V={novo:'#4ea1ff',conversando:'#e5b84e',proposta:'#b38cff',fechou:'var(--ok)',perdido:'#5b5b63'};
+const VENDAS=[['novo','Novo'],['enviada','Mensagem enviada'],['conversando','Respondeu'],['proposta','Proposta enviada'],['fechou','Fechou'],['perdido','Perdido']];
+const COR_V={novo:'#4ea1ff',enviada:'#8fa3b8',conversando:'#e5b84e',proposta:'#b38cff',fechou:'var(--ok)',perdido:'#5b5b63'};
 let fu={contatos:[],modelos:[]},filtro='ativos';
 const hojeL=()=>new Date().toLocaleDateString('sv-SE');
 const waNum=t=>t.length<=11?'55'+t:t;
@@ -759,7 +759,7 @@ function badge(){const n=(fu.contatos||[]).filter(precisaHoje).length;$('#bFollo
 function cardFu(c,destaque){
   const mi=Math.min(c.contatos,fu.modelos.length-1),ds=diasDesde(c.ultimo_contato),vd=VENDAS.find(v=>v[0]===c.venda)||VENDAS[0];
   const info=[c.telefone?fone(c.telefone):'sem WhatsApp',c.origem==='prospeccao'?'prospecção'+(c.cidade?' · '+c.cidade:''):null,c.projeto,c.origem==='prospeccao'?(c.site?'tem site':'sem site'):null,c.status==='parcial'?'parou no meio do formulário':null,c.contatos?c.contatos+' mensage'+(c.contatos>1?'ns':'m')+' · última há '+ds+(ds===1?' dia':' dias'):'nunca chamado',c.proximo_contato&&!destaque?'próximo: '+c.proximo_contato.split('-').reverse().join('/'):null].filter(Boolean).map(esc).join(' · ');
-  return '<div class="fc'+(destaque?' hoje':'')+'" data-c="'+c.id+'"><div class="fc__top"><div><b>'+esc(c.nome)+'</b>'+(c.empresa?' <span class="label">'+esc(c.empresa)+'</span>':'')+'<small>'+info+'</small></div><span class="pill st-'+c.venda+'">'+vd[1]+(c.proposta?' · '+brl(c.proposta):'')+'</span></div>'+
+  return '<div class="fc'+(destaque?' hoje':'')+'" data-c="'+c.id+'"><div class="fc__top"><div><b>'+esc(c.nome)+'</b>'+(c.empresa?' <span class="label">'+esc(c.empresa)+'</span>':'')+'<small>'+info+'</small></div><span class="pill st-'+c.venda+'">'+vd[1]+(c.proposta?' · '+brl(c.proposta):'')+'</span>'+(c.venda==='enviada'?'<button class="ghost" data-resp title="marcar que a pessoa respondeu">Respondeu ✓</button>':'')+'</div>'+
   (!destaque?'<details><summary>abrir · mensagem, anotações, status</summary><div class="mt" style="display:grid;gap:12px">':'')+
   (c.telefone&&!['fechou','perdido'].includes(c.venda)&&fu.modelos.length?'<div class="fc__msg"><select data-mod aria-label="Mensagem pronta">'+fu.modelos.map((m,i)=>'<option value="'+i+'"'+(i===mi?' selected':'')+'>'+esc(m.titulo)+'</option>').join('')+'</select><textarea data-txt rows="3">'+esc(preenche(fu.modelos[mi].texto,c))+'</textarea><div class="fc__row"><button class="solid" data-enviar>Enviar no WhatsApp ↗</button>'+(c.contatos>=3?'<span class="dica">já foram 3+ mensagens — talvez marcar como perdido</span>':'')+'</div></div>':'')+
   (destaque?'<details><summary>editar · '+(c.notas?'tem anotação':'anotações, status, data')+'</summary>':'')+'<div class="form mt">'+
@@ -778,6 +778,8 @@ function ligaCards(root){
     if(env)env.onclick=async()=>{window.open('https://api.whatsapp.com/send?phone='+waNum(c.telefone)+'&text='+encodeURIComponent(txt.value),'_blank','noopener');
       await api('/api/contatos/'+id+'/enviei',{method:'POST',body:{hoje:hojeL()}});toast('Registrado ✓ próximo lembrete agendado');carregaFollow()};
     el.querySelector('[data-salvar]').onclick=async()=>{await api('/api/contatos/'+id,{method:'PATCH',body:{venda:el.querySelector('[data-venda]').value,proximo_contato:el.querySelector('[data-prox]').value,notas:el.querySelector('[data-notas]').value,proposta:el.querySelector('[data-prop]').value.trim()?paraCent(el.querySelector('[data-prop]').value):null}});toast('Salvo ✓');carregaFollow()};
+    const rp=el.querySelector('[data-resp]');
+    if(rp)rp.onclick=async ev=>{ev.preventDefault();await api('/api/contatos/'+id,{method:'PATCH',body:{venda:'conversando'}});toast('Marcado: respondeu ✓');carregaFollow()};
     const rv=el.querySelector('[data-rv]');
     if(rv)rv.onclick=()=>{irPara('financeiro');limpaVenda();const f=$('#fVenda');f.cliente.value=c.empresa||c.nome;f.servico.value=c.projeto||'';f.contato_id.value=c.id;if(c.proposta)f.valor.value=reais(c.proposta);$('#finForm').scrollIntoView({behavior:'smooth'});toast('Confira os valores e registre')};
     el.querySelector('[data-del]').onclick=async()=>{if(!confirm('Excluir o contato de '+c.nome+'?'))return;await api('/api/contatos/'+id,{method:'DELETE'});toast('Contato excluído');carregaFollow()};
@@ -788,10 +790,12 @@ function ligaCards(root){
 function desenhaFollow(){
   const C=fu.contatos,ativos=C.filter(c=>!['fechou','perdido'].includes(c.venda)),fech=C.filter(c=>c.venda==='fechou').length,perd=C.filter(c=>c.venda==='perdido').length,hoje=C.filter(precisaHoje);
   const neg=ativos.reduce((a,c)=>a+(c.proposta||0),0),comProp=ativos.filter(c=>c.proposta).length;
+  const RESP=['conversando','proposta','fechou'],enviados=C.filter(c=>c.contatos>0||RESP.includes(c.venda)),resp=enviados.filter(c=>RESP.includes(c.venda)).length;
   badge();
   $('#kFollow').innerHTML=[
     {l:'chamar hoje',v:hoje.length,s:'precisam de mensagem'},
     {l:'em andamento',v:ativos.length,s:'ainda podem fechar',meter:pct(ativos.length,C.length)},
+    {l:'taxa de resposta',v:pct(resp,enviados.length)+'%',s:resp+' de '+enviados.length+' responderam',meter:pct(resp,enviados.length)},
     {l:'fecharam',v:fech,s:'viraram clientes',meter:pct(fech,C.length)},
     {l:'taxa de fechamento',v:(fech+perd?Math.round(fech/(fech+perd)*100):0)+'%',s:'dos que já decidiram',meter:fech+perd?fech/(fech+perd)*100:0},
     {l:'em negociação',v:brl(neg),s:comProp+' proposta'+(comProp===1?'':'s')+' com valor',cls:'money'},
@@ -937,7 +941,7 @@ $('#fVenda').onsubmit=async e=>{e.preventDefault();const f=e.target,id=f.id.valu
 function demoApi(p,o){
   const r=(a,b)=>Math.floor(a+Math.random()*(b-a+1)),hoje=new Date(),dia=i=>new Date(hoje-i*864e5).toISOString().slice(0,10),em=i=>dia(i)+' 14:'+String(r(10,59));
   window._demo=window._demo||{
-    contatos:[['Mariana Lopes','Clínica Bella','41999887766','Site','conversando',2,250000],['João Pedro','JP Burger','41988776655','Loja virtual','proposta',3,420000],['Camila Rocha','','41977665544','Tráfego pago','novo',0,0],['Rafael Souza','Studio RS','41966554433','Site + vídeo','fechou',4,380000],['Ana Beatriz','Doceria da Ana','41955443322','Landing page','novo',0,0],['Lucas Martins','','41944332211','Vídeo','perdido',3,0],['Fernanda Dias','FD Arquitetura','41933221100','Site','proposta',2,300000],['Bruno Alves','Alves Fit','41922110099','Tráfego pago','conversando',1,180000]]
+    contatos:[['Mariana Lopes','Clínica Bella','41999887766','Site','conversando',2,250000],['João Pedro','JP Burger','41988776655','Loja virtual','proposta',3,420000],['Camila Rocha','','41977665544','Tráfego pago','enviada',1,0],['Rafael Souza','Studio RS','41966554433','Site + vídeo','fechou',4,380000],['Ana Beatriz','Doceria da Ana','41955443322','Landing page','novo',0,0],['Lucas Martins','','41944332211','Vídeo','perdido',3,0],['Fernanda Dias','FD Arquitetura','41933221100','Site','proposta',2,300000],['Bruno Alves','Alves Fit','41922110099','Tráfego pago','conversando',1,180000]]
       .map((c,i)=>({id:i+1,nome:c[0],empresa:c[1],telefone:c[2],projeto:c[3],venda:c[4],contatos:c[5],proposta:c[6]||null,ultimo_contato:c[5]?em(r(1,9)):null,proximo_contato:c[5]?dia(-r(-1,5)):null,status:i===2?'parcial':'enviou',notas:'',mensagem:'Quero um orçamento.'})),
     modelos:[{id:1,titulo:'Primeiro contato',texto:'Oi, {nome}! Aqui é da Branco. Vi que você se interessou por {projeto}. Vamos conversar?'},{id:2,titulo:'Lembrete',texto:'Oi, {nome}! Passando para saber se ficou alguma dúvida sobre {projeto} 😊'}],
     vendas:[['Studio RS','Site + vídeo',380000,0,40],['Clínica Bella','Site institucional',250000,60000,120],['Alves Fit','Gestão de tráfego pago',0,80000,200],['JP Burger','Loja virtual',420000,0,250],['Doceria da Ana','Landing page',150000,0,10],['FD Arquitetura','Vídeo de divulgação',90000,0,75]]
