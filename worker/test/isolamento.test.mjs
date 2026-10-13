@@ -172,5 +172,80 @@ ok('teste vencido bloqueia a busca (402)', (await CB2.get('/api/prospeccao?nicho
 ok('teste vencido ainda deixa ver o follow-up (dados não somem)', (await CB2.get('/api/followup')).status === 200);
 globalThis.fetch = fetchReal;
 
+// ---- 9) painel do SaaS: só o admin ----
+console.log('• painel do SaaS');
+ok('assinante não vê o painel do SaaS (403)', (await CB2.get('/api/saas')).status === 403);
+const sa = (await A.get('/api/saas')).dados;
+ok('admin vê as contas (sem a dele) e os indicadores', sa.kpis.contas === 2 && sa.contas.every(c => c.id !== 1) && sa.contas.find(c => c.dono_email === 'bia@beta.com')?.usado === 30 && typeof sa.kpis.mrr === 'number');
+const idB = sa.contas.find(c => c.dono_email === 'bia@beta.com').id;
+ok('admin troca o plano', (await A.patch('/api/saas/contas/' + idB, { plano: 'pro' })).status === 200 && (await CB2.get('/api/sessao')).dados.uso.limite === 1500);
+ok('conta bloqueada não entra', (await A.patch('/api/saas/contas/' + idB, { status: 'bloqueada' })).status === 200 && (await CB2.get('/api/followup')).status === 403);
+ok('liberar volta a funcionar', (await A.patch('/api/saas/contas/' + idB, { status: 'ativa' })).status === 200 && (await CB2.get('/api/followup')).status === 200);
+ok('+7 dias de teste reativa o teste', (await A.patch('/api/saas/contas/' + idB, { teste_mais_dias: 7 })).status === 200 && (await CB2.get('/api/sessao')).dados.uso.testeAcabou === false);
+ok('conta 1 não pode ser alterada por aqui', (await A.patch('/api/saas/contas/1', { status: 'bloqueada' })).status === 400);
+const nova = (await A.post('/api/saas/contas', { nome: 'Agência Pixel', email: 'ana@pixel.com', plano: 'start' })).dados;
+ok('admin cria conta na mão e recebe a senha (sem e-mail configurado)', nova.ok && typeof nova.senha === 'string');
+ok('a conta criada na mão entra', (await chama('POST', '/api/login', { corpo: { email: 'ana@pixel.com', senha: nova.senha } })).status === 200);
+ok('admin exclui uma conta e os dados dela somem', (await A.del('/api/saas/contas/' + nova.id)).status === 200 && !d1._db.prepare('SELECT 1 FROM usuarios WHERE email = ?').get('ana@pixel.com') && !d1._db.prepare('SELECT 1 FROM modelos WHERE conta_id = ?').get(nova.id));
+ok('o log registra as ações', (await A.get('/api/saas')).dados.log.some(l => /excluída/.test(l.texto)));
+
+// ---- 10) cobrança pelo Mercado Pago (de mentira) ----
+console.log('• assinatura (Mercado Pago simulado)');
+const CC = api((await chama('POST', '/api/login', { corpo: { email: 'caio@gama.com', senha: 'senha-nova-456' } })).cookie);
+ok('sem MP_ACCESS_TOKEN, assinar avisa que não está configurado (503)', (await CC.post('/api/assinatura/criar', { plano: 'start' })).status === 503);
+env.MP_ACCESS_TOKEN = 'TEST-token';
+const MPDB = {}; let pagos = 0;
+globalThis.fetch = async (u, o = {}) => { u = String(u);
+  if (!u.startsWith('https://api.mercadopago.com')) return new Response('', { status: 404 });
+  const path = u.slice('https://api.mercadopago.com'.length), b = o.body ? JSON.parse(o.body) : {};
+  if (path === '/preapproval' && o.method === 'POST') { const id = 'pre_' + Object.keys(MPDB).length; MPDB[id] = { id, status: 'pending', external_reference: b.external_reference, auto_recurring: b.auto_recurring, next_payment_date: null }; return Response.json({ ...MPDB[id], init_point: 'https://mp.test/checkout/' + id }); }
+  const mPre = path.match(/^\/preapproval\/([^/?]+)$/);
+  if (mPre && o.method === 'PUT') { Object.assign(MPDB[mPre[1]], b); return Response.json(MPDB[mPre[1]]); }
+  if (mPre) return MPDB[mPre[1]] ? Response.json(MPDB[mPre[1]]) : new Response('{"message":"not found"}', { status: 404 });
+  const mPag = path.match(/^\/authorized_payments\/([^/?]+)$/);
+  if (mPag) { const [, preId, st] = mPag[1].split('-'); return Response.json({ id: mPag[1], preapproval_id: preId, status: 'processed', payment: { status: st }, transaction_amount: 29.9, date_created: '2026-10-13T10:00:00.000-03:00' }); }
+  return new Response('', { status: 404 }); };
+const cr = (await CC.post('/api/assinatura/criar', { plano: 'start' })).dados;
+ok('criar assinatura devolve o link do Mercado Pago', cr.ok && cr.url === 'https://mp.test/checkout/pre_0');
+ok('a assinatura fica pendente até o pagamento', (await CC.get('/api/assinatura')).dados.atual.status === 'pendente');
+ok('assinante não é admin do MP: só o dono assina (B é membro? não — dono) → plano inválido dá 400', (await CC.post('/api/assinatura/criar', { plano: 'teste' })).status === 400);
+// o cliente paga: o MP autoriza e manda o webhook
+MPDB.pre_0.status = 'authorized'; MPDB.pre_0.next_payment_date = '2026-11-13T10:00:00.000-03:00';
+const wh = (tipo, id, extra = {}) => worker.fetch(new Request(BASE + '/webhook/mp', { method: 'POST', headers: { 'Content-Type': 'application/json', ...extra }, body: JSON.stringify({ type: tipo, data: { id }, action: 'updated', date_created: '2026-10-13T10:00:00Z' }) }), env);
+ok('webhook sem segredo configurado é aceito', (await wh('subscription_preapproval', 'pre_0')).status === 200);
+const sCa = (await CC.get('/api/sessao')).dados;
+ok('plano ativa na conta depois do webhook', sCa.conta.plano === 'start' && sCa.uso.limite === 200 && sCa.uso.testeAte === null);
+ok('próxima cobrança registrada', (await CC.get('/api/assinatura')).dados.atual.proximo_pagamento === '2026-11-13 10:00:00');
+ok('webhook repetido não faz nada de errado (idempotente)', (await wh('subscription_preapproval', 'pre_0')).status === 200 && (await CC.get('/api/sessao')).dados.conta.plano === 'start');
+ok('webhook com id inventado não derruba nada', (await wh('subscription_preapproval', 'pre_999')).status === 200 && (await CC.get('/api/sessao')).dados.conta.plano === 'start');
+ok('cobrança aprovada entra no histórico', (await wh('subscription_authorized_payment', 'pag-pre_0-approved')).status === 200 && (await CC.get('/api/assinatura')).dados.cobrancas[0]?.status === 'approved');
+// troca de plano: nova assinatura; ao autorizar, a antiga é cancelada no MP
+const cr2 = (await CC.post('/api/assinatura/criar', { plano: 'pro' })).dados; MPDB.pre_1.status = 'authorized'; MPDB.pre_1.next_payment_date = '2026-11-13T10:00:00.000-03:00';
+await wh('subscription_preapproval', 'pre_1');
+ok('troca de plano ativa o novo e cancela o antigo no Mercado Pago', (await CC.get('/api/sessao')).dados.conta.plano === 'pro' && MPDB.pre_0.status === 'cancelled');
+// pagamento recusado seguido → MP pausa → conta inadimplente: busca trava, follow-up continua
+await wh('subscription_authorized_payment', 'pag-pre_1-rejected');
+MPDB.pre_1.status = 'paused'; await wh('subscription_preapproval', 'pre_1');
+ok('assinatura pausada deixa a conta inadimplente', (await CC.get('/api/sessao')).dados.uso.inadimplente === true);
+globalThis.fetch = (f => async (u, o) => String(u).includes('nominatim') ? Response.json([{ osm_type: 'relation', osm_id: 1, lat: 0, lon: 0, display_name: 'Curitiba' }]) : String(u).includes('overpass') ? Response.json({ elements: [{ type: 'node', id: 5, lat: 0, lon: 0, tags: { name: 'X', shop: 'hairdresser' } }] }) : f(u, o))(globalThis.fetch);
+ok('inadimplente não busca (402) mas vê o follow-up', (await CC.get('/api/prospeccao?nicho=barbearia&cidade=Curitiba&estado=PR&fonte=osm')).status === 402 && (await CC.get('/api/followup')).status === 200);
+MPDB.pre_1.status = 'authorized'; await wh('subscription_preapproval', 'pre_1'); await wh('subscription_authorized_payment', 'pag-pre_1-approved');
+ok('pagamento aprovado depois regulariza', (await CC.get('/api/sessao')).dados.uso.inadimplente === false);
+// cancelamento: volta para teste valendo até o fim do período pago
+ok('cancelar assinatura', (await CC.post('/api/assinatura/cancelar', {})).status === 200 && MPDB.pre_1.status === 'cancelled');
+const sC2 = (await CC.get('/api/sessao')).dados;
+ok('depois de cancelar: acesso continua até o fim do período pago', sC2.conta.plano === 'teste' && sC2.uso.testeAte === '2026-11-13 10:00:00' && sC2.uso.testeAcabou === false);
+// webhook assinado
+env.MP_WEBHOOK_SECRET = 'segredo';
+ok('com segredo configurado, webhook sem assinatura é recusado (401)', (await wh('subscription_preapproval', 'pre_1')).status === 401);
+const ts = '1700000000', manifesto = `id:pre_1;request-id:req1;ts:${ts};`;
+const k = await crypto.subtle.importKey('raw', new TextEncoder().encode('segredo'), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+const v1 = [...new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(manifesto)))].map(b => b.toString(16).padStart(2, '0')).join('');
+ok('webhook com assinatura certa passa', (await wh('subscription_preapproval', 'pre_1', { 'x-signature': `ts=${ts},v1=${v1}`, 'x-request-id': 'req1' })).status === 200);
+ok('webhook com assinatura errada é recusado', (await wh('subscription_preapproval', 'pre_1', { 'x-signature': `ts=${ts},v1=${'0'.repeat(64)}`, 'x-request-id': 'req1' })).status === 401);
+delete env.MP_WEBHOOK_SECRET; globalThis.fetch = fetchReal;
+ok('conta da Branco não tem assinatura', (await A.get('/api/assinatura')).status === 400);
+ok('painel do SaaS mostra o recebido no mês', typeof (await A.get('/api/saas')).dados.kpis.recebidoMes === 'number');
+
 console.log(`\n${passou} ok, ${falhou} falhou`);
 process.exit(falhou ? 1 : 0);
