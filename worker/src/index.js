@@ -4,6 +4,7 @@
  *   - banco D1 ligado com o nome  DB
  *   - variável secreta            ADMIN_SENHA   (senha do dono: entra na conta 1 sem e-mail)
  *   - opcionais: BREVO_KEY (ou RESEND_KEY) + EMAIL_DE para enviar e-mails; CADASTRO_ABERTO=0 fecha o cadastro
+ *   - cobrança: MP_ACCESS_TOKEN (Mercado Pago) e MP_WEBHOOK_SECRET (assinatura dos webhooks, opcional mas recomendado)
  * As tabelas são criadas sozinhas no primeiro acesso.
  *
  * Multi-conta: cada registro tem conta_id e toda consulta do painel filtra pela conta da sessão.
@@ -48,6 +49,11 @@ const SCHEMA = [
   // consumo: empresas encontradas por conta e por ciclo (mês), e quais já foram contadas (não cobra 2x a mesma empresa)
   `CREATE TABLE IF NOT EXISTS uso (conta_id INTEGER NOT NULL, ciclo TEXT NOT NULL, encontradas INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (conta_id, ciclo))`,
   `CREATE TABLE IF NOT EXISTS empresas_vistas (conta_id INTEGER NOT NULL, chave TEXT NOT NULL, criado_em TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY (conta_id, chave))`,
+  // cobrança (Mercado Pago): uma assinatura por conta; cada cobrança mensal vira uma linha em cobrancas
+  `CREATE TABLE IF NOT EXISTS assinaturas (id INTEGER PRIMARY KEY, conta_id INTEGER NOT NULL, plano TEXT NOT NULL, gateway TEXT NOT NULL DEFAULT 'mp', gateway_id TEXT UNIQUE, status TEXT NOT NULL DEFAULT 'pendente',
+     valor INTEGER NOT NULL DEFAULT 0, proximo_pagamento TEXT, ultimo_pagamento TEXT, criado_em TEXT NOT NULL DEFAULT (datetime('now')), atualizado_em TEXT)`,
+  `CREATE TABLE IF NOT EXISTS cobrancas (id INTEGER PRIMARY KEY, conta_id INTEGER NOT NULL, assinatura_id INTEGER, gateway_id TEXT UNIQUE NOT NULL, status TEXT NOT NULL, valor INTEGER NOT NULL DEFAULT 0, data TEXT, criado_em TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE TABLE IF NOT EXISTS webhooks (chave TEXT PRIMARY KEY, recebido_em TEXT NOT NULL DEFAULT (datetime('now')))`,
   `CREATE INDEX IF NOT EXISTS ex_data ON extrato (data)`,
 ];
 const MODELOS_INICIAIS = [
@@ -76,6 +82,8 @@ const COLUNAS = {
   extrato: ['ext_id', 'data', 'valor INTEGER', 'descricao', 'venda_id INTEGER', 'ignorar INTEGER', 'criado_em', 'conta_id INTEGER'],
   sessoes: ['token', 'criado_em', 'usuario_id INTEGER', 'conta_id INTEGER'],
   contas: ['nome', 'plano', 'status', 'criado_em', 'teste_ate'],
+  assinaturas: ['conta_id INTEGER', 'plano', 'gateway', 'gateway_id', 'status', 'valor INTEGER', 'proximo_pagamento', 'ultimo_pagamento', 'criado_em', 'atualizado_em'],
+  cobrancas: ['conta_id INTEGER', 'assinatura_id INTEGER', 'gateway_id', 'status', 'valor INTEGER', 'data', 'criado_em'],
   usuarios: ['email', 'senha', 'nome', 'verificado INTEGER', 'admin_saas INTEGER', 'criado_em'],
   membros: ['conta_id INTEGER', 'usuario_id INTEGER', 'papel', 'criado_em'],
 };
@@ -210,13 +218,14 @@ const cicloAtual = () => new Date().toISOString().slice(0, 7); // 'AAAA-MM'
 async function consumo(db, S) {
   const r = await db.prepare('SELECT encontradas FROM uso WHERE conta_id = ? AND ciclo = ?').bind(S.conta, cicloAtual()).first();
   const plano = PLANOS[S.plano] || PLANOS.teste, testeAcabou = S.plano === 'teste' && S.testeAte && S.testeAte < new Date().toISOString().slice(0, 19).replace('T', ' ');
-  return { usado: r?.encontradas || 0, limite: S.conta === CONTA_SITE ? null : plano.empresas, plano: S.plano, planoNome: S.conta === CONTA_SITE ? 'Branco' : plano.nome, testeAte: S.testeAte, testeAcabou: !!testeAcabou };
+  return { usado: r?.encontradas || 0, limite: S.conta === CONTA_SITE ? null : plano.empresas, plano: S.plano, planoNome: S.conta === CONTA_SITE ? 'Branco' : plano.nome, testeAte: S.testeAte, testeAcabou: !!testeAcabou, inadimplente: S.status === 'inadimplente' };
 }
 // desconta do plano só as empresas que a conta ainda não tinha visto (chave: telefone, senão nome+cidade)
 async function descontaEmpresas(db, S, itens) {
   if (S.conta === CONTA_SITE) return itens;
   const c = await consumo(db, S);
   if (c.testeAcabou) throw Object.assign(new Error('Seu teste grátis terminou. Assine um plano para continuar buscando.'), { status: 402 });
+  if (S.status === 'inadimplente') throw Object.assign(new Error('O pagamento da sua assinatura não foi confirmado. Regularize em "Assinatura" para continuar buscando.'), { status: 402 });
   const chave = x => 'e:' + (digitos(x.telefone) || (String(x.nome || '').toLowerCase().trim() + '|' + String(x.cidade || '').toLowerCase().trim()));
   const novos = [], vistas = new Set();
   for (const x of itens) { const k = chave(x); if (vistas.has(k)) continue; vistas.add(k);
@@ -341,6 +350,8 @@ async function api(req, db, env, caminho) {
   const conta = S.conta, b = ['POST', 'PATCH', 'PUT'].includes(m) ? await corpo(req) : {};
   // painel do dono do SaaS (só admin): assinantes, planos, consumo, log
   if (rec === 'saas') return S.admin ? await rotaSaas(req, db, env, m, seg, b) : erro('Só o administrador do Branco pode ver isso.', 403);
+  // assinatura do assinante (Mercado Pago)
+  if (rec === 'assinatura') { try { return await rotaAssinatura(req, db, env, m, seg, b, S); } catch (e) { await registra(db, 'erro', conta, 'assinatura: ' + e.message); return erro(e.message, e.status || 502); } }
 
   // conta: dados, equipe, trocar senha, criar o login do dono
   if (rec === 'conta') {
@@ -603,11 +614,127 @@ async function rotaConta(req, db, env, acao, S, cadastroAberto) {
   return erro('Rota não encontrada.', 404);
 }
 
+/* ---------- cobrança: Mercado Pago (assinaturas = "preapproval") ---------- */
+// Regra de ouro: o Worker nunca confia no corpo do webhook. Ele só pega o id e consulta o Mercado Pago com o token.
+const MP = 'https://api.mercadopago.com';
+async function mp(env, caminho, opcoes = {}) {
+  if (!env.MP_ACCESS_TOKEN) throw Object.assign(new Error('Pagamento ainda não configurado (falta MP_ACCESS_TOKEN no Worker).'), { status: 503 });
+  const r = await fetch(MP + caminho, { ...opcoes, headers: { Authorization: 'Bearer ' + env.MP_ACCESS_TOKEN, 'Content-Type': 'application/json', ...(opcoes.headers || {}) }, signal: AbortSignal.timeout(15000) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error('Mercado Pago: ' + (d.message || d.error || r.status)), { status: 502, codigo: r.status });
+  return d;
+}
+const mpData = s => s ? String(s).replace('T', ' ').slice(0, 19) : null;
+// aplica no banco o estado real de uma assinatura do Mercado Pago
+async function sincronizaAssinatura(db, env, preId) {
+  const pre = await mp(env, '/preapproval/' + encodeURIComponent(preId));
+  let a = await db.prepare('SELECT * FROM assinaturas WHERE gateway_id = ?').bind(String(pre.id)).first();
+  const contaId = a?.conta_id || Number(String(pre.external_reference || '').split(':')[0]) || null;
+  if (!contaId) return null;
+  const plano = a?.plano || String(pre.external_reference || '').split(':')[1] || 'start';
+  const status = { authorized: 'ativa', pending: 'pendente', paused: 'pausada', cancelled: 'cancelada' }[pre.status] || pre.status;
+  if (!a) { const r = await db.prepare("INSERT INTO assinaturas (conta_id, plano, gateway, gateway_id, status, valor, criado_em) VALUES (?, ?, 'mp', ?, ?, ?, datetime('now'))").bind(contaId, plano, String(pre.id), status, Math.round((pre.auto_recurring?.transaction_amount || 0) * 100)).run(); a = { id: r.meta.last_row_id, conta_id: contaId, plano }; }
+  await db.prepare("UPDATE assinaturas SET status = ?, proximo_pagamento = ?, atualizado_em = datetime('now') WHERE id = ?").bind(status, mpData(pre.next_payment_date), a.id).run();
+  if (status === 'ativa') {
+    // plano ativo: libera a conta e cancela outras assinaturas ativas (troca de plano)
+    await db.prepare("UPDATE contas SET plano = ?, status = CASE WHEN status = 'bloqueada' THEN 'bloqueada' ELSE 'ativa' END, teste_ate = NULL WHERE id = ?").bind(plano, contaId).run();
+    const outras = (await db.prepare("SELECT gateway_id FROM assinaturas WHERE conta_id = ? AND id <> ? AND status IN ('ativa','pendente','pausada')").bind(contaId, a.id).all()).results;
+    for (const o of outras) { await mp(env, '/preapproval/' + encodeURIComponent(o.gateway_id), { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) }).catch(() => {}); await db.prepare("UPDATE assinaturas SET status = 'cancelada', atualizado_em = datetime('now') WHERE gateway_id = ?").bind(o.gateway_id).run(); }
+    await registra(db, 'info', contaId, `assinatura ativa: ${plano}`);
+  } else if (status === 'pausada') { // pagamentos recusados seguidos: trava as buscas, mantém os dados
+    await db.prepare("UPDATE contas SET status = CASE WHEN status = 'bloqueada' THEN 'bloqueada' ELSE 'inadimplente' END WHERE id = ?").bind(contaId).run();
+    await registra(db, 'aviso', contaId, 'assinatura pausada pelo Mercado Pago (pagamento recusado)');
+  } else if (status === 'cancelada') {
+    const atual = await db.prepare("SELECT 1 FROM assinaturas WHERE conta_id = ? AND status = 'ativa'").bind(contaId).first();
+    if (!atual) { // sem outra ativa: volta para "teste" valendo até o fim do período já pago
+      const ate = mpData(pre.next_payment_date) || new Date().toISOString().slice(0, 19).replace('T', ' ');
+      await db.prepare("UPDATE contas SET plano = 'teste', teste_ate = ?, status = CASE WHEN status = 'bloqueada' THEN 'bloqueada' ELSE 'ativa' END WHERE id = ?").bind(ate, contaId).run();
+      await registra(db, 'aviso', contaId, 'assinatura cancelada; acesso até ' + ate);
+    }
+  }
+  return a;
+}
+// registra uma cobrança mensal (pagamento autorizado da assinatura)
+async function sincronizaCobranca(db, env, pagId) {
+  const c = await mp(env, '/authorized_payments/' + encodeURIComponent(pagId));
+  const a = await db.prepare('SELECT id, conta_id FROM assinaturas WHERE gateway_id = ?').bind(String(c.preapproval_id)).first();
+  if (!a) return null;
+  const st = c.payment?.status || c.status || 'desconhecido', valor = Math.round((c.transaction_amount || 0) * 100);
+  await db.prepare(`INSERT INTO cobrancas (conta_id, assinatura_id, gateway_id, status, valor, data, criado_em) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(gateway_id) DO UPDATE SET status = excluded.status, valor = excluded.valor, data = excluded.data`).bind(a.conta_id, a.id, String(c.id), st, valor, mpData(c.debit_date || c.date_created)).run();
+  if (st === 'approved') { await db.prepare("UPDATE assinaturas SET ultimo_pagamento = ?, atualizado_em = datetime('now') WHERE id = ?").bind(mpData(c.debit_date || c.date_created), a.id).run();
+    await db.prepare("UPDATE contas SET status = 'ativa' WHERE id = ? AND status = 'inadimplente'").bind(a.conta_id).run(); }
+  else if (['rejected', 'cancelled'].includes(st)) await registra(db, 'aviso', a.conta_id, 'cobrança ' + st + ' (' + (valor / 100).toFixed(2) + ')');
+  return a;
+}
+// confere a assinatura do webhook (x-signature) quando MP_WEBHOOK_SECRET está configurado
+async function webhookAssinado(req, env, dataId) {
+  if (!env.MP_WEBHOOK_SECRET) return true;
+  const sig = Object.fromEntries((req.headers.get('x-signature') || '').split(',').map(p => p.trim().split('=')));
+  if (!sig.ts || !sig.v1) return false;
+  const manifesto = `id:${String(dataId).toLowerCase()};request-id:${req.headers.get('x-request-id') || ''};ts:${sig.ts};`;
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.MP_WEBHOOK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const h = [...new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(manifesto)))].map(b => b.toString(16).padStart(2, '0')).join('');
+  return iguais(h, sig.v1);
+}
+async function rotaWebhookMP(req, db, env) {
+  const url = new URL(req.url), b = await corpo(req);
+  const tipo = b.type || url.searchParams.get('type') || url.searchParams.get('topic') || '', dataId = b.data?.id || url.searchParams.get('data.id') || url.searchParams.get('id') || '';
+  if (!dataId) return new Response('ok', { status: 200 });
+  if (!await webhookAssinado(req, env, dataId)) { await registra(db, 'aviso', null, 'webhook MP com assinatura inválida'); return new Response('assinatura inválida', { status: 401 }); }
+  const chave = b.id ? 'mp:' + b.id : null; // o MP numera cada aviso; o mesmo pode chegar várias vezes (sem número, processa — a sincronização é idempotente)
+  if (chave && await db.prepare('SELECT 1 FROM webhooks WHERE chave = ?').bind(chave).first()) return new Response('ok', { status: 200 });
+  try {
+    if (tipo === 'subscription_preapproval') await sincronizaAssinatura(db, env, dataId);
+    else if (tipo === 'subscription_authorized_payment') await sincronizaCobranca(db, env, dataId);
+    else return new Response('ok', { status: 200 }); // outros tipos (payment, plan) não interessam
+    if (chave) await db.batch([db.prepare("INSERT OR IGNORE INTO webhooks (chave, recebido_em) VALUES (?, datetime('now'))").bind(chave), db.prepare("DELETE FROM webhooks WHERE recebido_em < datetime('now','-30 days')")]);
+  } catch (e) {
+    if (e.codigo === 404) return new Response('ok', { status: 200 }); // id que não existe no MP: nada a fazer
+    await registra(db, 'erro', null, 'webhook MP ' + tipo + ' ' + dataId + ': ' + e.message); return new Response('erro', { status: 500 }); // 500 faz o MP tentar de novo
+  }
+  return new Response('ok', { status: 200 });
+}
+async function rotaAssinatura(req, db, env, m, seg, b, S) {
+  const conta = S.conta, origem = new URL(req.url).origin;
+  if (conta === CONTA_SITE) return erro('A conta da Branco não paga assinatura.');
+  if (m === 'GET') {
+    const [a, cs] = await db.batch([db.prepare("SELECT id, plano, status, valor, proximo_pagamento, ultimo_pagamento, criado_em FROM assinaturas WHERE conta_id = ? ORDER BY (status = 'ativa') DESC, id DESC LIMIT 1").bind(conta),
+      db.prepare('SELECT status, valor, data FROM cobrancas WHERE conta_id = ? ORDER BY data DESC, id DESC LIMIT 24').bind(conta)]);
+    const planos = Object.fromEntries(Object.entries(PLANOS).filter(([id]) => id !== 'teste'));
+    return json({ planos, atual: a.results[0] || null, cobrancas: cs.results, uso: await consumo(db, S), configurado: !!env.MP_ACCESS_TOKEN, contaStatus: S.status });
+  }
+  if (seg[1] === 'criar' && m === 'POST') { // gera o link de pagamento do Mercado Pago para o plano escolhido
+    if (S.papel !== 'dono') return erro('Só o dono da conta pode assinar.', 403);
+    const plano = PLANOS[b.plano] && b.plano !== 'teste' ? b.plano : null; if (!plano) return erro('Escolha um plano.');
+    if (await excedeu(db, 'assin:' + conta, 10, 60)) return erro('Muitas tentativas. Espere alguns minutos.', 429);
+    const pre = await mp(env, '/preapproval', { method: 'POST', body: JSON.stringify({ reason: 'Branco — ' + PLANOS[plano].nome, external_reference: conta + ':' + plano, payer_email: S.email || undefined,
+      auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: PLANOS[plano].preco / 100, currency_id: 'BRL' }, back_url: origem + '/admin?pagamento=voltou', status: 'pending' }) });
+    await db.prepare("INSERT INTO assinaturas (conta_id, plano, gateway, gateway_id, status, valor, criado_em) VALUES (?, ?, 'mp', ?, 'pendente', ?, datetime('now'))").bind(conta, plano, String(pre.id), PLANOS[plano].preco).run();
+    await registra(db, 'info', conta, 'link de pagamento criado: ' + plano);
+    return json({ ok: true, url: pre.init_point });
+  }
+  if (seg[1] === 'sincronizar' && m === 'POST') { // o painel chama ao voltar do Mercado Pago (o webhook pode demorar)
+    const pend = (await db.prepare("SELECT gateway_id FROM assinaturas WHERE conta_id = ? AND status IN ('pendente','ativa','pausada') ORDER BY id DESC LIMIT 3").bind(conta).all()).results;
+    for (const p of pend) await sincronizaAssinatura(db, env, p.gateway_id).catch(() => {});
+    return json({ ok: true });
+  }
+  if (seg[1] === 'cancelar' && m === 'POST') {
+    if (S.papel !== 'dono') return erro('Só o dono da conta pode cancelar.', 403);
+    const a = await db.prepare("SELECT gateway_id FROM assinaturas WHERE conta_id = ? AND status IN ('ativa','pausada','pendente') ORDER BY id DESC LIMIT 1").bind(conta).first();
+    if (!a) return erro('Não há assinatura ativa.');
+    await mp(env, '/preapproval/' + encodeURIComponent(a.gateway_id), { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) });
+    await sincronizaAssinatura(db, env, a.gateway_id);
+    return json({ ok: true });
+  }
+  return erro('Rota não encontrada.', 404);
+}
+
 /* ---------- painel do SaaS (só para o administrador do Branco) ---------- */
 async function rotaSaas(req, db, env, m, seg, b) {
   const id = seg[1] === 'contas' && seg[2] ? Number(seg[2]) : null, ciclo = cicloAtual();
   if (m === 'GET' && !seg[1]) {
-    const [cs, lg] = await db.batch([
+    const [cs, lg, rec] = await db.batch([
       db.prepare(`SELECT c.id, c.nome, c.plano, c.status, c.teste_ate, c.criado_em, u.email dono_email, u.nome dono_nome,
           (SELECT encontradas FROM uso WHERE conta_id = c.id AND ciclo = ?) usado,
           (SELECT COUNT(*) FROM contatos WHERE conta_id = c.id) contatos,
@@ -615,12 +742,13 @@ async function rotaSaas(req, db, env, m, seg, b) {
           (SELECT MAX(criado_em) FROM sessoes WHERE conta_id = c.id) ultimo_login
         FROM contas c LEFT JOIN membros mb ON mb.conta_id = c.id AND mb.papel = 'dono' LEFT JOIN usuarios u ON u.id = mb.usuario_id
         WHERE c.id <> ? GROUP BY c.id ORDER BY c.criado_em DESC`).bind(ciclo, CONTA_SITE),
-      db.prepare('SELECT nivel, conta_id, texto, criado_em FROM log ORDER BY id DESC LIMIT 60')]);
+      db.prepare('SELECT nivel, conta_id, texto, criado_em FROM log ORDER BY id DESC LIMIT 60'),
+      db.prepare("SELECT COALESCE(SUM(valor),0) v, COUNT(*) n FROM cobrancas WHERE status = 'approved' AND substr(data,1,7) = ?").bind(ciclo)]);
     const contas = cs.results.map(c => ({ ...c, usado: c.usado || 0, limite: (PLANOS[c.plano] || PLANOS.teste).empresas, preco: (PLANOS[c.plano] || PLANOS.teste).preco }));
     const agora = new Date().toISOString().slice(0, 19).replace('T', ' ');
     const ativas = contas.filter(c => c.status === 'ativa'), pagantes = ativas.filter(c => c.plano !== 'teste'), teste = ativas.filter(c => c.plano === 'teste');
     return json({ ciclo, planos: PLANOS, kpis: { contas: contas.length, pagantes: pagantes.length, teste: teste.filter(c => !c.teste_ate || c.teste_ate >= agora).length, testeVencido: teste.filter(c => c.teste_ate && c.teste_ate < agora).length,
-      bloqueadas: contas.filter(c => c.status === 'bloqueada').length, mrr: pagantes.reduce((a, c) => a + c.preco, 0), buscasMes: contas.reduce((a, c) => a + c.usado, 0) }, contas, log: lg.results });
+      bloqueadas: contas.filter(c => c.status === 'bloqueada').length, inadimplentes: contas.filter(c => c.status === 'inadimplente').length, mrr: pagantes.reduce((a, c) => a + c.preco, 0), recebidoMes: rec.results[0]?.v || 0, cobrancasMes: rec.results[0]?.n || 0, buscasMes: contas.reduce((a, c) => a + c.usado, 0) }, contas, log: lg.results });
   }
   if (seg[1] === 'contas' && m === 'POST' && !id) { // criar conta na mão (ex.: cliente que pagou por fora)
     const email = emailOk(b.email), nome = txt(b.nome, 80), plano = PLANOS[b.plano] ? b.plano : 'start', senha = txt(b.senha, 80) || aleatorio(10);
@@ -638,7 +766,7 @@ async function rotaSaas(req, db, env, m, seg, b) {
   if (id && m === 'PATCH') {
     const q = [];
     if (b.plano && PLANOS[b.plano]) q.push(db.prepare('UPDATE contas SET plano = ? WHERE id = ?').bind(b.plano, id));
-    if (['ativa', 'bloqueada'].includes(b.status)) q.push(db.prepare('UPDATE contas SET status = ? WHERE id = ?').bind(b.status, id));
+    if (['ativa', 'bloqueada', 'inadimplente'].includes(b.status)) q.push(db.prepare('UPDATE contas SET status = ? WHERE id = ?').bind(b.status, id));
     if (b.teste_mais_dias) q.push(db.prepare("UPDATE contas SET plano = 'teste', status = 'ativa', teste_ate = datetime(MAX(COALESCE(teste_ate, datetime('now')), datetime('now')), ?) WHERE id = ?").bind(`+${inteiro(b.teste_mais_dias, 1, 365)} days`, id));
     if (b.zerar_uso) q.push(db.prepare('DELETE FROM uso WHERE conta_id = ? AND ciclo = ?').bind(id, ciclo));
     if (!q.length) return erro('Nada para alterar.');
@@ -647,7 +775,7 @@ async function rotaSaas(req, db, env, m, seg, b) {
   }
   if (id && m === 'DELETE') { // apaga a conta e tudo dela
     const us = (await db.prepare('SELECT usuario_id FROM membros WHERE conta_id = ?').bind(id).all()).results.map(x => x.usuario_id);
-    await db.batch([...['contatos', 'modelos', 'vendas', 'clientes', 'links', 'extrato', 'eventos', 'visitas_cliente', 'sessoes', 'config_conta', 'uso', 'empresas_vistas', 'membros'].map(t => db.prepare(`DELETE FROM ${t} WHERE conta_id = ?`).bind(id)),
+    await db.batch([...['contatos', 'modelos', 'vendas', 'clientes', 'links', 'extrato', 'eventos', 'visitas_cliente', 'sessoes', 'config_conta', 'uso', 'empresas_vistas', 'membros', 'assinaturas', 'cobrancas'].map(t => db.prepare(`DELETE FROM ${t} WHERE conta_id = ?`).bind(id)),
       ...us.map(u => db.prepare('DELETE FROM usuarios WHERE id = ? AND NOT EXISTS (SELECT 1 FROM membros WHERE usuario_id = ? AND conta_id <> ?)').bind(u, u, id)),
       ...us.map(u => db.prepare('DELETE FROM tokens_email WHERE usuario_id = ?').bind(u)), db.prepare('DELETE FROM contas WHERE id = ?').bind(id)]);
     await registra(db, 'aviso', id, 'conta excluída pelo admin');
@@ -930,6 +1058,7 @@ export default {
       if (p === '/lead' && req.method === 'POST') return await rotaLead(req, env.DB);
       if (p === '/c' && req.method === 'POST') return await rotaVisitaCliente(req, env.DB);
       if (p === '/status') return await rotaStatus(env.DB);
+      if (p === '/webhook/mp' && req.method === 'POST') return await rotaWebhookMP(req, env.DB, env);
       if (p === '/c.js') return js(contadorCliente(url.origin));
       if (p === '/chat.js') return js('/* assistente: desativado nesta versão */');
       if (p === '/admin') return html(PAINEL_HTML, SEGURANCA);

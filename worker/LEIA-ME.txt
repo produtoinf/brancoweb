@@ -38,6 +38,22 @@ CONTAS E E-MAIL (SaaS)
    Sem BREVO_KEY nenhum e-mail sai (o cadastro funciona, mas sem confirmação e sem "esqueci a senha").
    Dica: quando tiver domínio próprio, troque o remetente para ele — e-mail saindo de @gmail.com por outro serviço cai mais no spam.
 
+COBRANÇA (Mercado Pago — aceita CPF)
+   1. mercadopago.com.br/developers > Suas integrações > Criar aplicação
+      Nome: Branco · Produto: "Pagamentos online" / Assinaturas · Modelo: "Não estou usando plataforma"
+   2. Dentro da aplicação > Credenciais de produção > copie o "Access Token"
+      (use as credenciais de TESTE primeiro, se quiser experimentar sem cobrar de verdade)
+   3. Dentro da aplicação > Webhooks > Configurar notificações:
+        URL: https://branco-admin.brancowebs.workers.dev/webhook/mp
+        Eventos: marque "Planos e assinaturas" (subscription_preapproval e subscription_authorized_payment)
+      Salve e copie a "Assinatura secreta" que aparece.
+   4. Worker > Settings > Variables and Secrets > Add:
+        Secret   MP_ACCESS_TOKEN   = (o Access Token)
+        Secret   MP_WEBHOOK_SECRET = (a assinatura secreta do webhook)
+   Pronto: na aba "Assinatura" o assinante escolhe o plano, paga no Mercado Pago e volta com o plano ativo.
+   Troca de plano = nova assinatura (a antiga é cancelada sozinha). Cancelar = acesso até o fim do período pago.
+   Pagamento recusado repetidas vezes = o MP pausa a assinatura e a conta fica "pagamento pendente" (buscas travam, dados ficam).
+
 TESTE AUTOMÁTICO (no seu computador, precisa só do Node 22+)
    node worker/test/isolamento.test.mjs
    Cria contas de mentira, enche de dados e confere que uma conta não vê nem mexe na outra.

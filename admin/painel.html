@@ -195,6 +195,10 @@ html[data-theme=light] .st-novo{color:#1f6fd1}html[data-theme=light] .st-enviada
 .sug{font:500 .66rem var(--mono);color:var(--ok)}
 tr.ign td{opacity:.45}
 .chk{display:flex;align-items:center;gap:8px;font:500 .78rem var(--mono);color:var(--mute)}.chk input{width:18px;height:18px;padding:0}
+.planos{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.plano{display:grid;gap:10px;align-content:start;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px}.plano.atual{border-color:var(--fg)}
+.plano b{font:800 1.2rem Archivo;letter-spacing:-.03em}.plano .preco{font:800 1.9rem Archivo;letter-spacing:-.04em}.plano .preco small{font:500 .72rem var(--mono);color:var(--mute);letter-spacing:0}
+.plano ul{margin:0;padding-left:18px;color:var(--mute);font-size:.85rem;display:grid;gap:4px}
 .uso{margin:10px 0 0;font:500 .72rem var(--mono);color:var(--mute)}.uso b{color:var(--fg)}.uso i{display:inline-block;width:120px;height:4px;border-radius:2px;background:var(--soft);vertical-align:middle;margin:0 8px;overflow:hidden}.uso i::after{content:"";display:block;height:100%;width:var(--p,0%);background:var(--fg)}
 .aviso{margin:0 0 14px;padding:10px 14px;border:1px solid var(--warn);border-radius:10px;color:var(--warn);font:500 .8rem var(--mono);display:flex;gap:12px;align-items:center;justify-content:space-between}.aviso button{padding:6px 10px;font-size:.75rem}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg);font:500 .8rem var(--mono);padding:11px 20px;border-radius:999px;z-index:40;box-shadow:0 10px 30px #0005;animation:tin .25s ease}
@@ -244,6 +248,7 @@ tr.ign td{opacity:.45}
       <button role="tab" aria-selected="false" data-tab="follow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span class="t">Follow-up</span><span class="badge" id="bFollow" hidden></span></button>
       <button role="tab" aria-selected="false" data-tab="financeiro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></svg><span class="t">Financeiro</span></button>
       <button role="tab" aria-selected="false" data-tab="prospec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span class="t">Prospecção</span></button>
+      <button role="tab" aria-selected="false" data-tab="assinatura" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="t">Assinatura</span></button>
       <button role="tab" aria-selected="false" data-tab="saas" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M8 15h3"/></svg><span class="t">SaaS</span></button>
       <button role="tab" aria-selected="false" data-tab="clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="t">Clientes</span></button>
     </nav>
@@ -368,6 +373,12 @@ tr.ign td{opacity:.45}
     </div>
 
     <!-- CLIENTES -->
+    <div id="tAssin" hidden>
+      <section class="kpis" id="kAssin"></section>
+      <p class="aviso" id="assinAviso" hidden></p>
+      <section class="box mt"><div class="hd"><div><h2>Planos</h2><p class="dica">pagamento mensal no cartão pelo Mercado Pago. Você pode trocar ou cancelar quando quiser.</p></div></div><div class="planos" id="planos"></div></section>
+      <section class="box mt"><div class="hd"><h2>Cobranças</h2></div><div class="tbl"><table><thead><tr><th>Data</th><th>Valor</th><th>Situação</th></tr></thead><tbody id="cobrancas"></tbody></table></div></section>
+    </div>
     <div id="tSaas" hidden>
       <section class="kpis" id="kSaas"></section>
       <section class="box mt"><div class="hd"><div><h2>Nova conta</h2><p class="dica">para quem pagou por fora ou para liberar um teste na mão. A senha vai por e-mail (ou aparece aqui, se o e-mail não estiver configurado).</p></div></div>
@@ -595,13 +606,39 @@ $('#csvCad').onclick=()=>csv('cadastros-branco.csv',['Data','Nome','Empresa','Wh
 async function carregaConfig(){try{const c=await api('/api/config');const f=$('#fConfig');f.manutencao.checked=!!c.manutencao;f.mensagem.value=c.mensagem||'';$('#cfgTxt').textContent=c.manutencao?'● aviso ligado':'aviso desligado'}catch(e){}}
 $('#fConfig').onsubmit=async e=>{e.preventDefault();const f=e.target;try{await api('/api/config',{method:'PUT',body:{manutencao:f.manutencao.checked,mensagem:f.mensagem.value}});toast(f.manutencao.checked?'Aviso ligado no site':'Aviso desligado ✓');carregaConfig()}catch(x){toast(x.erro||'Erro')}};
 
+/* ---------- ASSINATURA (assinante) ---------- */
+const ST_ASSIN={ativa:['ativa','ok'],pendente:['aguardando pagamento',''],pausada:['pagamento recusado','hot'],cancelada:['cancelada','']};
+const ST_COB={approved:['pago','ok'],rejected:['recusado','hot'],pending:['pendente',''],in_process:['processando',''],cancelled:['cancelado',''],scheduled:['agendado','']};
+async function carregaAssin(){
+  const a=await api('/api/assinatura'),u=a.uso,at=a.atual,P=a.planos;
+  const fim=u.testeAte?new Date(u.testeAte.replace(' ','T')+'Z'):null,dias=fim?Math.max(0,Math.ceil((fim-Date.now())/864e5)):null;
+  $('#kAssin').innerHTML=[{l:'seu plano',v:esc(u.planoNome),s:at&&at.status==='ativa'?'assinatura ativa':u.plano==='teste'?(u.testeAcabou?'teste encerrado':'teste grátis · '+(dias===0?'termina hoje':'faltam '+dias+' dias')):'—'},
+    {l:'empresas neste mês',v:u.usado+' / '+u.limite,s:'renova todo mês',meter:pct(u.usado,u.limite)},
+    {l:'próxima cobrança',v:at&&at.status==='ativa'&&at.proximo_pagamento?dataBR(at.proximo_pagamento):'—',s:at&&at.status==='ativa'?brl(at.valor)+' por mês':'sem assinatura'},
+    {l:'situação',v:at?ST_ASSIN[at.status]?.[0]||at.status:'sem plano',s:a.contaStatus==='inadimplente'?'regularize para continuar buscando':'tudo certo',cls:a.contaStatus==='inadimplente'?'':''}].map(kpi).join('');
+  const av=$('#assinAviso');
+  if(!a.configurado){av.hidden=false;av.textContent='O pagamento ainda não está configurado neste painel. Fale com o suporte.'}
+  else if(a.contaStatus==='inadimplente'){av.hidden=false;av.innerHTML='Seu último pagamento não foi aprovado. Assine de novo abaixo (ou atualize o cartão no Mercado Pago) para liberar as buscas.'}
+  else if(at&&at.status==='pendente'){av.hidden=false;av.innerHTML='Pagamento aguardando confirmação do Mercado Pago. <button type="button" class="ghost" id="reSinc">Conferir agora</button>';$('#reSinc').onclick=async()=>{await api('/api/assinatura/sincronizar',{method:'POST'}).catch(()=>{});carregaAssin()}}
+  else av.hidden=true;
+  const REC={start:['200 empresas/mês','Prospecção por nicho e cidade','CRM, funil e follow-up','Mensagens personalizadas','1 usuário'],pro:['1.500 empresas/mês','Tudo do Start','Filtros avançados','Relatórios de desempenho','Histórico de negociações','1 usuário'],agency:['4.000 empresas/mês','Tudo do Pro','Até 3 usuários','CRM compartilhado','Indicadores por usuário']};
+  $('#planos').innerHTML=Object.entries(P).map(([id,p])=>{const atual=at&&at.status==='ativa'&&at.plano===id;
+    return '<div class="plano'+(atual?' atual':'')+'"><b>'+esc(p.nome)+'</b><div class="preco">'+brl(p.preco)+'<small> /mês</small></div><ul>'+(REC[id]||[]).map(x=>'<li>'+x+'</li>').join('')+'</ul>'+
+      (atual?'<span class="pill on">seu plano atual</span><button class="ghost" data-cancelar>Cancelar assinatura</button>':'<button class="'+(at&&at.status==='ativa'?'ghost':'solid')+'" data-assinar="'+id+'"'+(!a.configurado?' disabled':'')+'>'+(at&&at.status==='ativa'?'Trocar para este':'Assinar')+'</button>')+'</div>'}).join('');
+  $$('[data-assinar]').forEach(b=>b.onclick=async()=>{b.disabled=true;b.textContent='Abrindo o Mercado Pago…';
+    try{const r=await api('/api/assinatura/criar',{method:'POST',body:{plano:b.dataset.assinar}});location.href=r.url}catch(x){toast(x.erro||'Erro');b.disabled=false;b.textContent='Assinar'}});
+  const bc=$('[data-cancelar]');if(bc)bc.onclick=async()=>{if(!confirm('Cancelar a assinatura? Você continua usando até o fim do período já pago.'))return;try{await api('/api/assinatura/cancelar',{method:'POST'});toast('Assinatura cancelada');carregaAssin()}catch(x){toast(x.erro||'Erro')}};
+  $('#cobrancas').innerHTML=a.cobrancas.length?a.cobrancas.map(c=>'<tr><td>'+dataBR(c.data)+'</td><td class="money">'+brl(c.valor)+'</td><td><span class="tag '+(ST_COB[c.status]?.[1]||'')+'">'+(ST_COB[c.status]?.[0]||c.status)+'</span></td></tr>').join(''):'<tr><td colspan="3" class="vazio">Nenhuma cobrança ainda.</td></tr>';
+}
+
 /* ---------- SAAS (dono) ---------- */
 let saas=null,saasF='todas';
 const dataBR=d=>d?new Date(d.replace(' ','T')+'Z').toLocaleDateString('pt-BR'):'—';
 async function carregaSaas(){
   saas=await api('/api/saas');const k=saas.kpis,P=saas.planos;
   $('#kSaas').innerHTML=[{l:'contas',v:k.contas,s:'fora a sua'},{l:'pagantes',v:k.pagantes,s:'com plano ativo',meter:pct(k.pagantes,k.contas)},{l:'receita mensal',v:brl(k.mrr),s:'somando os planos ativos',cls:'money'},
-    {l:'em teste',v:k.teste,s:k.testeVencido+' com teste vencido'},{l:'bloqueadas',v:k.bloqueadas,s:'sem acesso'},{l:'empresas buscadas',v:num(k.buscasMes),s:'neste mês, todas as contas'}].map(kpi).join('');
+    {l:'recebido no mês',v:brl(k.recebidoMes||0),s:(k.cobrancasMes||0)+' cobrança'+(k.cobrancasMes===1?'':'s')+' aprovada'+(k.cobrancasMes===1?'':'s'),cls:'money'},
+    {l:'em teste',v:k.teste,s:k.testeVencido+' com teste vencido'},{l:'bloqueadas',v:k.bloqueadas,s:(k.inadimplentes||0)+' com pagamento pendente'},{l:'empresas buscadas',v:num(k.buscasMes),s:'neste mês, todas as contas'}].map(kpi).join('');
   $('#saasPlano').innerHTML=Object.entries(P).map(([id,p])=>'<option value="'+id+'"'+(id==='start'?' selected':'')+'>'+esc(p.nome)+(p.preco?' · '+brl(p.preco):'')+'</option>').join('');
   const F=[['todas','Todas'],['teste','Em teste'],['pagantes','Pagantes'],['vencido','Teste vencido'],['bloqueada','Bloqueadas']];
   const agora=new Date().toISOString().slice(0,19).replace('T',' ');
@@ -673,29 +710,32 @@ function abre(id){
 function fecha(){aberto=null;$('#det').hidden=true;$('#lista').hidden=false}
 
 /* ---------- navegação ---------- */
-const TITULOS={site:['( como o seu site está indo )','Visão<br><span>geral.</span>'],follow:['( quem chamar e quando )','Follow-<br><span>up.</span>'],financeiro:['( quanto entrou e quanto vai entrar )','Valores<br><span>gerados.</span>'],prospec:['( novos clientes por nicho e cidade )','Prospec-<br><span>ção.</span>'],clientes:['( projetos e áreas do cliente )','Seus<br><span>clientes.</span>'],saas:['( assinantes, planos e consumo )','Seu<br><span>SaaS.</span>']};
+const TITULOS={site:['( como o seu site está indo )','Visão<br><span>geral.</span>'],follow:['( quem chamar e quando )','Follow-<br><span>up.</span>'],financeiro:['( quanto entrou e quanto vai entrar )','Valores<br><span>gerados.</span>'],prospec:['( novos clientes por nicho e cidade )','Prospec-<br><span>ção.</span>'],clientes:['( projetos e áreas do cliente )','Seus<br><span>clientes.</span>'],saas:['( assinantes, planos e consumo )','Seu<br><span>SaaS.</span>'],assinatura:['( seu plano e pagamentos )','Sua<br><span>assinatura.</span>']};
 function redesenha(){if(telaAtual==='site')desenhaSite();if(telaAtual==='follow'&&fu.contatos)desenhaFollow();if(telaAtual==='financeiro')desenhaFin()}
 function telaAdmin(){
   $('#admin').hidden=false;document.body.classList.add('logado');
   const S=window.SESSAO||{};
   if(S.conta){$('.brand small').textContent=S.conta.nome;$('#aSub').textContent='( painel de '+S.conta.nome+' )'}
   if(!S.site){['site','financeiro','clientes'].forEach(t=>$('[data-tab="'+t+'"]').hidden=true);document.body.classList.add('assinante')} // assinantes: só follow-up e prospecção
-  if(S.admin)$('[data-tab="saas"]').hidden=false; // dono do SaaS
+  $('[data-tab="saas"]').hidden=!S.admin; // dono do SaaS
+  if(S.site===false)$('[data-tab="assinatura"]').hidden=false; // assinantes pagam; a conta da Branco não
   if(S.usuario&&!S.usuario.verificado)$('#avisoEmail').hidden=false;
   $('#reenviar').onclick=async()=>{try{await api('/api/conta/reenviar',{method:'POST'});toast('E-mail reenviado ✓')}catch(x){toast(x.erro||'Erro')}};
   const D=[['1','Hoje'],['7','7d'],['30','30d'],['90','90d'],['365','1 ano']];
   $('#segDias').innerHTML=D.map(x=>'<button type="button" data-d="'+x[0]+'" aria-pressed="'+(x[0]===$('#dias').value)+'">'+x[1]+'</button>').join('');
   $$('[data-d]').forEach(b=>b.onclick=()=>{$('#dias').value=b.dataset.d;$$('[data-d]').forEach(x=>x.setAttribute('aria-pressed',x===b));carregaSite()});
-  const tab=t=>{telaAtual=t;$$('[data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));$('#tSite').hidden=t!=='site';$('#tClientes').hidden=t!=='clientes';$('#tSaas').hidden=t!=='saas';
+  const tab=t=>{telaAtual=t;$$('[data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));$('#tSite').hidden=t!=='site';$('#tClientes').hidden=t!=='clientes';$('#tSaas').hidden=t!=='saas';$('#tAssin').hidden=t!=='assinatura';
     $('#tFollow').hidden=t!=='follow';$('#tFin').hidden=t!=='financeiro';$('#tProspec').hidden=t!=='prospec';$('#segDias').hidden=t!=='site';
     $('#aSub').textContent=TITULOS[t][0];$('#aTitulo').innerHTML=TITULOS[t][1];scrollTo({top:0});
-    if(t==='site')carregaSite();if(t==='clientes')carregaClientes();if(t==='follow')carregaFollow();if(t==='financeiro')carregaFin();if(t==='prospec')carregaProspec();if(t==='saas')carregaSaas()};
+    if(t==='site')carregaSite();if(t==='clientes')carregaClientes();if(t==='follow')carregaFollow();if(t==='financeiro')carregaFin();if(t==='prospec')carregaProspec();if(t==='saas')carregaSaas();if(t==='assinatura')carregaAssin()};
   window.irPara=tab;
   carregaConfig();
   $$('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
   $('#recarregar').onclick=()=>tab(telaAtual);
   $('#fNovo').onsubmit=async e=>{e.preventDefault();$('#eNovo').textContent='';try{await api('/api/clientes',{method:'POST',body:Object.fromEntries(new FormData(e.target))});e.target.reset();toast('Cliente cadastrado ✓');carregaClientes()}catch(x){$('#eNovo').textContent=x.erro||'Erro'}};
-  tab(S.site===false?'follow':'site');
+  const qp=new URLSearchParams(location.search);
+  if(qp.get('pagamento')){history.replaceState(null,'','/admin');api('/api/assinatura/sincronizar',{method:'POST'}).catch(()=>{}).then(()=>{tab('assinatura');toast('Voltou do Mercado Pago. Conferindo o pagamento…')})}
+  else tab(S.site===false?'follow':'site');
   // número de quem chamar hoje no menu
   api('/api/followup').then(x=>{fu=x;badge()}).catch(()=>{});
   // atualiza sozinho a cada 2 minutos na visão geral
@@ -729,7 +769,7 @@ const MSG_COM='Oi! Tudo bem? Vi o site da {nome} ({site}). Sou da Branco, a gent
 let pros={itens:[],sel:new Set()},pCfg=null,pJaSalvos=new Map();
 function mostraUso(u){const el=$('#pUso');if(!u||u.limite==null){el.hidden=true;return}el.hidden=false;
   const fim=u.testeAte?new Date(u.testeAte.replace(' ','T')+'Z'):null,dias=fim?Math.max(0,Math.ceil((fim-Date.now())/864e5)):null;
-  el.innerHTML='<b>'+u.usado+'</b> de <b>'+u.limite+'</b> empresas neste mês <i style="--p:'+Math.min(100,u.usado/u.limite*100)+'%"></i>'+esc(u.planoNome)+(u.plano==='teste'?(u.testeAcabou?' · <span class="tag hot">teste encerrado</span>':' · teste grátis: '+(dias===0?'termina hoje':'faltam '+dias+' dia'+(dias===1?'':'s'))):'')}
+  el.innerHTML='<b>'+u.usado+'</b> de <b>'+u.limite+'</b> empresas neste mês <i style="--p:'+Math.min(100,u.usado/u.limite*100)+'%"></i>'+esc(u.planoNome)+(u.plano==='teste'?(u.testeAcabou?' · <span class="tag hot">teste encerrado</span> <button class="solid" style="padding:4px 10px;font-size:.72rem" onclick="irPara(\'assinatura\')">Assinar um plano</button>':' · teste grátis: '+(dias===0?'termina hoje':'faltam '+dias+' dia'+(dias===1?'':'s'))+' · <a href="#" onclick="irPara(\'assinatura\');return false">ver planos</a>'):'')+(u.inadimplente?' · <span class="tag hot">pagamento pendente</span> <button class="solid" style="padding:4px 10px;font-size:.72rem" onclick="irPara(\'assinatura\')">Regularizar</button>':'')}
 async function carregaProspec(){
   mostraUso(window.SESSAO?.uso);
   if(!$('#pNicho').options[1]){const N=await api('/api/prospeccao/nichos').catch(()=>[]);const g={};N.forEach(n=>(g[n.grupo]=g[n.grupo]||[]).push(n));
@@ -1052,6 +1092,7 @@ function demoApi(p,o){
   const D=window._demo;
   if(p==='/api/sessao')return Promise.resolve({papel:'admin',conta:{id:1,nome:'Branco'},usuario:null,site:true,admin:true,cadastro:true,uso:{usado:0,limite:null}});
   if(p.startsWith('/api/conta'))return Promise.resolve({ok:true,conta:{id:1,nome:'Branco'},usuario:null,meuPapel:'dono',equipe:[]});
+  if(p.startsWith('/api/assinatura')){if(o.method)return Promise.resolve({ok:true,url:'#'});return Promise.resolve({configurado:true,contaStatus:'ativa',planos:{start:{nome:'Branco Start',empresas:200,preco:2990},pro:{nome:'Branco Pro',empresas:1500,preco:5990},agency:{nome:'Branco Agency',empresas:4000,preco:11990}},atual:{plano:'pro',status:'ativa',valor:5990,proximo_pagamento:dia(-18)+' 10:00:00'},cobrancas:[{status:'approved',valor:5990,data:dia(12)},{status:'approved',valor:5990,data:dia(42)},{status:'rejected',valor:5990,data:dia(43)}],uso:{usado:640,limite:1500,plano:'pro',planoNome:'Branco Pro',testeAte:null,testeAcabou:false}})}
   if(p.startsWith('/api/saas')){if(o.method)return Promise.resolve({ok:true});const P={teste:{nome:'Teste grátis',empresas:30,preco:0},start:{nome:'Branco Start',empresas:200,preco:2990},pro:{nome:'Branco Pro',empresas:1500,preco:5990},agency:{nome:'Branco Agency',empresas:4000,preco:11990}};
     const C=[['Agência Pixel','ana@pixel.com','pro','ativa',null,640,-20],['Studio Zeta','zeta@gmail.com','teste','ativa',4,12,-3],['Marcos Tráfego','marcos@mt.com','start','ativa',null,180,-40],['Loja da Bia','bia@loja.com','teste','ativa',-2,30,-10],['Web Fácil','web@facil.com','agency','bloqueada',null,0,-60]]
       .map((x,i)=>({id:i+2,nome:x[0],dono_email:x[1],dono_nome:x[0].split(' ')[0],plano:x[2],status:x[3],teste_ate:x[4]==null?null:dia(-x[4])+' 12:00:00',criado_em:dia(-x[6])+' 10:00:00',ultimo_login:dia(0)+' 09:00:00',usado:x[5],limite:P[x[2]].empresas,preco:P[x[2]].preco,contatos:x[5]*2,usuarios:x[2]==='agency'?3:1}));
