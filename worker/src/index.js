@@ -42,7 +42,7 @@ const MODELOS_INICIAIS = [
   ['Lembrete · 7 dias', 'Oi, {nome}! Ainda pensando em {projeto} para {empresa}? Se quiser, te mostro alguns projetos parecidos que já fizemos.'],
   ['Último contato · 15 dias', 'Oi, {nome}! Vou encerrar seu atendimento por aqui, tudo bem? Quando quiser retomar {projeto}, é só me chamar.'],
 ];
-const ETAPAS_VENDA = ['novo', 'conversando', 'proposta', 'fechou', 'perdido'];
+const ETAPAS_VENDA = ['novo', 'enviada', 'conversando', 'proposta', 'fechou', 'perdido']; // conversando = respondeu
 const LEMBRETES = [2, 7, 15]; // dias até o próximo lembrete depois de cada mensagem
 
 // colunas que cada tabela precisa ter: se o banco veio de uma versão antiga, as que faltam são criadas (nada é apagado)
@@ -71,6 +71,10 @@ async function migra(db) {
   if (sem.results.length) await db.batch(sem.results.map(c => db.prepare('UPDATE clientes SET token = ?, site = ? WHERE id = ?')
     .bind(c.token || aleatorio(24), c.site || aleatorio(10), c.id)));
   await db.prepare('CREATE INDEX IF NOT EXISTS cl_token ON clientes (token)').run();
+  // etapa nova "mensagem enviada": quem foi para "conversando" só por ter recebido mensagem (nunca editado à mão) volta para ela — roda uma vez
+  if (!(await db.prepare("SELECT 1 FROM config WHERE chave = 'mig_enviada'").first())) await db.batch([
+    db.prepare("UPDATE contatos SET venda = 'enviada' WHERE venda = 'conversando' AND atualizado_em IS NULL"),
+    db.prepare("INSERT INTO config (chave, valor) VALUES ('mig_enviada', '1') ON CONFLICT(chave) DO NOTHING")]);
 }
 
 let pronto = null;
@@ -314,7 +318,7 @@ async function api(req, db, env, caminho) {
       const c = await db.prepare('SELECT contatos FROM contatos WHERE id = ?').bind(id).first(); if (!c) return erro('Contato não encontrado.', 404);
       const n = (c.contatos || 0) + 1, hoje = dataOk(b.hoje) || new Date().toISOString().slice(0, 10), dias = LEMBRETES[n - 1];
       await db.prepare(`UPDATE contatos SET contatos = ?, ultimo_contato = datetime('now'), proximo_contato = ${dias ? "date(?, '+' || ? || ' days')" : 'NULL'},
-        venda = CASE WHEN COALESCE(venda,'novo') = 'novo' THEN 'conversando' ELSE venda END WHERE id = ?`).bind(...(dias ? [n, hoje, dias, id] : [n, id])).run();
+        venda = CASE WHEN COALESCE(venda,'novo') = 'novo' THEN 'enviada' ELSE venda END WHERE id = ?`).bind(...(dias ? [n, hoje, dias, id] : [n, id])).run();
       return json({ ok: true });
     }
     if (id && m === 'PATCH') {
