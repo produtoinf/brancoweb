@@ -281,6 +281,19 @@ console.log('• prospecção nos EUA');
   ok('busca no Google (Serper) nos EUA usa gl=us', pedidoS?.body?.gl === 'us' && pedidoS?.body?.hl === 'en');
   ok('telefone vindo do Google nos EUA', enr2[cut.id]?.telefone === '13055550155' && enr2[cut.id]?.google === true);
   delete env.SERPER_KEY;
+  ok('Yelp sem chave avisa (502)', (await A.get('/api/prospeccao?nicho=barbearia&cidade=Miami&estado=Florida&pais=Estados%20Unidos&fonte=yelp')).status === 502);
+  env.YELP_KEY = 'y-teste';
+  globalThis.fetch = (f => async (u, o = {}) => { u = String(u); if (!u.startsWith('https://api.yelp.com')) return f(u, o);
+    pedidos.push({ u, auth: o.headers?.Authorization });
+    const q = new URL(u).searchParams; if (q.get('offset') !== '0') return Response.json({ businesses: [], total: 2 });
+    return Response.json({ total: 2, businesses: [
+      { id: 'b1', name: 'Yelp Barber', phone: '+13055550111', url: 'https://www.yelp.com/biz/yelp-barber?adjust=1', categories: [{ alias: 'barbers', title: 'Barbers' }], rating: 4.5, review_count: 120, is_closed: false, location: { display_address: ['10 Main St', 'Miami, FL 33130'], city: 'Miami' }, coordinates: { latitude: 25.7, longitude: -80.1 } },
+      { id: 'b2', name: 'Fechado', phone: '+13055550112', is_closed: true, location: {}, categories: [] }] }); })(globalThis.fetch);
+  const y = (await A.get('/api/prospeccao?nicho=barbearia&cidade=Miami&estado=Florida&pais=Estados%20Unidos&fonte=yelp')).dados;
+  const pedidoY = pedidos.find(p => p.u.startsWith('https://api.yelp.com'));
+  ok('Yelp: pergunta em inglês com a chave no cabeçalho', pedidoY?.auth === 'Bearer y-teste' && new URL(pedidoY.u).searchParams.get('term') === 'barber shop' && new URL(pedidoY.u).searchParams.get('location') === 'Miami, Florida, USA');
+  ok('Yelp: resultado com telefone +1, nota e link, sem os fechados', y.fonte === 'yelp' && y.total === 1 && y.itens[0].telefone === '13055550111' && y.itens[0].avaliacao === 4.5 && y.itens[0].yelp === 'https://www.yelp.com/biz/yelp-barber' && y.itens[0].cidade === 'Miami');
+  delete env.YELP_KEY;
   const br = (await A.get('/api/prospeccao?nicho=barbearia&cidade=Curitiba&estado=Paraná&fonte=osm'));
   ok('busca no Brasil continua igual (padrão)', br.status === 200 || br.status === 502);
   globalThis.fetch = fetchReal;

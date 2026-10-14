@@ -353,7 +353,7 @@ tr.ign td{opacity:.45}
           <label class="fl"><span>País</span><select name="pais" id="pPais"><option value="Brasil">🇧🇷 Brasil</option><option value="Estados Unidos">🇺🇸 Estados Unidos</option><option value="Portugal">Portugal</option><option value="Argentina">Argentina</option><option value="Paraguai">Paraguai</option><option value="Uruguai">Uruguai</option><option value="Chile">Chile</option><option value="México">México</option><option value="Colômbia">Colômbia</option><option value="Espanha">Espanha</option></select></label>
           <label class="fl"><span>Estado</span><select id="pUf"></select><select id="pUfUs" hidden></select><input id="pEstadoTxt" placeholder="Estado / província" maxlength="60" hidden></label>
           <label class="fl"><span>Cidade</span><input name="cidade" id="pCidade" list="pCidades" placeholder="Escolha o estado primeiro" maxlength="80" autocomplete="off"><datalist id="pCidades"></datalist></label>
-          <div class="ops"><label class="fl" style="min-width:200px"><span>Fonte dos dados</span><select name="fonte" id="pFonte"><option value="tomtom">TomTom</option><option value="here">HERE</option><option value="google">Google Maps</option><option value="osm">OpenStreetMap (grátis, poucos dados)</option></select></label>
+          <div class="ops"><label class="fl" style="min-width:200px"><span>Fonte dos dados</span><select name="fonte" id="pFonte"><option value="tomtom">TomTom</option><option value="here">HERE</option><option value="google">Google Maps</option><option value="yelp">Yelp (EUA)</option><option value="osm">OpenStreetMap (grátis, poucos dados)</option></select></label>
             <label class="chk"><input type="checkbox" id="pCel"> só com celular/WhatsApp</label><label class="chk"><input type="checkbox" id="pSem"> só sem site próprio</label>
             <button class="solid" id="bBusca" style="margin-left:auto">Buscar estabelecimentos</button></div>
         </form>
@@ -776,7 +776,7 @@ async function carregaProspec(){
     $('#pNicho').innerHTML='<option value="">— escolha —</option>'+Object.entries(g).map(([k,v])=>'<optgroup label="'+esc(k)+'">'+v.map(n=>'<option value="'+n.id+'">'+esc(n.nome)+'</option>').join('')+'</optgroup>').join('')}
   pCfg=await api('/api/config').catch(()=>({}));
   $('#msgSem').value=pCfg.msg_semsite||MSG_SEM;$('#msgCom').value=pCfg.msg_comsite||MSG_COM;
-  const FONTES=[['google','Google Maps','GOOGLE_PLACES_KEY'],['tomtom','TomTom (grátis, 2.500/dia)','TOMTOM_KEY'],['here','HERE (grátis, 1.000/dia)','HERE_KEY']];
+  const FONTES=[['google','Google Maps','GOOGLE_PLACES_KEY'],['tomtom','TomTom (grátis, 2.500/dia)','TOMTOM_KEY'],['here','HERE (grátis, 1.000/dia)','HERE_KEY'],['yelp','Yelp (EUA e Canadá, com telefone)','YELP_KEY']];
   FONTES.forEach(([id,nome,chave])=>{const o=$('#pFonte').querySelector('[value='+id+']');o.disabled=!pCfg[id];o.textContent=pCfg[id]?nome:nome+' · falta a chave '+chave});
   if(!$('#pFonte').dataset.ok){const melhor=FONTES.map(x=>x[0]).find(id=>pCfg[id])||'osm';$('#pFonte').value=melhor;$('#pFonte').dataset.ok=1}
   try{const f=await api('/api/followup');fu=f;pJaSalvos=new Map();f.contatos.forEach(c=>{if(c.telefone)pJaSalvos.set('t'+c.telefone,c.id);pJaSalvos.set('n'+semAcento(c.nome)+'|'+semAcento(c.cidade||''),c.id)})}catch(e){}
@@ -785,7 +785,7 @@ async function carregaProspec(){
 $('#sMsgs').onclick=async()=>{await api('/api/config',{method:'PUT',body:{msg_semsite:$('#msgSem').value,msg_comsite:$('#msgCom').value}});toast('Mensagens salvas ✓')};
 const jaSalvo=x=>pJaSalvos.get('t'+x.telefone)||pJaSalvos.get('n'+semAcento(x.nome)+'|'+semAcento(x.cidade||''));
 const msgPara=x=>($('#'+(x.site?'msgCom':'msgSem')).value||'').replace(/\{nome\}/g,x.nome).replace(/\{nicho\}/g,(pros.nicho||'negócios').toLowerCase()).replace(/\{cidade\}/g,x.cidade||'sua cidade').replace(/\{site\}/g,x.site||'');
-const NOME_FONTE=f=>({google:'Google Maps',tomtom:'TomTom',here:'HERE',osm:'OpenStreetMap'})[f]||f;
+const NOME_FONTE=f=>({google:'Google Maps',tomtom:'TomTom',here:'HERE',yelp:'Yelp',osm:'OpenStreetMap'})[f]||f;
 const proFiltrados=()=>pros.itens.filter(x=>(!$('#pCel').checked||x.celular||x.whatsapp||(ehEUA()&&x.telefone))&&(!$('#pSem').checked||!x.site));
 function desenhaPros(){
   const L=proFiltrados(),T=pros.itens;
@@ -803,7 +803,7 @@ function desenhaPros(){
     '<td>'+(x.site?'<a class="pill" href="'+esc(x.site)+'" target="_blank" rel="noopener noreferrer">'+esc(host(x.site))+' ↗</a>':'<span class="tag hot">sem site</span>')+'</td>'+
     '<td>'+[x.instagram&&'<a class="pill" href="'+esc(/^https?:/.test(x.instagram)?x.instagram:'https://instagram.com/'+x.instagram.replace('@',''))+'" target="_blank" rel="noopener noreferrer">insta ↗</a>',x.redeSocial&&!x.instagram&&'<a class="pill" href="'+esc(x.redeSocial)+'" target="_blank" rel="noopener noreferrer">rede ↗</a>',x.email&&'<span class="pill">'+esc(x.email)+'</span>'].filter(Boolean).join(' ')+'</td>'+
     '<td><small style="margin:0">'+esc(x.endereco||'—')+'</small></td>'+
-    '<td style="white-space:nowrap">'+(x.maps?'<a class="pill" href="'+esc(x.maps)+'" target="_blank" rel="noopener noreferrer">mapa ↗</a> ':'')+(x.telefone?'<button class="ghost" data-pwa="'+esc(x.id)+'">WhatsApp</button>':'')+'</td></tr>'}).join('')
+    '<td style="white-space:nowrap">'+(x.maps?'<a class="pill" href="'+esc(x.maps)+'" target="_blank" rel="noopener noreferrer">mapa ↗</a> ':'')+(x.yelp?'<a class="pill" href="'+esc(x.yelp)+'" target="_blank" rel="noopener noreferrer">yelp ↗</a> ':'')+(x.telefone?'<button class="ghost" data-pwa="'+esc(x.id)+'">WhatsApp</button>':'')+'</td></tr>'}).join('')
     :'<tr><td colspan="7" class="vazio">Nenhum resultado com esses filtros.</td></tr>';
   $$('[data-pid]').forEach(c=>c.onchange=()=>{c.checked?pros.sel.add(c.dataset.pid):pros.sel.delete(c.dataset.pid);$('#pResS').textContent='fonte: '+NOME_FONTE(pros.fonte)+' · '+pros.sel.size+' selecionados'});
   $$('[data-pwa]').forEach(b=>b.onclick=()=>{const x=pros.itens.find(i=>i.id===b.dataset.pwa);abrirWa(x,msgPara(x))});
@@ -853,6 +853,7 @@ $('#pUf').onchange=()=>{try{localStorage.setItem('pUf',$('#pUf').value)}catch(e)
 const ehBrasil=()=>/^bra[sz]il$/i.test(semAcento($('#fBusca').pais.value.trim()));
 const ehEUA=()=>/^(estados unidos|eua|usa|united states)$/i.test(semAcento($('#fBusca').pais.value.trim()));
 function mudouPais(){const br=ehBrasil(),us=ehEUA();$('#pUf').hidden=!br;$('#pUfUs').hidden=!us;$('#pEstadoTxt').hidden=br||us;
+  const fonte=$('#pFonte');if(us&&pCfg?.yelp)fonte.value='yelp';else if(!us&&fonte.value==='yelp')fonte.value=['tomtom','here','google'].find(id=>pCfg?.[id])||'osm';
   $('#pCel').parentElement.lastChild.textContent=us?' só com telefone':' só com celular/WhatsApp';
   if(br)cidadesDo($('#pUf').value);else if(us)cidadesUS($('#pUfUs').value);else{$('#pCidades').innerHTML='';$('#pCidade').placeholder='Cidade'}
   try{localStorage.setItem('pPais',$('#fBusca').pais.value)}catch(e){}}

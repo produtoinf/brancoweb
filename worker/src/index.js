@@ -406,7 +406,7 @@ async function api(req, db, env, caminho) {
     }
     const cc = Object.fromEntries((await db.prepare('SELECT chave, valor FROM config_conta WHERE conta_id = ?').bind(conta).all()).results.map(x => [x.chave, x.valor]));
     const c = conta === CONTA_SITE ? Object.fromEntries((await db.prepare("SELECT chave, valor FROM config WHERE chave IN ('manutencao','mensagem')").all()).results.map(x => [x.chave, x.valor])) : {};
-    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: cc.msg_semsite || '', msg_comsite: cc.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY, serper: !!env.SERPER_KEY, tomtom: !!env.TOMTOM_KEY, here: !!env.HERE_KEY });
+    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: cc.msg_semsite || '', msg_comsite: cc.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY, serper: !!env.SERPER_KEY, tomtom: !!env.TOMTOM_KEY, here: !!env.HERE_KEY, yelp: !!env.YELP_KEY });
   }
 
   // cidades de um estado (IBGE), guardadas em cache por 30 dias
@@ -937,9 +937,35 @@ async function buscaHere(env, f) {
   return { fonte: 'here', lugar, itens };
 }
 
+// Yelp Fusion: o guia de comércios dos EUA (e Canadá); plano gratuito, chave em YELP_KEY
+async function buscaYelp(env, f) {
+  const { q, n } = oQue(f), lugar = [f.cidade, f.estado, ehEUA(f.pais) ? 'USA' : f.pais].filter(Boolean).join(', '), itens = [];
+  for (const offset of [0, 50, 100, 150]) { // até 200 resultados
+    const p = new URLSearchParams({ term: q, location: lugar, limit: '50', offset: String(offset), sort_by: 'best_match' });
+    const r = await fetch('https://api.yelp.com/v3/businesses/search?' + p, { headers: { Authorization: 'Bearer ' + env.YELP_KEY, Accept: 'application/json' }, signal: AbortSignal.timeout(15000) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (offset) break; // as páginas seguintes podem falhar por limite de paginação; fica com o que veio
+      throw new Error(r.status === 401 ? 'Yelp: chave inválida.' : r.status === 429 ? 'Yelp: limite de buscas do dia atingido. Tente amanhã ou use outra fonte.'
+        : /LOCATION_NOT_FOUND/i.test(d.error?.code || '') ? 'Não encontrei essa cidade. Confira o nome, o estado e o país.' : 'Yelp: ' + (d.error?.description || 'erro na busca'));
+    }
+    for (const b of d.businesses || []) {
+      if (b.is_closed) continue;
+      const tel = telefone(b.phone || b.display_phone, f.pais), lo = b.location || {};
+      itens.push({ id: 'y:' + b.id, nome: b.name, categoria: b.categories?.[0]?.title || n?.nome || '', telefone: tel?.num || null, celular: tel?.cel ?? null, whatsapp: false,
+        site: null, instagram: null, email: null, endereco: (lo.display_address || []).join(', ') || null, cidade: lo.city || null, yelp: b.url ? b.url.split('?')[0] : null,
+        maps: mapaLink(b.name, b.coordinates?.latitude, b.coordinates?.longitude), avaliacao: b.rating || null, avaliacoes: b.review_count || 0 });
+    }
+    if ((d.businesses || []).length < 50 || offset + 50 >= (d.total || 0)) break;
+  }
+  return { fonte: 'yelp', lugar, itens };
+}
+
 async function buscaProspects(env, f) {
   if (!f.cidade && !f.estado) throw new Error('Coloque a cidade ou o estado.');
+  if (f.fonte === 'yelp' && !env.YELP_KEY) throw new Error('Yelp: falta a chave YELP_KEY no Worker.');
   const r = f.fonte === 'google' && env.GOOGLE_PLACES_KEY ? await buscaGoogle(env, f)
+    : f.fonte === 'yelp' ? await buscaYelp(env, f)
     : f.fonte === 'tomtom' && env.TOMTOM_KEY ? await buscaTomTom(env, f)
     : f.fonte === 'here' && env.HERE_KEY ? await buscaHere(env, f) : await buscaOSM(f);
   const vistos = new Set(); r.itens = r.itens.filter(x => x.nome && !vistos.has(x.id) && vistos.add(x.id)); // sem repetidos
