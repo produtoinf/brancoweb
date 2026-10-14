@@ -62,6 +62,9 @@ const MODELOS_INICIAIS = [
   ['Lembrete · 7 dias', 'Oi, {nome}! Ainda pensando em {projeto} para {empresa}? Se quiser, te mostro alguns projetos parecidos que já fizemos.'],
   ['Último contato · 15 dias', 'Oi, {nome}! Vou encerrar seu atendimento por aqui, tudo bem? Quando quiser retomar {projeto}, é só me chamar.'],
 ];
+// mensagens da prospecção, uma por idioma (pt = sem sufixo)
+const MSG_CHAVES = ['msg_semsite', 'msg_comsite', 'msg_semsite_en', 'msg_comsite_en', 'msg_semsite_es', 'msg_comsite_es'];
+const idiomaOk = v => ['pt', 'en', 'es'].includes(v) ? v : null;
 const ETAPAS_VENDA = ['novo', 'enviada', 'conversando', 'proposta', 'fechou', 'perdido']; // conversando = respondeu
 const LEMBRETES = [2, 7, 15]; // dias até o próximo lembrete depois de cada mensagem
 const CONTA_SITE = 1; // conta da Branco: dona do site, dos eventos (/t) e dos leads (/lead)
@@ -73,8 +76,8 @@ const TESTE_DIAS = 7;
 const COLUNAS = {
   eventos: ['tipo', 'v', 'p', 'o', 'd', 'criado_em', 'conta_id INTEGER'],
   contatos: ['lid', 'v', 'nome', 'telefone', 'empresa', 'projeto', 'mensagem', 'status', 'origem', 'venda', 'contatos INTEGER', 'ultimo_contato', 'proximo_contato', 'notas', 'proposta INTEGER', 'criado_em', 'atualizado_em',
-    'site', 'instagram', 'endereco', 'cidade', 'nicho', 'maps', 'conta_id INTEGER', 'usuario_id INTEGER'],
-  modelos: ['titulo', 'texto', 'criado_em', 'conta_id INTEGER'],
+    'site', 'instagram', 'endereco', 'cidade', 'nicho', 'maps', 'conta_id INTEGER', 'usuario_id INTEGER', 'idioma'],
+  modelos: ['titulo', 'texto', 'criado_em', 'conta_id INTEGER', 'idioma'],
   vendas: ['cliente', 'servico', 'valor INTEGER', 'mensal INTEGER', 'data', 'fim', 'pago INTEGER', 'notas', 'contato_id INTEGER', 'criado_em', 'conta_id INTEGER', 'usuario_id INTEGER'],
   clientes: ['nome', 'email', 'projeto', 'site_url', 'etapa INTEGER', 'recado', 'site', 'token', 'criado_em', 'conta_id INTEGER'],
   links: ['cliente_id INTEGER', 'titulo', 'url', 'criado_em', 'conta_id INTEGER'],
@@ -396,7 +399,7 @@ async function api(req, db, env, caminho) {
   if (rec === 'config') {
     if (m === 'PUT') {
       const minhas = [], globais = [];
-      for (const k of ['msg_semsite', 'msg_comsite']) if (k in b) minhas.push([k, txt(b[k], 1500) || '']);
+      for (const k of MSG_CHAVES) if (k in b) minhas.push([k, txt(b[k], 1500) || '']);
       if (conta === CONTA_SITE) {
         if ('manutencao' in b) globais.push(['manutencao', b.manutencao ? '1' : '0']);
         if ('mensagem' in b) globais.push(['mensagem', txt(b.mensagem, 300) || '']);
@@ -406,7 +409,7 @@ async function api(req, db, env, caminho) {
     }
     const cc = Object.fromEntries((await db.prepare('SELECT chave, valor FROM config_conta WHERE conta_id = ?').bind(conta).all()).results.map(x => [x.chave, x.valor]));
     const c = conta === CONTA_SITE ? Object.fromEntries((await db.prepare("SELECT chave, valor FROM config WHERE chave IN ('manutencao','mensagem')").all()).results.map(x => [x.chave, x.valor])) : {};
-    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: cc.msg_semsite || '', msg_comsite: cc.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY, serper: !!env.SERPER_KEY, tomtom: !!env.TOMTOM_KEY, here: !!env.HERE_KEY, yelp: !!env.YELP_KEY, serperMaps: !!env.SERPER_KEY });
+    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', ...Object.fromEntries(MSG_CHAVES.map(k => [k, cc[k] || ''])), google: !!env.GOOGLE_PLACES_KEY, serper: !!env.SERPER_KEY, tomtom: !!env.TOMTOM_KEY, here: !!env.HERE_KEY, yelp: !!env.YELP_KEY, serperMaps: !!env.SERPER_KEY });
   }
 
   // cidades de um estado (IBGE), guardadas em cache por 30 dias
@@ -482,16 +485,16 @@ async function api(req, db, env, caminho) {
   // follow-up
   if (rec === 'followup' && m === 'GET') {
     const [c, mo] = await db.batch([
-      db.prepare(`SELECT id, nome, empresa, telefone, projeto, mensagem, COALESCE(status,'enviado') status, origem, site, instagram, endereco, cidade, nicho, maps, COALESCE(venda,'novo') venda, COALESCE(contatos,0) contatos,
+      db.prepare(`SELECT id, nome, empresa, telefone, idioma, projeto, mensagem, COALESCE(status,'enviado') status, origem, site, instagram, endereco, cidade, nicho, maps, COALESCE(venda,'novo') venda, COALESCE(contatos,0) contatos,
         ultimo_contato, proximo_contato, notas, proposta, usuario_id, criado_em FROM contatos WHERE conta_id = ? ORDER BY (COALESCE(venda,'novo') IN ('fechou','perdido')), COALESCE(proximo_contato, '0000'), criado_em DESC`).bind(conta),
-      db.prepare('SELECT id, titulo, texto FROM modelos WHERE conta_id = ? ORDER BY id').bind(conta)]);
+      db.prepare('SELECT id, titulo, texto, idioma FROM modelos WHERE conta_id = ? ORDER BY id').bind(conta)]);
     return json({ contatos: c.results, modelos: mo.results });
   }
   if (rec === 'contatos') {
     if (m === 'POST' && !id) {
       const nome = txt(b.nome, 100); if (!nome) return erro('Coloque o nome.');
-      await db.prepare("INSERT INTO contatos (lid, nome, telefone, projeto, notas, status, origem, venda, contatos, conta_id, usuario_id, criado_em) VALUES (?, ?, ?, ?, ?, 'enviado', 'manual', 'novo', 0, ?, ?, datetime('now'))")
-        .bind('m-' + aleatorio(16), nome, digitos(b.telefone), txt(b.projeto, 80), txt(b.notas, 2000), conta, S.usuario).run();
+      await db.prepare("INSERT INTO contatos (lid, nome, telefone, projeto, notas, idioma, status, origem, venda, contatos, conta_id, usuario_id, criado_em) VALUES (?, ?, ?, ?, ?, ?, 'enviado', 'manual', 'novo', 0, ?, ?, datetime('now'))")
+        .bind('m-' + aleatorio(16), nome, digitos(b.telefone), txt(b.projeto, 80), txt(b.notas, 2000), idiomaOk(b.idioma), conta, S.usuario).run();
       return json({ ok: true });
     }
     if (id && !await db.prepare('SELECT 1 FROM contatos WHERE id = ? AND conta_id = ?').bind(id, conta).first()) return erro('Contato não encontrado.', 404);
@@ -514,9 +517,9 @@ async function api(req, db, env, caminho) {
     if (id && m === 'DELETE') { await db.prepare('DELETE FROM contatos WHERE id = ? AND conta_id = ?').bind(id, conta).run(); return json({ ok: true }); }
   }
   if (rec === 'modelos') {
-    if (m === 'GET') return json((await db.prepare('SELECT id, titulo, texto FROM modelos WHERE conta_id = ? ORDER BY id').bind(conta).all()).results);
+    if (m === 'GET') return json((await db.prepare('SELECT id, titulo, texto, idioma FROM modelos WHERE conta_id = ? ORDER BY id').bind(conta).all()).results);
     const titulo = txt(b.titulo, 60), texto = txt(b.texto, 1000);
-    if (m === 'POST' && !id) { if (!titulo || !texto) return erro('Coloque título e texto.'); await db.prepare("INSERT INTO modelos (titulo, texto, conta_id, criado_em) VALUES (?, ?, ?, datetime('now'))").bind(titulo, texto, conta).run(); return json({ ok: true }); }
+    if (m === 'POST' && !id) { if (!titulo || !texto) return erro('Coloque título e texto.'); await db.prepare("INSERT INTO modelos (titulo, texto, idioma, conta_id, criado_em) VALUES (?, ?, ?, ?, datetime('now'))").bind(titulo, texto, idiomaOk(b.idioma) || 'pt', conta).run(); return json({ ok: true }); }
     if (id && m === 'PATCH') { if (!titulo || !texto) return erro('Coloque título e texto.'); await db.prepare('UPDATE modelos SET titulo = ?, texto = ? WHERE id = ? AND conta_id = ?').bind(titulo, texto, id, conta).run(); return json({ ok: true }); }
     if (id && m === 'DELETE') { await db.prepare('DELETE FROM modelos WHERE id = ? AND conta_id = ?').bind(id, conta).run(); return json({ ok: true }); }
   }
@@ -997,7 +1000,7 @@ async function buscaProspects(env, f) {
   const vistos = new Set(); r.itens = r.itens.filter(x => x.nome && !vistos.has(x.id) && vistos.add(x.id)); // sem repetidos
   // sites que são só Instagram/Facebook/Linktree contam como "sem site próprio"
   r.itens.forEach(x => { if (x.site && /instagram\.com|facebook\.com|linktr\.ee|wa\.me|whatsapp/i.test(x.site)) { x.instagram = x.instagram || (/instagram/.test(x.site) ? x.site : null); x.redeSocial = x.site; x.site = null; } });
-  return { ...r, nicho: NICHOS.find(x => x.id === f.nicho)?.nome || f.termo, total: r.itens.length };
+  return { ...r, nicho: NICHOS.find(x => x.id === f.nicho)?.nome || f.termo, nichoEn: f.termo || NICHO_EN[f.nicho] || null, total: r.itens.length };
 }
 // procura WhatsApp/telefone/Instagram/e-mail no site do estabelecimento (só sites próprios; plataformas são ignoradas)
 const PLATAFORMAS = /tuaagenda|booksy|linktr\.ee|wa\.me|whatsapp|instagram\.com|facebook\.com|negocio\.site|ifood|goomer|agendor|calendly|google\.|anota\.ai|cardapioweb|beacons\.ai/i;
@@ -1080,9 +1083,9 @@ async function salvaProspects(db, conta, itens, usuario) {
     const tel = digitos(x.telefone), cidade = txt(x.cidade, 80);
     const ja = await db.prepare('SELECT id FROM contatos WHERE conta_id = ? AND ((? IS NOT NULL AND telefone = ?) OR (lower(nome) = lower(?) AND COALESCE(cidade,\'\') = COALESCE(?,\'\'))) LIMIT 1').bind(conta, tel, tel, nome, cidade).first();
     if (ja) { ids.push(ja.id); continue; }
-    const r = await db.prepare(`INSERT INTO contatos (lid, nome, empresa, telefone, projeto, status, origem, venda, contatos, site, instagram, endereco, cidade, nicho, maps, notas, conta_id, usuario_id, criado_em)
-        VALUES (?, ?, ?, ?, ?, 'enviado', 'prospeccao', 'novo', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`)
-      .bind('p-' + aleatorio(16), nome, nome, tel, txt(x.nicho, 80), urlOk(x.site), txt(x.instagram, 200), txt(x.endereco, 300), cidade, txt(x.nicho, 80), urlOk(x.maps), txt(x.notas, 500), conta, usuario).run();
+    const r = await db.prepare(`INSERT INTO contatos (lid, nome, empresa, telefone, projeto, status, origem, venda, contatos, site, instagram, endereco, cidade, nicho, maps, notas, idioma, conta_id, usuario_id, criado_em)
+        VALUES (?, ?, ?, ?, ?, 'enviado', 'prospeccao', 'novo', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`)
+      .bind('p-' + aleatorio(16), nome, nome, tel, txt(x.nicho, 80), urlOk(x.site), txt(x.instagram, 200), txt(x.endereco, 300), cidade, txt(x.nicho, 80), urlOk(x.maps), txt(x.notas, 500), idiomaOk(x.idioma), conta, usuario).run();
     ids.push(r.meta?.last_row_id ?? null); novos++;
   }
   return { ok: true, novos, repetidos: itens.length - novos, ids };

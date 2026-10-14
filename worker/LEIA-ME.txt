@@ -110,8 +110,16 @@ PROSPECÇÃO NOS ESTADOS UNIDOS
    Funciona com qualquer fonte (Serper, Google Maps, TomTom, HERE, Yelp e OpenStreetMap). Recomendado: Serper. As buscas são feitas em
    inglês (o nicho é traduzido sozinho), o telefone sai no formato +1 (305) 555-0123 e o botão
    "Chamar" abre o WhatsApp normalmente. Nos EUA não dá para saber se um número é celular, então o
-   filtro vira "só com telefone". As mensagens do follow-up continuam as suas: escreva em inglês
-   nos modelos (aba Follow-up → mensagens) se for falar com empresas de lá.
+   filtro vira "só com telefone".
+
+MENSAGENS POR IDIOMA
+   Prospecção: acima das mensagens tem "Idioma das mensagens" (Português, English, Español). Ele muda
+   sozinho conforme o país da busca: EUA = inglês; Argentina, Paraguai, Uruguai, Chile, México,
+   Colômbia e Espanha = espanhol; Brasil e Portugal = português. Cada idioma tem as suas mensagens;
+   "Salvar mensagens" grava os três.
+   Follow-up: o contato salvo da prospecção guarda o idioma do país. As mensagens prontas são escolhidas
+   nesse idioma. Enquanto você não criar as suas em inglês/espanhol (Follow-up → + nova mensagem →
+   Idioma), o painel usa 4 mensagens prontas em cada idioma.
 
 O QUE O WORKER FAZ
 - Conta visitas, cliques no WhatsApp, formulário aberto e cadastros do site (track.js)
