@@ -308,7 +308,7 @@ tr.ign td{opacity:.45}
           <form class="form mt" id="fManual"><input name="nome" placeholder="Nome" maxlength="100"><input name="telefone" placeholder="WhatsApp com DDD" inputmode="tel"><input name="projeto" placeholder="Interesse (ex: Site)" maxlength="80"><input name="notas" placeholder="Observação" maxlength="300"><div class="full acts"><button class="solid">Adicionar</button><span class="msg-err" id="eManual"></span></div></form></details>
       </section>
       <section class="box mt"><div class="hd"><div><h2>Mensagens prontas</h2><p class="dica">use {nome}, {projeto} e {empresa} — trocamos pelos dados de cada pessoa.</p></div></div><div id="fuModelos"></div>
-        <details class="mt"><summary style="text-align:left">+ nova mensagem</summary><form class="form mt" id="fModelo"><input name="titulo" placeholder="Título (ex: Promoção)" maxlength="60" class="full"><textarea name="texto" rows="3" maxlength="1000" class="full" placeholder="Oi, {nome}! ..."></textarea><div class="full acts"><button class="solid">Salvar mensagem</button><span class="msg-err" id="eModelo"></span></div></form></details>
+        <details class="mt"><summary style="text-align:left">+ nova mensagem</summary><form class="form mt" id="fModelo"><label class="fl full"><span>Idioma</span><select name="idioma"><option value="pt">🇧🇷 Português</option><option value="en">🇺🇸 English (EUA)</option><option value="es">🇪🇸 Español</option></select></label><p class="dica full">Contatos dos EUA recebem as mensagens em inglês; dos países de língua espanhola, em espanhol. Enquanto você não criar as suas, o painel usa mensagens prontas nesses idiomas.</p><input name="titulo" placeholder="Título (ex: Promoção)" maxlength="60" class="full"><textarea name="texto" rows="3" maxlength="1000" class="full" placeholder="Oi, {nome}! ..."></textarea><div class="full acts"><button class="solid">Salvar mensagem</button><span class="msg-err" id="eModelo"></span></div></form></details>
       </section>
     </div>
 
@@ -365,6 +365,7 @@ tr.ign td{opacity:.45}
       <section class="box mt" id="pResBox" hidden><div class="hd"><div><h2 id="pResT">Resultados</h2><p class="label" id="pResS"></p></div>
         <div class="busca"><button class="ghost" id="pTodos">Selecionar todos</button><button class="ghost" id="pSalvar">Salvar no follow-up</button><button class="ghost" id="pCsv">Exportar CSV</button><button class="solid" id="pSeq">Iniciar sequência de mensagens →</button></div></div>
         <div class="tbl"><table><thead><tr><th></th><th>Estabelecimento</th><th>Telefone</th><th>Site</th><th>Redes</th><th>Endereço</th><th></th></tr></thead><tbody id="pRes"></tbody></table></div></section>
+      <div class="acts mt"><label class="fl" style="min-width:220px"><span>Idioma das mensagens</span><select id="msgIdioma"><option value="pt">🇧🇷 Português</option><option value="en">🇺🇸 English</option><option value="es">🇪🇸 Español</option></select></label><p class="dica">Muda sozinho conforme o país da busca. Cada idioma tem as suas mensagens.</p></div>
       <section class="grid2">
         <div class="box"><div class="hd"><div><h2>Mensagem · quem não tem site</h2><p class="dica">use {nome}, {nicho} e {cidade}</p></div></div><textarea id="msgSem" rows="6" maxlength="1500"></textarea></div>
         <div class="box"><div class="hd"><div><h2>Mensagem · quem já tem site</h2><p class="dica">use {nome}, {nicho}, {cidade} e {site}</p></div></div><textarea id="msgCom" rows="6" maxlength="1500"></textarea></div>
@@ -764,6 +765,16 @@ async function telaConta(){
 $('#bConta').onclick=telaConta;
 
 /* ---------- PROSPECÇÃO ---------- */
+const MSG_PADRAO={
+  pt:{sem:null,com:null},
+  en:{sem:'Hi! I came across {nome} in {cidade} and noticed you don\'t have a website yet. I\'m with Branco: we build professional websites and run paid ads for local businesses, so you show up on Google and customers reach you directly. Can I show you a few examples?',
+      com:'Hi! I checked out the {nome} website ({site}). I\'m with Branco: we help local businesses in {cidade} get more customers with paid ads and landing pages that convert. Can I send you 2 quick ideas to improve it?'},
+  es:{sem:'¡Hola! ¿Qué tal? Encontré {nome} en {cidade} y vi que todavía no tienen sitio web propio. Soy de Branco: creamos sitios web profesionales y hacemos publicidad paga para negocios locales, para aparecer en Google y recibir clientes directo en WhatsApp. ¿Te muestro algunos ejemplos rápido?',
+      com:'¡Hola! ¿Qué tal? Vi el sitio web de {nome} ({site}). Soy de Branco: ayudamos a negocios locales en {cidade} a atraer más clientes con publicidad paga y páginas que convierten. ¿Te mando 2 ideas rápidas de lo que se podría mejorar?'}};
+/* idioma de cada país (Brasil e Portugal = pt) */
+const IDIOMA_PAIS={'estados unidos':'en',eua:'en',usa:'en','united states':'en',argentina:'es',paraguai:'es',uruguai:'es',chile:'es',mexico:'es',colombia:'es',espanha:'es'};
+const idiomaDoPais=p=>IDIOMA_PAIS[semAcento(String(p||'').trim()).toLowerCase()]||'pt';
+const MSGS={pt:{},en:{},es:{}};let msgIdi='pt';
 const MSG_SEM='Oi! Tudo bem? Encontrei a {nome} aqui em {cidade} e vi que vocês ainda não têm um site próprio. Sou da Branco, a gente cria sites profissionais e faz tráfego pago para {nicho}, para aparecer no Google e receber clientes direto no WhatsApp. Posso te mostrar alguns exemplos rapidinho?';
 const MSG_COM='Oi! Tudo bem? Vi o site da {nome} ({site}). Sou da Branco, a gente ajuda {nicho} em {cidade} a atrair mais clientes com tráfego pago e páginas que convertem. Posso te mandar 2 ideias rápidas do que daria para melhorar?';
 let pros={itens:[],sel:new Set()},pCfg=null,pJaSalvos=new Map();
@@ -775,16 +786,24 @@ async function carregaProspec(){
   if(!$('#pNicho').options[1]){const N=await api('/api/prospeccao/nichos').catch(()=>[]);const g={};N.forEach(n=>(g[n.grupo]=g[n.grupo]||[]).push(n));
     $('#pNicho').innerHTML='<option value="">— escolha —</option>'+Object.entries(g).map(([k,v])=>'<optgroup label="'+esc(k)+'">'+v.map(n=>'<option value="'+n.id+'">'+esc(n.nome)+'</option>').join('')+'</optgroup>').join('')}
   pCfg=await api('/api/config').catch(()=>({}));
-  $('#msgSem').value=pCfg.msg_semsite||MSG_SEM;$('#msgCom').value=pCfg.msg_comsite||MSG_COM;
+  MSG_PADRAO.pt={sem:MSG_SEM,com:MSG_COM};
+  msgsNaTela=false;for(const i of ['pt','en','es']){const suf=i==='pt'?'':'_'+i;MSGS[i]={sem:pCfg['msg_semsite'+suf]||MSG_PADRAO[i].sem,com:pCfg['msg_comsite'+suf]||MSG_PADRAO[i].com}}
+  mostraMsgs(idiomaDoPais($('#fBusca').pais.value));
   const FONTES=[['serperMaps','Serper (Google Maps, com telefone)','SERPER_KEY'],['google','Google Maps','GOOGLE_PLACES_KEY'],['tomtom','TomTom (grátis, 2.500/dia)','TOMTOM_KEY'],['here','HERE (grátis, 1.000/dia)','HERE_KEY'],['yelp','Yelp (EUA e Canadá, com telefone)','YELP_KEY']];
   FONTES.forEach(([id,nome,chave])=>{const o=$('#pFonte').querySelector('[value='+id+']');o.disabled=!pCfg[id];o.textContent=pCfg[id]?nome:nome+' · falta a chave '+chave});
   if(!$('#pFonte').dataset.ok){const melhor=FONTES.map(x=>x[0]).find(id=>pCfg[id])||'osm';$('#pFonte').value=melhor;$('#pFonte').dataset.ok=1}
   try{const f=await api('/api/followup');fu=f;pJaSalvos=new Map();f.contatos.forEach(c=>{if(c.telefone)pJaSalvos.set('t'+c.telefone,c.id);pJaSalvos.set('n'+semAcento(c.nome)+'|'+semAcento(c.cidade||''),c.id)})}catch(e){}
   desenhaPros();
 }
-$('#sMsgs').onclick=async()=>{await api('/api/config',{method:'PUT',body:{msg_semsite:$('#msgSem').value,msg_comsite:$('#msgCom').value}});toast('Mensagens salvas ✓')};
+let msgsNaTela=false; // só guarda o que está na tela depois que as mensagens foram carregadas
+function mostraMsgs(i){guardaMsgs();msgIdi=i;$('#msgIdioma').value=i;$('#msgSem').value=MSGS[i].sem||'';$('#msgCom').value=MSGS[i].com||'';msgsNaTela=true}
+function guardaMsgs(){if(msgsNaTela&&MSGS[msgIdi]){MSGS[msgIdi].sem=$('#msgSem').value;MSGS[msgIdi].com=$('#msgCom').value}}
+$('#msgIdioma').onchange=()=>mostraMsgs($('#msgIdioma').value);
+$('#sMsgs').onclick=async()=>{guardaMsgs();const b={};for(const i of ['pt','en','es']){const suf=i==='pt'?'':'_'+i;b['msg_semsite'+suf]=MSGS[i].sem||'';b['msg_comsite'+suf]=MSGS[i].com||''}
+  await api('/api/config',{method:'PUT',body:b});toast('Mensagens salvas ✓ (português, inglês e espanhol)')};
 const jaSalvo=x=>pJaSalvos.get('t'+x.telefone)||pJaSalvos.get('n'+semAcento(x.nome)+'|'+semAcento(x.cidade||''));
-const msgPara=x=>($('#'+(x.site?'msgCom':'msgSem')).value||'').replace(/\{nome\}/g,x.nome).replace(/\{nicho\}/g,(pros.nicho||'negócios').toLowerCase()).replace(/\{cidade\}/g,x.cidade||'sua cidade').replace(/\{site\}/g,x.site||'');
+const msgPara=x=>{guardaMsgs();const i=pros.idioma||'pt',m=MSGS[i]||MSGS.pt,pad={pt:['negócios','sua cidade'],en:['businesses','your area'],es:['negocios','tu ciudad']}[i];
+  return ((x.site?m.com:m.sem)||'').replace(/\{nome\}/g,x.nome).replace(/\{nicho\}/g,((i==='en'&&pros.nichoEn)||pros.nicho||pad[0]).toLowerCase()).replace(/\{cidade\}/g,x.cidade||pad[1]).replace(/\{site\}/g,x.site||'')};
 const NOME_FONTE=f=>({google:'Google Maps',serper:'Serper (Google Maps)',tomtom:'TomTom',here:'HERE',yelp:'Yelp',osm:'OpenStreetMap'})[f]||f;
 const proFiltrados=()=>pros.itens.filter(x=>(!$('#pCel').checked||x.celular||x.whatsapp||(ehEUA()&&x.telefone))&&(!$('#pSem').checked||!x.site));
 function desenhaPros(){
@@ -856,7 +875,8 @@ function mudouPais(){const br=ehBrasil(),us=ehEUA();$('#pUf').hidden=!br;$('#pUf
   const fonte=$('#pFonte');if(us&&pCfg?.serperMaps)fonte.value='serperMaps';else if(us&&pCfg?.yelp)fonte.value='yelp';else if(!us&&fonte.value==='yelp')fonte.value=['serperMaps','tomtom','here','google'].find(id=>pCfg?.[id])||'osm';
   $('#pCel').parentElement.lastChild.textContent=us?' só com telefone':' só com celular/WhatsApp';
   if(br)cidadesDo($('#pUf').value);else if(us)cidadesUS($('#pUfUs').value);else{$('#pCidades').innerHTML='';$('#pCidade').placeholder='Cidade'}
-  try{localStorage.setItem('pPais',$('#fBusca').pais.value)}catch(e){}}
+  try{localStorage.setItem('pPais',$('#fBusca').pais.value)}catch(e){}
+  if(pCfg)mostraMsgs(idiomaDoPais($('#fBusca').pais.value))}
 $('#fBusca').pais.onchange=mudouPais;
 try{const u=localStorage.getItem('pUf');if(u){$('#pUf').value=u;cidadesDo(u)}const s=localStorage.getItem('pUfUs');if(s)$('#pUfUs').value=s;const p=localStorage.getItem('pPais');if(p&&[...$('#pPais').options].some(o=>o.value===p)){$('#pPais').value=p;mudouPais()}}catch(e){}
 const estadoAtual=()=>ehBrasil()?(UFS.find(u=>u[0]===$('#pUf').value)||[])[1]||'':ehEUA()?(UFS_US.find(u=>u[0]===$('#pUfUs').value)||[])[1]||'':$('#pEstadoTxt').value.trim();
@@ -867,7 +887,7 @@ $('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca
   if(!f.cidade.value.trim()&&!estado){b.disabled=false;b.textContent='Buscar estabelecimentos';return pStatus('Escolha o estado e a cidade.',true)}
   pStatus('Buscando '+esc(f.nicho.selectedOptions[0]?.value?f.nicho.selectedOptions[0].textContent:f.termo.value||'')+' em '+esc(f.cidade.value||estado)+'… (pode levar até 30 segundos)');
   try{const q=new URLSearchParams({nicho:f.nicho.value,termo:f.termo.value,pais:f.pais.value,estado,cidade:f.cidade.value,fonte:f.fonte.value});
-    const r=await api('/api/prospeccao?'+q);r.itens.forEach(x=>x.cidade=x.cidade||f.cidade.value||null);pros={...r,sel:new Set()};desenhaPros();if(r.uso){window.SESSAO.uso=r.uso;mostraUso(r.uso)}
+    const r=await api('/api/prospeccao?'+q);r.itens.forEach(x=>x.cidade=x.cidade||f.cidade.value||null);pros={...r,idioma:idiomaDoPais(f.pais.value),sel:new Set()};desenhaPros();if(r.uso){window.SESSAO.uso=r.uso;mostraUso(r.uso)}
     enriquecer();
     const osm=r.fonte==='osm',vis=proFiltrados().length;
     if(!r.total)pStatus('Nenhum estabelecimento encontrado em '+esc(r.lugar||'')+'.'+(osm?'<br>O OpenStreetMap tem poucos dados em muitas cidades. Use <b>TomTom</b>, <b>HERE</b> ou <b>Google Maps</b> (chaves no Worker) para listas bem mais completas.':' Tente outra palavra, um nicho parecido ou outra fonte.'),false);
@@ -876,7 +896,7 @@ $('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca
   }catch(x){pStatus(esc(x.erro||'Erro na busca. Tente de novo.'),true)}finally{b.disabled=false;b.textContent='Buscar estabelecimentos'}};
 $('#pTodos').onclick=()=>{const L=proFiltrados(),todos=L.every(x=>pros.sel.has(x.id));L.forEach(x=>todos?pros.sel.delete(x.id):pros.sel.add(x.id));desenhaPros()};
 const selecionados=()=>{const L=proFiltrados().filter(x=>pros.sel.has(x.id));return L.length?L:[]};
-async function salvarPros(L){const r=await api('/api/prospeccao/salvar',{method:'POST',body:{itens:L.map(x=>({nome:x.nome,telefone:x.telefone,site:x.site,instagram:x.instagram,endereco:x.endereco,cidade:x.cidade,nicho:pros.nicho,maps:x.maps,notas:[x.categoria,x.avaliacao&&'★ '+x.avaliacao+' ('+x.avaliacoes+')',x.email].filter(Boolean).join(' · ')}))}});
+async function salvarPros(L){const r=await api('/api/prospeccao/salvar',{method:'POST',body:{itens:L.map(x=>({idioma:pros.idioma||'pt',nome:x.nome,telefone:x.telefone,site:x.site,instagram:x.instagram,endereco:x.endereco,cidade:x.cidade,nicho:pros.nicho,maps:x.maps,notas:[x.categoria,x.avaliacao&&'★ '+x.avaliacao+' ('+x.avaliacoes+')',x.email].filter(Boolean).join(' · ')}))}});
   L.forEach((x,i)=>{if(r.ids[i]){if(x.telefone)pJaSalvos.set('t'+x.telefone,r.ids[i]);pJaSalvos.set('n'+semAcento(x.nome)+'|'+semAcento(x.cidade||''),r.ids[i])}});badge();return r}
 $('#pSalvar').onclick=async()=>{const L=selecionados();if(!L.length)return toast('Selecione os estabelecimentos');const r=await salvarPros(L);toast(r.novos+' salvos no follow-up'+(r.repetidos?' · '+r.repetidos+' já estavam':''));desenhaPros();api('/api/followup').then(x=>{fu=x;badge()})};
 $('#pCsv').onclick=()=>{const L=selecionados().length?selecionados():proFiltrados();csv('prospeccao-branco.csv',['Nome','Categoria','Telefone','WhatsApp','Site','Instagram','E-mail','Endereço','Cidade','Mapa'],L.map(x=>[x.nome,x.categoria,x.telefone,x.celular||x.whatsapp?'sim':'',x.site,x.instagram,x.email,x.endereco,x.cidade,x.maps]))};
@@ -904,18 +924,30 @@ const VENDAS=[['novo','Novo'],['enviada','Mensagem enviada'],['conversando','Res
 const COR_V={novo:'#4ea1ff',enviada:'#8fa3b8',conversando:'#e5b84e',proposta:'#b38cff',fechou:'var(--ok)',perdido:'#5b5b63'};
 let fu={contatos:[],modelos:[]},filtro='ativos';
 const hojeL=()=>new Date().toLocaleDateString('sv-SE');
-const waNum=t=>t.length<=11?'55'+t:t;
-const fone=t=>{t=String(t||'');if(/^1[2-9]\d{9}$/.test(t))return '+1 ('+t.slice(1,4)+') '+t.slice(4,7)+'-'+t.slice(7);t=t.replace(/^55(?=\d{10,11}$)/,'').slice(-11);return t.length===11?'('+t.slice(0,2)+') '+t.slice(2,7)+'-'+t.slice(7):t.length===10?'('+t.slice(0,2)+') '+t.slice(2,6)+'-'+t.slice(6):t};
-const preenche=(txt,c)=>txt.replace(/\{nome\}/g,(c.nome||'').trim().split(/\s+/)[0]||'tudo bem').replace(/\{projeto\}/g,c.projeto?c.projeto.toLowerCase():'seu projeto').replace(/\{empresa\}/g,c.empresa||'seu negócio');
+const waNum=(t,idi)=>t.length<=11&&!(idi==='en'&&/^1[2-9]\d{9}$/.test(t))?'55'+t:t;
+const fone=(t,idi)=>{t=String(t||'');if(idi!=='pt'&&/^1[2-9]\d{9}$/.test(t))return '+1 ('+t.slice(1,4)+') '+t.slice(4,7)+'-'+t.slice(7);t=t.replace(/^55(?=\d{10,11}$)/,'').slice(-11);return t.length===11?'('+t.slice(0,2)+') '+t.slice(2,7)+'-'+t.slice(7):t.length===10?'('+t.slice(0,2)+') '+t.slice(2,6)+'-'+t.slice(6):t};
+const preenche=(txt,c)=>{const p={pt:['tudo bem','seu projeto','seu negócio'],en:['there','your project','your business'],es:['qué tal','tu proyecto','tu negocio']}[c.idioma||'pt']||[];
+  return txt.replace(/\{nome\}/g,(c.nome||'').trim().split(/\s+/)[0]||p[0]).replace(/\{projeto\}/g,c.projeto?c.projeto.toLowerCase():p[1]).replace(/\{empresa\}/g,c.empresa||p[2])};
+/* mensagens prontas padrão em inglês e espanhol (usadas enquanto a conta não criar as suas nesses idiomas) */
+const MODELOS_PADRAO={en:[{titulo:'First contact',texto:'Hi {nome}! This is Branco 👋 We help local businesses get more customers with websites and paid ads. Do you have 2 minutes for a quick idea for {empresa}?'},
+  {titulo:'Reminder · 2 days',texto:'Hi {nome}! Just following up on my last message. Happy to answer any questions 😊'},
+  {titulo:'Reminder · 7 days',texto:'Hi {nome}! Still thinking about growing {empresa} online? I can show you a few similar projects we\'ve done.'},
+  {titulo:'Last contact · 15 days',texto:'Hi {nome}! I\'ll close this conversation for now. Whenever you want to pick it up again, just message me.'}],
+ es:[{titulo:'Primer contacto',texto:'¡Hola, {nome}! Soy de Branco 👋 Ayudamos a negocios locales a conseguir más clientes con sitios web y publicidad paga. ¿Tienes 2 minutos para una idea rápida para {empresa}?'},
+  {titulo:'Recordatorio · 2 días',texto:'¡Hola, {nome}! Paso para saber si te quedó alguna duda sobre mi mensaje. Quedo a disposición 😊'},
+  {titulo:'Recordatorio · 7 días',texto:'¡Hola, {nome}! ¿Sigues pensando en hacer crecer {empresa} en internet? Si quieres, te muestro algunos proyectos parecidos que ya hicimos.'},
+  {titulo:'Último contacto · 15 días',texto:'¡Hola, {nome}! Voy a cerrar la conversación por ahora, ¿está bien? Cuando quieras retomarla, solo escríbeme.'}]};
+const modelosDe=c=>{const i=c.idioma||'pt',M=fu.modelos.filter(m=>(m.idioma||'pt')===i);return M.length?M:(MODELOS_PADRAO[i]||fu.modelos)};
+const BANDEIRA={pt:'🇧🇷',en:'🇺🇸',es:'🇪🇸'};
 const diasDesde=d=>d?Math.floor((Date.now()-new Date(d.replace(' ','T')+'Z'))/864e5):null;
 const precisaHoje=c=>c.telefone&&!['fechou','perdido'].includes(c.venda)&&(c.contatos===0||(c.proximo_contato&&c.proximo_contato<=hojeL()));
 function badge(){const n=(fu.contatos||[]).filter(precisaHoje).length;$('#bFollow').hidden=!n;$('#bFollow').textContent=n}
 function cardFu(c,destaque){
-  const mi=Math.min(c.contatos,fu.modelos.length-1),ds=diasDesde(c.ultimo_contato),vd=VENDAS.find(v=>v[0]===c.venda)||VENDAS[0];
-  const info=[c.telefone?fone(c.telefone):'sem WhatsApp',c.origem==='prospeccao'?'prospecção'+(c.cidade?' · '+c.cidade:''):null,c.projeto,c.origem==='prospeccao'?(c.site?'tem site':'sem site'):null,c.status==='parcial'?'parou no meio do formulário':null,c.contatos?c.contatos+' mensage'+(c.contatos>1?'ns':'m')+' · última há '+ds+(ds===1?' dia':' dias'):'nunca chamado',c.proximo_contato&&!destaque?'próximo: '+c.proximo_contato.split('-').reverse().join('/'):null].filter(Boolean).map(esc).join(' · ');
+  const MC=modelosDe(c),mi=Math.min(c.contatos,MC.length-1),ds=diasDesde(c.ultimo_contato),vd=VENDAS.find(v=>v[0]===c.venda)||VENDAS[0];
+  const info=[c.telefone?(c.idioma&&c.idioma!=='pt'?BANDEIRA[c.idioma]+' ':'')+fone(c.telefone,c.idioma||'pt'):'sem WhatsApp',c.origem==='prospeccao'?'prospecção'+(c.cidade?' · '+c.cidade:''):null,c.projeto,c.origem==='prospeccao'?(c.site?'tem site':'sem site'):null,c.status==='parcial'?'parou no meio do formulário':null,c.contatos?c.contatos+' mensage'+(c.contatos>1?'ns':'m')+' · última há '+ds+(ds===1?' dia':' dias'):'nunca chamado',c.proximo_contato&&!destaque?'próximo: '+c.proximo_contato.split('-').reverse().join('/'):null].filter(Boolean).map(esc).join(' · ');
   return '<div class="fc'+(destaque?' hoje':'')+'" data-c="'+c.id+'"><div class="fc__top"><div><b>'+esc(c.nome)+'</b>'+(c.empresa?' <span class="label">'+esc(c.empresa)+'</span>':'')+'<small>'+info+'</small></div><span class="pill st-'+c.venda+'">'+vd[1]+(c.proposta?' · '+brl(c.proposta):'')+'</span>'+(c.venda==='enviada'?'<button class="ghost" data-resp title="marcar que a pessoa respondeu">Respondeu ✓</button>':'')+'</div>'+
   (!destaque?'<details><summary>abrir · mensagem, anotações, status</summary><div class="mt" style="display:grid;gap:12px">':'')+
-  (c.telefone&&!['fechou','perdido'].includes(c.venda)&&fu.modelos.length?'<div class="fc__msg"><select data-mod aria-label="Mensagem pronta">'+fu.modelos.map((m,i)=>'<option value="'+i+'"'+(i===mi?' selected':'')+'>'+esc(m.titulo)+'</option>').join('')+'</select><textarea data-txt rows="3">'+esc(preenche(fu.modelos[mi].texto,c))+'</textarea><div class="fc__row"><button class="solid" data-enviar>Enviar no WhatsApp ↗</button>'+(c.contatos>=3?'<span class="dica">já foram 3+ mensagens — talvez marcar como perdido</span>':'')+'</div></div>':'')+
+  (c.telefone&&!['fechou','perdido'].includes(c.venda)&&MC.length?'<div class="fc__msg"><select data-mod aria-label="Mensagem pronta">'+MC.map((m,i)=>'<option value="'+i+'"'+(i===mi?' selected':'')+'>'+esc(m.titulo)+'</option>').join('')+'</select><textarea data-txt rows="3">'+esc(preenche(MC[mi].texto,c))+'</textarea><div class="fc__row"><button class="solid" data-enviar>Enviar no WhatsApp ↗</button>'+(c.contatos>=3?'<span class="dica">já foram 3+ mensagens — talvez marcar como perdido</span>':'')+'</div></div>':'')+
   (destaque?'<details><summary>editar · '+(c.notas?'tem anotação':'anotações, status, data')+'</summary>':'')+'<div class="form mt">'+
     '<label class="fl"><span>Status</span><select data-venda>'+VENDAS.map(v=>'<option value="'+v[0]+'"'+(v[0]===c.venda?' selected':'')+'>'+v[1]+'</option>').join('')+'</select></label>'+
     '<label class="fl"><span>Próximo lembrete</span><input type="date" data-prox value="'+(c.proximo_contato||'')+'"></label>'+
@@ -927,9 +959,9 @@ function cardFu(c,destaque){
 function ligaCards(root){
   root.querySelectorAll('[data-c]').forEach(el=>{
     const id=+el.dataset.c,c=fu.contatos.find(x=>x.id===id),sel=el.querySelector('[data-mod]'),txt=el.querySelector('[data-txt]');
-    if(sel)sel.onchange=()=>{txt.value=preenche(fu.modelos[+sel.value].texto,c)};
+    if(sel)sel.onchange=()=>{txt.value=preenche(modelosDe(c)[+sel.value].texto,c)};
     const env=el.querySelector('[data-enviar]');
-    if(env)env.onclick=async()=>{window.open('https://api.whatsapp.com/send?phone='+waNum(c.telefone)+'&text='+encodeURIComponent(txt.value),'_blank','noopener');
+    if(env)env.onclick=async()=>{window.open('https://api.whatsapp.com/send?phone='+waNum(c.telefone,c.idioma)+'&text='+encodeURIComponent(txt.value),'_blank','noopener');
       await api('/api/contatos/'+id+'/enviei',{method:'POST',body:{hoje:hojeL()}});toast('Registrado ✓ próximo lembrete agendado');carregaFollow()};
     el.querySelector('[data-salvar]').onclick=async()=>{await api('/api/contatos/'+id,{method:'PATCH',body:{venda:el.querySelector('[data-venda]').value,proximo_contato:el.querySelector('[data-prox]').value,notas:el.querySelector('[data-notas]').value,proposta:el.querySelector('[data-prop]').value.trim()?paraCent(el.querySelector('[data-prop]').value):null}});toast('Salvo ✓');carregaFollow()};
     const rp=el.querySelector('[data-resp]');
@@ -968,7 +1000,7 @@ function desenhaFollow(){
   const lst=filtro==='todos'?C:filtro==='ativos'?ativos:C.filter(c=>c.venda===filtro);
   $('#fuTodos').innerHTML=lst.length?lst.map(c=>cardFu(c,false)).join(''):'<p class="vazio">Nenhum contato aqui.</p>';
   ligaCards($('#fuHoje'));ligaCards($('#fuTodos'));
-  $('#fuModelos').innerHTML=fu.modelos.length?fu.modelos.map(m=>'<div class="mod" data-m="'+m.id+'"><input data-t value="'+esc(m.titulo)+'" maxlength="60"><textarea data-x rows="3" maxlength="1000">'+esc(m.texto)+'</textarea><div class="fc__row"><button class="ghost" data-ms>Salvar</button><button class="danger" data-md>Excluir</button></div></div>').join(''):'<p class="vazio">Nenhuma mensagem pronta.</p>';
+  $('#fuModelos').innerHTML=fu.modelos.length?fu.modelos.map(m=>'<div class="mod" data-m="'+m.id+'"><span class="label">'+BANDEIRA[m.idioma||'pt']+' '+({pt:'português',en:'inglês',es:'espanhol'})[m.idioma||'pt']+'</span><input data-t value="'+esc(m.titulo)+'" maxlength="60"><textarea data-x rows="3" maxlength="1000">'+esc(m.texto)+'</textarea><div class="fc__row"><button class="ghost" data-ms>Salvar</button><button class="danger" data-md>Excluir</button></div></div>').join(''):'<p class="vazio">Nenhuma mensagem pronta.</p>';
   $$('#fuModelos [data-m]').forEach(el=>{const id=el.dataset.m;
     el.querySelector('[data-ms]').onclick=async()=>{try{await api('/api/modelos/'+id,{method:'PATCH',body:{titulo:el.querySelector('[data-t]').value,texto:el.querySelector('[data-x]').value}});toast('Mensagem salva ✓');carregaFollow()}catch(e){toast(e.erro||'Erro')}};
     el.querySelector('[data-md]').onclick=async()=>{if(!confirm('Excluir essa mensagem pronta?'))return;await api('/api/modelos/'+id,{method:'DELETE'});carregaFollow()}});

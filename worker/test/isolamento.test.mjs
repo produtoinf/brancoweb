@@ -313,5 +313,23 @@ console.log('• prospecção nos EUA');
   globalThis.fetch = fetchReal;
 }
 
+// ---- 13) mensagens por idioma ----
+console.log('• mensagens por idioma');
+{
+  await A.put('/api/config', { msg_semsite: 'Oi {nome}', msg_semsite_en: 'Hi {nome}', msg_comsite_es: 'Hola {nome}' });
+  const cfg = (await A.get('/api/config')).dados;
+  ok('config guarda as mensagens em português, inglês e espanhol', cfg.msg_semsite === 'Oi {nome}' && cfg.msg_semsite_en === 'Hi {nome}' && cfg.msg_comsite_es === 'Hola {nome}' && cfg.msg_comsite_en === '');
+  ok('mensagens de uma conta não vazam para outra', (await CB2.get('/api/config')).dados.msg_semsite_en === '');
+  await A.post('/api/modelos', { titulo: 'First', texto: 'Hi {nome}', idioma: 'en' });
+  await A.post('/api/modelos', { titulo: 'Sem idioma', texto: 'Oi' });
+  await A.post('/api/modelos', { titulo: 'Inválido', texto: 'x', idioma: 'xx' });
+  const mods = (await A.get('/api/modelos')).dados;
+  ok('mensagem pronta guarda o idioma (inválido vira português)', mods.find(m => m.titulo === 'First')?.idioma === 'en' && mods.find(m => m.titulo === 'Sem idioma')?.idioma === 'pt' && mods.find(m => m.titulo === 'Inválido')?.idioma === 'pt');
+  await A.post('/api/prospeccao/salvar', { itens: [{ nome: 'Miami Cuts', telefone: '13055550101', cidade: 'Miami', idioma: 'en' }, { nome: 'Corte Madrid', telefone: '34911222333', cidade: 'Madrid', idioma: 'es' }] });
+  const fuA = (await A.get('/api/followup')).dados;
+  ok('contato salvo da prospecção guarda o idioma do país', fuA.contatos.find(c => c.nome === 'Miami Cuts')?.idioma === 'en' && fuA.contatos.find(c => c.nome === 'Corte Madrid')?.idioma === 'es');
+  ok('follow-up devolve o idioma das mensagens prontas', fuA.modelos.some(m => m.idioma === 'en'));
+}
+
 console.log(`\n${passou} ok, ${falhou} falhou`);
 process.exit(falhou ? 1 : 0);
