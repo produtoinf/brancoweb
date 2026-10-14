@@ -95,6 +95,14 @@ PROSPECÇÃO COM GOOGLE MAPS (opcional, bem mais completo que o OpenStreetMap)
    Com a chave, quem vier sem celular (TomTom/HERE) tem o telefone completado sozinho pelo Google.
    Sem a chave, a prospecção usa o OpenStreetMap (grátis, mas com menos estabelecimentos).
 
+PROSPECÇÃO NOS ESTADOS UNIDOS
+   No painel, em País escolha "Estados Unidos": aparece a lista dos 50 estados e as cidades principais.
+   Funciona com qualquer fonte (TomTom, HERE, Google Maps e OpenStreetMap). As buscas são feitas em
+   inglês (o nicho é traduzido sozinho), o telefone sai no formato +1 (305) 555-0123 e o botão
+   "Chamar" abre o WhatsApp normalmente. Nos EUA não dá para saber se um número é celular, então o
+   filtro vira "só com telefone". As mensagens do follow-up continuam as suas: escreva em inglês
+   nos modelos (aba Follow-up → mensagens) se for falar com empresas de lá.
+
 O QUE O WORKER FAZ
 - Conta visitas, cliques no WhatsApp, formulário aberto e cadastros do site (track.js)
 - Painel /admin: visão geral com gráficos, follow-up, financeiro, clientes

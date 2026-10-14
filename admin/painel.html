@@ -350,8 +350,8 @@ tr.ign td{opacity:.45}
         <form class="pf" id="fBusca">
           <label class="fl"><span>Nicho</span><select name="nicho" id="pNicho"><option value="">— escolha —</option></select></label>
           <label class="fl"><span>ou palavra-chave</span><input name="termo" placeholder="Ex: hamburgueria artesanal" maxlength="60"></label>
-          <label class="fl"><span>País</span><input name="pais" value="Brasil" maxlength="60"></label>
-          <label class="fl"><span>Estado</span><select id="pUf"></select><input id="pEstadoTxt" placeholder="Estado / província" maxlength="60" hidden></label>
+          <label class="fl"><span>País</span><select name="pais" id="pPais"><option value="Brasil">🇧🇷 Brasil</option><option value="Estados Unidos">🇺🇸 Estados Unidos</option><option value="Portugal">Portugal</option><option value="Argentina">Argentina</option><option value="Paraguai">Paraguai</option><option value="Uruguai">Uruguai</option><option value="Chile">Chile</option><option value="México">México</option><option value="Colômbia">Colômbia</option><option value="Espanha">Espanha</option></select></label>
+          <label class="fl"><span>Estado</span><select id="pUf"></select><select id="pUfUs" hidden></select><input id="pEstadoTxt" placeholder="Estado / província" maxlength="60" hidden></label>
           <label class="fl"><span>Cidade</span><input name="cidade" id="pCidade" list="pCidades" placeholder="Escolha o estado primeiro" maxlength="80" autocomplete="off"><datalist id="pCidades"></datalist></label>
           <div class="ops"><label class="fl" style="min-width:200px"><span>Fonte dos dados</span><select name="fonte" id="pFonte"><option value="tomtom">TomTom</option><option value="here">HERE</option><option value="google">Google Maps</option><option value="osm">OpenStreetMap (grátis, poucos dados)</option></select></label>
             <label class="chk"><input type="checkbox" id="pCel"> só com celular/WhatsApp</label><label class="chk"><input type="checkbox" id="pSem"> só sem site próprio</label>
@@ -786,7 +786,7 @@ $('#sMsgs').onclick=async()=>{await api('/api/config',{method:'PUT',body:{msg_se
 const jaSalvo=x=>pJaSalvos.get('t'+x.telefone)||pJaSalvos.get('n'+semAcento(x.nome)+'|'+semAcento(x.cidade||''));
 const msgPara=x=>($('#'+(x.site?'msgCom':'msgSem')).value||'').replace(/\{nome\}/g,x.nome).replace(/\{nicho\}/g,(pros.nicho||'negócios').toLowerCase()).replace(/\{cidade\}/g,x.cidade||'sua cidade').replace(/\{site\}/g,x.site||'');
 const NOME_FONTE=f=>({google:'Google Maps',tomtom:'TomTom',here:'HERE',osm:'OpenStreetMap'})[f]||f;
-const proFiltrados=()=>pros.itens.filter(x=>(!$('#pCel').checked||x.celular||x.whatsapp)&&(!$('#pSem').checked||!x.site));
+const proFiltrados=()=>pros.itens.filter(x=>(!$('#pCel').checked||x.celular||x.whatsapp||(ehEUA()&&x.telefone))&&(!$('#pSem').checked||!x.site));
 function desenhaPros(){
   const L=proFiltrados(),T=pros.itens;
   $('#kPros').innerHTML=T.length?[{l:'encontrados',v:T.length,s:esc(pros.lugar||'')},{l:'com telefone',v:T.filter(x=>x.telefone).length,s:'dá para chamar',meter:pct(T.filter(x=>x.telefone).length,T.length)},
@@ -811,11 +811,12 @@ function desenhaPros(){
 }
 // anexa/corrige o número na mão (ex.: achou no Google ou no Instagram)
 function numManual(x){if(!x)return;
-  const v=prompt('WhatsApp de '+x.nome+' (com DDD):',x.telefone?fone(x.telefone):'');if(v===null)return;
-  let d=v.replace(/\D/g,'').replace(/^0+/,'');if(d.length===10||d.length===11)d='55'+d;
+  const us=ehEUA(),v=prompt((us?'Telefone de ':'WhatsApp de ')+x.nome+(us?' (com código de área):':' (com DDD):'),x.telefone?fone(x.telefone):'');if(v===null)return;
+  let d=v.replace(/\D/g,'').replace(/^0+/,'');
+  if(us){if(d.length===10)d='1'+d}else if(d.length===10||d.length===11)d='55'+d;
   if(!d){x.telefone=null;x.celular=null;x.whatsapp=false;x.telSite=null;return desenhaPros()}
-  if(d.length<12||d.length>13)return toast('Número inválido. Use DDD + número, ex.: (41) 99999-9999');
-  x.telefone=d;x.celular=/^55\d{2}9\d{8}$/.test(d);x.whatsapp=x.celular;x.telSite='manual';desenhaPros();toast('Número anexado ✓')}
+  if(us?!/^1[2-9]\d{9}$/.test(d):(d.length<12||d.length>13))return toast(us?'Número inválido. Use código de área + número, ex.: (305) 555-0123':'Número inválido. Use DDD + número, ex.: (41) 99999-9999');
+  x.telefone=d;x.celular=us?null:/^55\d{2}9\d{8}$/.test(d);x.whatsapp=!!x.celular;x.telSite='manual';desenhaPros();toast('Número anexado ✓')}
 ['pCel','pSem'].forEach(id=>$('#'+id).onchange=desenhaPros);
 // abre o site de quem não veio com celular e pega o WhatsApp/telefone/Instagram de lá
 async function enriquecer(){
@@ -823,7 +824,7 @@ async function enriquecer(){
   const base=$('#pStatus').innerHTML;let feitos=0,achou=0;
   for(let i=0;i<alvo.length;i+=20){if(pros.lugar+pros.total!==id)return; // nova busca: para
     const lote=alvo.slice(i,i+20);$('#pStatus').innerHTML=base+'<br>🔎 procurando WhatsApp'+((pCfg?.google||pCfg?.serper)?' (sites + Google)':' nos sites')+'… '+feitos+'/'+alvo.length;
-    try{const r=await api('/api/prospeccao/enriquecer',{method:'POST',body:{itens:lote.map(x=>({id:x.id,site:x.site,nome:x.nome,endereco:x.endereco,cidade:x.cidade}))}});
+    try{const r=await api('/api/prospeccao/enriquecer',{method:'POST',body:{pais:$('#fBusca').pais.value,itens:lote.map(x=>({id:x.id,site:x.site,nome:x.nome,endereco:x.endereco,cidade:x.cidade}))}});
       lote.forEach(x=>{const c=r[x.id];x.doSite=true;if(!c)return;
         if(c.telefone&&(!x.telefone||(c.celular&&!x.celular))){x.telefone=c.telefone;x.celular=c.celular;x.whatsapp=c.whatsapp;x.telSite=c.google?'google':'site';achou++}
         x.site=x.site||c.site||null;
@@ -835,6 +836,11 @@ const abrirWa=(x,txt)=>window.open('https://api.whatsapp.com/send?phone='+x.tele
 /* estados e cidades (IBGE) */
 const UFS=[['AC','Acre'],['AL','Alagoas'],['AP','Amapá'],['AM','Amazonas'],['BA','Bahia'],['CE','Ceará'],['DF','Distrito Federal'],['ES','Espírito Santo'],['GO','Goiás'],['MA','Maranhão'],['MT','Mato Grosso'],['MS','Mato Grosso do Sul'],['MG','Minas Gerais'],['PA','Pará'],['PB','Paraíba'],['PR','Paraná'],['PE','Pernambuco'],['PI','Piauí'],['RJ','Rio de Janeiro'],['RN','Rio Grande do Norte'],['RS','Rio Grande do Sul'],['RO','Rondônia'],['RR','Roraima'],['SC','Santa Catarina'],['SP','São Paulo'],['SE','Sergipe'],['TO','Tocantins']];
 $('#pUf').innerHTML='<option value="">— escolha o estado —</option>'+UFS.map(u=>'<option value="'+u[0]+'">'+u[1]+' ('+u[0]+')</option>').join('');
+/* Estados Unidos: estados e as cidades principais de cada um (a cidade pode ser digitada livremente) */
+const UFS_US=[['AL','Alabama','Birmingham|Montgomery|Huntsville|Mobile'],['AK','Alaska','Anchorage|Fairbanks|Juneau'],['AZ','Arizona','Phoenix|Tucson|Mesa|Scottsdale|Chandler'],['AR','Arkansas','Little Rock|Fayetteville|Fort Smith'],['CA','California','Los Angeles|San Diego|San Jose|San Francisco|Sacramento|Fresno|Long Beach|Oakland|Anaheim|Irvine'],['CO','Colorado','Denver|Colorado Springs|Aurora|Boulder'],['CT','Connecticut','Bridgeport|New Haven|Stamford|Hartford'],['DE','Delaware','Wilmington|Dover|Newark'],['DC','District of Columbia','Washington'],['FL','Florida','Miami|Orlando|Tampa|Jacksonville|Fort Lauderdale|Boca Raton|Pompano Beach|West Palm Beach|Kissimmee|St. Petersburg|Hialeah|Deerfield Beach'],['GA','Georgia','Atlanta|Savannah|Augusta|Marietta|Alpharetta'],['HI','Hawaii','Honolulu|Hilo|Kailua'],['ID','Idaho','Boise|Meridian|Nampa'],['IL','Illinois','Chicago|Aurora|Naperville|Springfield'],['IN','Indiana','Indianapolis|Fort Wayne|Evansville'],['IA','Iowa','Des Moines|Cedar Rapids|Davenport'],['KS','Kansas','Wichita|Overland Park|Kansas City'],['KY','Kentucky','Louisville|Lexington|Bowling Green'],['LA','Louisiana','New Orleans|Baton Rouge|Shreveport'],['ME','Maine','Portland|Lewiston|Bangor'],['MD','Maryland','Baltimore|Rockville|Silver Spring|Annapolis'],['MA','Massachusetts','Boston|Worcester|Springfield|Cambridge|Framingham|Everett|Somerville|Lowell'],['MI','Michigan','Detroit|Grand Rapids|Ann Arbor|Lansing'],['MN','Minnesota','Minneapolis|Saint Paul|Rochester'],['MS','Mississippi','Jackson|Gulfport|Biloxi'],['MO','Missouri','Kansas City|St. Louis|Springfield'],['MT','Montana','Billings|Missoula|Bozeman'],['NE','Nebraska','Omaha|Lincoln'],['NV','Nevada','Las Vegas|Henderson|Reno'],['NH','New Hampshire','Manchester|Nashua|Concord'],['NJ','New Jersey','Newark|Jersey City|Paterson|Elizabeth|Long Branch|Kearny'],['NM','New Mexico','Albuquerque|Santa Fe|Las Cruces'],['NY','New York','New York|Brooklyn|Queens|Bronx|Buffalo|Rochester|Yonkers|Long Island|Mount Vernon|White Plains'],['NC','North Carolina','Charlotte|Raleigh|Greensboro|Durham'],['ND','North Dakota','Fargo|Bismarck'],['OH','Ohio','Columbus|Cleveland|Cincinnati|Toledo'],['OK','Oklahoma','Oklahoma City|Tulsa'],['OR','Oregon','Portland|Salem|Eugene'],['PA','Pennsylvania','Philadelphia|Pittsburgh|Allentown|Harrisburg'],['RI','Rhode Island','Providence|Warwick|Cranston'],['SC','South Carolina','Charleston|Columbia|Greenville|Myrtle Beach'],['SD','South Dakota','Sioux Falls|Rapid City'],['TN','Tennessee','Nashville|Memphis|Knoxville|Chattanooga'],['TX','Texas','Houston|Dallas|Austin|San Antonio|Fort Worth|El Paso|Plano|Arlington'],['UT','Utah','Salt Lake City|Provo|Orem'],['VT','Vermont','Burlington|Montpelier'],['VA','Virginia','Virginia Beach|Richmond|Arlington|Norfolk|Alexandria'],['WA','Washington','Seattle|Spokane|Tacoma|Bellevue'],['WV','West Virginia','Charleston|Huntington'],['WI','Wisconsin','Milwaukee|Madison|Green Bay'],['WY','Wyoming','Cheyenne|Casper']];
+$('#pUfUs').innerHTML='<option value="">— choose the state —</option>'+UFS_US.map(u=>'<option value="'+u[0]+'">'+u[1]+' ('+u[0]+')</option>').join('');
+function cidadesUS(uf){const c=$('#pCidade'),u=UFS_US.find(x=>x[0]===uf);$('#pCidades').innerHTML=u?u[2].split('|').map(n=>'<option value="'+esc(n)+'">').join(''):'';c.placeholder=u?'Digite a cidade (ex.: '+u[2].split('|')[0]+')':'Escolha o estado primeiro'}
+$('#pUfUs').onchange=()=>{try{localStorage.setItem('pUfUs',$('#pUfUs').value)}catch(e){}cidadesUS($('#pUfUs').value)};
 const cacheCid={};
 async function cidadesDo(uf){const c=$('#pCidade');$('#pCidades').innerHTML='';
   if(!uf){c.placeholder='Escolha o estado primeiro';return}
@@ -845,9 +851,14 @@ async function cidadesDo(uf){const c=$('#pCidade');$('#pCidades').innerHTML='';
   }catch(e){c.placeholder='Digite a cidade'}}
 $('#pUf').onchange=()=>{try{localStorage.setItem('pUf',$('#pUf').value)}catch(e){}cidadesDo($('#pUf').value)};
 const ehBrasil=()=>/^bra[sz]il$/i.test(semAcento($('#fBusca').pais.value.trim()));
-$('#fBusca').pais.oninput=()=>{const br=ehBrasil();$('#pUf').hidden=!br;$('#pEstadoTxt').hidden=br;if(!br){$('#pCidades').innerHTML='';$('#pCidade').placeholder='Cidade'}else cidadesDo($('#pUf').value)};
-try{const u=localStorage.getItem('pUf');if(u){$('#pUf').value=u;cidadesDo(u)}}catch(e){}
-const estadoAtual=()=>ehBrasil()?(UFS.find(u=>u[0]===$('#pUf').value)||[])[1]||'':$('#pEstadoTxt').value.trim();
+const ehEUA=()=>/^(estados unidos|eua|usa|united states)$/i.test(semAcento($('#fBusca').pais.value.trim()));
+function mudouPais(){const br=ehBrasil(),us=ehEUA();$('#pUf').hidden=!br;$('#pUfUs').hidden=!us;$('#pEstadoTxt').hidden=br||us;
+  $('#pCel').parentElement.lastChild.textContent=us?' só com telefone':' só com celular/WhatsApp';
+  if(br)cidadesDo($('#pUf').value);else if(us)cidadesUS($('#pUfUs').value);else{$('#pCidades').innerHTML='';$('#pCidade').placeholder='Cidade'}
+  try{localStorage.setItem('pPais',$('#fBusca').pais.value)}catch(e){}}
+$('#fBusca').pais.onchange=mudouPais;
+try{const u=localStorage.getItem('pUf');if(u){$('#pUf').value=u;cidadesDo(u)}const s=localStorage.getItem('pUfUs');if(s)$('#pUfUs').value=s;const p=localStorage.getItem('pPais');if(p&&[...$('#pPais').options].some(o=>o.value===p)){$('#pPais').value=p;mudouPais()}}catch(e){}
+const estadoAtual=()=>ehBrasil()?(UFS.find(u=>u[0]===$('#pUf').value)||[])[1]||'':ehEUA()?(UFS_US.find(u=>u[0]===$('#pUfUs').value)||[])[1]||'':$('#pEstadoTxt').value.trim();
 
 const pStatus=(t,erro)=>{const e=$('#pStatus');e.hidden=!t;e.className='pst'+(erro?' erro':'');e.innerHTML=t||''};
 $('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca');b.disabled=true;b.textContent='Buscando…';
@@ -893,7 +904,7 @@ const COR_V={novo:'#4ea1ff',enviada:'#8fa3b8',conversando:'#e5b84e',proposta:'#b
 let fu={contatos:[],modelos:[]},filtro='ativos';
 const hojeL=()=>new Date().toLocaleDateString('sv-SE');
 const waNum=t=>t.length<=11?'55'+t:t;
-const fone=t=>{t=String(t||'').replace(/^55(?=\d{10,11}$)/,'').slice(-11);return t.length===11?'('+t.slice(0,2)+') '+t.slice(2,7)+'-'+t.slice(7):t.length===10?'('+t.slice(0,2)+') '+t.slice(2,6)+'-'+t.slice(6):t};
+const fone=t=>{t=String(t||'');if(/^1[2-9]\d{9}$/.test(t))return '+1 ('+t.slice(1,4)+') '+t.slice(4,7)+'-'+t.slice(7);t=t.replace(/^55(?=\d{10,11}$)/,'').slice(-11);return t.length===11?'('+t.slice(0,2)+') '+t.slice(2,7)+'-'+t.slice(7):t.length===10?'('+t.slice(0,2)+') '+t.slice(2,6)+'-'+t.slice(6):t};
 const preenche=(txt,c)=>txt.replace(/\{nome\}/g,(c.nome||'').trim().split(/\s+/)[0]||'tudo bem').replace(/\{projeto\}/g,c.projeto?c.projeto.toLowerCase():'seu projeto').replace(/\{empresa\}/g,c.empresa||'seu negócio');
 const diasDesde=d=>d?Math.floor((Date.now()-new Date(d.replace(' ','T')+'Z'))/864e5):null;
 const precisaHoje=c=>c.telefone&&!['fechou','perdido'].includes(c.venda)&&(c.contatos===0||(c.proximo_contato&&c.proximo_contato<=hojeL()));

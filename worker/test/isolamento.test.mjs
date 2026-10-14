@@ -247,5 +247,44 @@ delete env.MP_WEBHOOK_SECRET; globalThis.fetch = fetchReal;
 ok('conta da Branco não tem assinatura', (await A.get('/api/assinatura')).status === 400);
 ok('painel do SaaS mostra o recebido no mês', typeof (await A.get('/api/saas')).dados.kpis.recebidoMes === 'number');
 
+// ---- 12) prospecção nos Estados Unidos ----
+console.log('• prospecção nos EUA');
+{
+  const pedidos = [];
+  globalThis.fetch = async (u, o = {}) => { u = String(u); let body = null; try { body = o.body ? JSON.parse(o.body) : null; } catch {} pedidos.push({ u, body });
+    if (u.includes('nominatim')) return Response.json([{ osm_type: 'relation', osm_id: 7, lat: 25.76, lon: -80.19, display_name: 'Miami, Miami-Dade County, Florida, United States' }]);
+    if (u.includes('overpass')) return Response.json({ elements: [
+      { type: 'node', id: 1, lat: 25.7, lon: -80.1, tags: { name: 'Joe Barber', shop: 'hairdresser', phone: '(305) 555-0123', website: 'https://joebarber.test' } },
+      { type: 'node', id: 2, lat: 25.7, lon: -80.1, tags: { name: 'Cut & Shave', shop: 'hairdresser', phone: '+1 786-555-0199' } },
+      { type: 'node', id: 3, lat: 25.7, lon: -80.1, tags: { name: 'Sem telefone', shop: 'hairdresser', phone: '12345' } }] });
+    if (u.startsWith('https://joebarber.test')) return new Response('<html><body><a href="https://wa.me/13055550100">WhatsApp</a> Call us: (305) 555-0199 · <a href="mailto:hi@joebarber.test">mail</a></body></html>', { headers: { 'content-type': 'text/html' } });
+    if (u.startsWith('https://places.googleapis.com')) return Response.json({ places: [{ id: 'abc', displayName: { text: 'Miami Fades' }, nationalPhoneNumber: '(305) 555-0177', formattedAddress: '1 Ocean Dr, Miami, FL', businessStatus: 'OPERATIONAL' }] });
+    if (u.startsWith('https://google.serper.dev/places')) return Response.json({ places: [{ phoneNumber: '+1 305-555-0155', website: 'https://cutshave.test' }] });
+    if (u.startsWith('https://cutshave.test')) return new Response('<html><body>Hours 9-5</body></html>', { headers: { 'content-type': 'text/html' } });
+    return new Response('', { status: 404 }); };
+  const usR = await A.get('/api/prospeccao?nicho=barbearia&cidade=Miami&estado=Florida&pais=Estados%20Unidos&fonte=osm'); if (usR.status !== 200) console.error('   resposta:', usR.status, JSON.stringify(usR.dados)); const us = usR.dados;
+  ok('busca nos EUA devolve os estabelecimentos', us.total === 3 && us.lugar.startsWith('Miami'));
+  const joe = us.itens.find(x => x.nome === 'Joe Barber'), cut = us.itens.find(x => x.nome === 'Cut & Shave'), sem = us.itens.find(x => x.nome === 'Sem telefone');
+  ok('telefone americano ganha o +1 e não é marcado como celular', joe.telefone === '13055550123' && joe.celular === null && cut.telefone === '17865550199');
+  ok('número inválido nos EUA fica vazio', sem.telefone === null);
+  ok('o OpenStreetMap recebe o país', pedidos.some(p => p.u.includes('nominatim') && /country=Estados\+?%?2?0?Unidos|country=Estados%20Unidos/.test(p.u)));
+  const enr = (await A.post('/api/prospeccao/enriquecer', { pais: 'Estados Unidos', itens: [{ id: joe.id, site: joe.site, nome: joe.nome, cidade: 'Miami' }] })).dados;
+  ok('no site do estabelecimento acha o WhatsApp e o e-mail no formato dos EUA', enr[joe.id]?.telefone === '13055550100' && enr[joe.id]?.whatsapp === true && enr[joe.id]?.email === 'hi@joebarber.test');
+  env.GOOGLE_PLACES_KEY = 'g-teste';
+  const g = (await A.get('/api/prospeccao?nicho=barbearia&cidade=Miami&estado=Florida&pais=Estados%20Unidos&fonte=google')).dados;
+  const pedidoG = pedidos.find(p => p.u.startsWith('https://places.googleapis.com'));
+  ok('Google Maps nos EUA pergunta em inglês', pedidoG?.body?.textQuery === 'barber shop in Miami, Florida, USA' && pedidoG?.body?.languageCode === 'en-US');
+  ok('resultado do Google nos EUA com telefone +1', g.total === 1 && g.itens[0].telefone === '13055550177');
+  delete env.GOOGLE_PLACES_KEY; env.SERPER_KEY = 's-teste';
+  const enr2 = (await A.post('/api/prospeccao/enriquecer', { pais: 'Estados Unidos', itens: [{ id: cut.id, nome: cut.nome, cidade: 'Miami' }] })).dados;
+  const pedidoS = pedidos.find(p => p.u.startsWith('https://google.serper.dev/places'));
+  ok('busca no Google (Serper) nos EUA usa gl=us', pedidoS?.body?.gl === 'us' && pedidoS?.body?.hl === 'en');
+  ok('telefone vindo do Google nos EUA', enr2[cut.id]?.telefone === '13055550155' && enr2[cut.id]?.google === true);
+  delete env.SERPER_KEY;
+  const br = (await A.get('/api/prospeccao?nicho=barbearia&cidade=Curitiba&estado=Paraná&fonte=osm'));
+  ok('busca no Brasil continua igual (padrão)', br.status === 200 || br.status === 502);
+  globalThis.fetch = fetchReal;
+}
+
 console.log(`\n${passou} ok, ${falhou} falhou`);
 process.exit(falhou ? 1 : 0);

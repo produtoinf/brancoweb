@@ -432,7 +432,7 @@ async function api(req, db, env, caminho) {
     if (seg[1] === 'salvar' && m === 'POST') return json(await salvaProspects(db, conta, b.itens, S.usuario));
     if (seg[1] === 'enriquecer' && m === 'POST') {
       if (await excedeu(db, 'enriq:' + ip(req), 120, 60)) return erro('Muitas consultas seguidas. Espere alguns minutos.', 429);
-      return json(await enriquece(env, b.itens));
+      return json(await enriquece(env, b.itens, txt(b.pais, 60)));
     }
     if (m === 'GET') {
       if (await excedeu(db, 'busca:' + ip(req), 60, 60)) { await registra(db, 'aviso', conta, 'limite de buscas por minuto atingido'); return erro('Muitas buscas seguidas. Espere alguns minutos.', 429); }
@@ -814,13 +814,22 @@ const NICHOS = [
   ['floricultura', 'Floricultura', 'Comércio', 'shop=florist'], ['papelaria', 'Papelaria / gráfica', 'Comércio', 'shop=stationery|shop=copyshop'],
   ['hotel', 'Hotel / pousada', 'Turismo', 'tourism=hotel|tourism=guest_house|tourism=hostel'], ['agencia', 'Agência de viagens', 'Turismo', 'shop=travel_agency'],
 ].map(([id, nome, grupo, osm]) => ({ id, nome, grupo, osm: osm.split('|').map(t => t.split('&').map(kv => kv.split('='))) }));
+// nome do nicho em inglês: usado nas buscas quando o país é os Estados Unidos
+const NICHO_EN = { restaurante: 'restaurant', pizzaria: 'pizza restaurant', hamburgueria: 'burger restaurant', cafeteria: 'coffee shop', bar: 'bar', padaria: 'bakery', confeitaria: 'cake shop', sorveteria: 'ice cream shop',
+  mercado: 'grocery store', acougue: 'butcher shop', salao: 'hair salon', barbearia: 'barber shop', estetica: 'med spa', manicure: 'nail salon', tatuagem: 'tattoo studio', cosmeticos: 'beauty supply store',
+  dentista: 'dentist', clinica: 'medical clinic', psicologo: 'psychologist', fisioterapia: 'physical therapy', nutricionista: 'nutritionist', farmacia: 'pharmacy', otica: 'optical store', veterinario: 'veterinarian',
+  petshop: 'pet store', academia: 'gym', pilates: 'pilates studio', crossfit: 'crossfit gym', advogado: 'law firm', contador: 'accountant', imobiliaria: 'real estate agency', arquiteto: 'architect',
+  construtora: 'general contractor', fotografo: 'photographer', eventos: 'event venue', lavanderia: 'laundromat', autoescola: 'driving school', idiomas: 'language school', escola: 'school',
+  oficina: 'auto repair shop', lavacar: 'car wash', autopecas: 'auto parts store', concessionaria: 'car dealer', roupas: 'clothing store', calcados: 'shoe store', joalheria: 'jewelry store',
+  moveis: 'furniture store', construcao: 'hardware store', eletronicos: 'electronics store', floricultura: 'florist', papelaria: 'print shop', hotel: 'hotel', agencia: 'travel agency' };
 
 const UA = { 'User-Agent': 'BrancoPainel/1.0 (+https://produtoinf.github.io/brancoweb)' };
 function telefone(t, pais) { // devolve número com DDI e se parece celular (WhatsApp)
   let d = String(t || '').split(/[;,/]/)[0].replace(/\D/g, ''); if (!d) return null;
-  const br = /bra[sz]il/i.test(pais || '');
+  const br = /bra[sz]il/i.test(pais || ''), us = ehEUA(pais);
   if (br) { d = d.replace(/^0+/, ''); if (d.length === 10 || d.length === 11) d = '55' + d; }
-  const cel = br ? /^55\d{2}9\d{8}$/.test(d) : null;
+  if (us) { d = d.replace(/^0+/, ''); if (d.length === 10) d = '1' + d; if (d.length !== 11 || d[0] !== '1') return null; }
+  const cel = br ? /^55\d{2}9\d{8}$/.test(d) : null; // nos EUA não dá para saber se é celular pelo número
   return { num: d, cel };
 }
 async function buscaOSM({ nicho, termo, cidade, estado, pais }) {
@@ -860,13 +869,13 @@ async function buscaOSM({ nicho, termo, cidade, estado, pais }) {
   return { fonte: 'osm', lugar, itens };
 }
 async function buscaGoogle(env, { nicho, termo, cidade, estado, pais }) {
-  const n = NICHOS.find(x => x.id === nicho), oque = termo || n?.nome; if (!oque) throw new Error('Escolha um nicho ou digite uma palavra.');
-  const textQuery = `${oque} em ${[cidade, estado, pais].filter(Boolean).join(', ')}`, itens = [];
+  const n = NICHOS.find(x => x.id === nicho), oque = termo || (ehEUA(pais) ? NICHO_EN[nicho] : null) || n?.nome; if (!oque) throw new Error('Escolha um nicho ou digite uma palavra.');
+  const us = ehEUA(pais), textQuery = us ? `${oque} in ${[cidade, estado, 'USA'].filter(Boolean).join(', ')}` : `${oque} em ${[cidade, estado, pais].filter(Boolean).join(', ')}`, itens = [];
   let token = '';
   for (let i = 0; i < 3; i++) { // até 60 resultados (3 páginas)
     const r = await fetch('https://places.googleapis.com/v1/places:searchText', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': env.GOOGLE_PLACES_KEY,
       'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber,places.websiteUri,places.googleMapsUri,places.rating,places.userRatingCount,places.primaryTypeDisplayName,places.businessStatus,nextPageToken' },
-      body: JSON.stringify({ textQuery, languageCode: 'pt-BR', pageSize: 20, ...(token ? { pageToken: token } : {}) }) });
+      body: JSON.stringify({ textQuery, languageCode: idioma(pais), pageSize: 20, ...(token ? { pageToken: token } : {}) }) });
     const d = await r.json(); if (!r.ok) throw new Error('Google: ' + (d.error?.message || 'erro na busca'));
     for (const pl of d.places || []) {
       if (pl.businessStatus && pl.businessStatus !== 'OPERATIONAL') continue;
@@ -882,8 +891,10 @@ async function buscaGoogle(env, { nicho, termo, cidade, estado, pais }) {
 const PAISES = { brasil: ['BR', 'BRA'], brazil: ['BR', 'BRA'], portugal: ['PT', 'PRT'], argentina: ['AR', 'ARG'], paraguai: ['PY', 'PRY'], uruguai: ['UY', 'URY'], chile: ['CL', 'CHL'],
   'estados unidos': ['US', 'USA'], eua: ['US', 'USA'], espanha: ['ES', 'ESP'], mexico: ['MX', 'MEX'], colombia: ['CO', 'COL'] };
 const codPais = p => PAISES[String(p || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()] || [];
+const ehEUA = p => codPais(p)[0] === 'US' || /^(usa|united states)$/i.test(String(p || '').trim());
+const idioma = p => ehEUA(p) ? 'en-US' : 'pt-BR'; // idioma pedido às fontes (TomTom, HERE, Google)
 const raioBusca = f => f.cidade ? 15000 : 60000; // só estado → raio maior em volta da capital/centro
-const oQue = f => { const n = NICHOS.find(x => x.id === f.nicho); const q = f.termo || n?.nome?.split(' / ')[0]; if (!q) throw new Error('Escolha um nicho ou digite uma palavra.'); return { q, n }; };
+const oQue = f => { const n = NICHOS.find(x => x.id === f.nicho); const q = f.termo || (ehEUA(f.pais) ? NICHO_EN[f.nicho] : null) || n?.nome?.split(' / ')[0]; if (!q) throw new Error('Escolha um nicho ou digite uma palavra.'); return { q, n }; };
 const mapaLink = (nome, lat, lon) => lat != null ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(nome)}%20${lat},${lon}` : null;
 
 // TomTom: 2.500 buscas grátis por dia, sem cartão (chave em TOMTOM_KEY)
@@ -891,11 +902,11 @@ async function buscaTomTom(env, f) {
   const { q, n } = oQue(f), [cc] = codPais(f.pais), lugar = [f.cidade, f.estado, f.pais].filter(Boolean).join(', '), k = encodeURIComponent(env.TOMTOM_KEY);
   const pega = async u => { const r = await fetch(u, { signal: AbortSignal.timeout(15000) }); const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(r.status === 403 ? 'TomTom: chave inválida ou limite diário atingido.' : 'TomTom: ' + (d.errorText || d.detailedError?.message || 'erro na busca')); return d; };
-  const g = await pega(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(lugar)}.json?key=${k}&limit=1&language=pt-BR${cc ? '&countrySet=' + cc : ''}`);
+  const g = await pega(`https://api.tomtom.com/search/2/geocode/${encodeURIComponent(lugar)}.json?key=${k}&limit=1&language=${idioma(f.pais)}${cc ? '&countrySet=' + cc : ''}`);
   const pos = g.results?.[0]?.position; if (!pos) throw new Error('Não encontrei essa cidade. Confira o nome, o estado e o país.');
   const itens = [];
   for (const ofs of [0, 100]) { // até 200 resultados
-    const d = await pega(`https://api.tomtom.com/search/2/search/${encodeURIComponent(q)}.json?key=${k}&lat=${pos.lat}&lon=${pos.lon}&radius=${raioBusca(f)}&limit=100&ofs=${ofs}&idxSet=POI&language=pt-BR${cc ? '&countrySet=' + cc : ''}`);
+    const d = await pega(`https://api.tomtom.com/search/2/search/${encodeURIComponent(q)}.json?key=${k}&lat=${pos.lat}&lon=${pos.lon}&radius=${raioBusca(f)}&limit=100&ofs=${ofs}&idxSet=POI&language=${idioma(f.pais)}${cc ? '&countrySet=' + cc : ''}`);
     for (const x of d.results || []) {
       const p = x.poi || {}, a = x.address || {}, tel = telefone(p.phone, f.pais);
       itens.push({ id: 't:' + x.id, nome: p.name, categoria: n?.nome || p.classifications?.[0]?.names?.[0]?.name || p.categories?.[0] || '', // nicho em português; a categoria da TomTom vem em inglês telefone: tel?.num || null, celular: tel?.cel ?? null,
@@ -912,9 +923,9 @@ async function buscaHere(env, f) {
   const { q, n } = oQue(f), lugar = [f.cidade, f.estado, f.pais].filter(Boolean).join(', '), k = encodeURIComponent(env.HERE_KEY);
   const pega = async u => { const r = await fetch(u, { signal: AbortSignal.timeout(15000) }); const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'HERE: chave inválida.' : r.status === 429 ? 'HERE: limite de buscas atingido. Tente mais tarde.' : 'HERE: ' + (d.title || 'erro na busca')); return d; };
-  const g = await pega(`https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(lugar)}&limit=1&lang=pt-BR&apiKey=${k}`);
+  const g = await pega(`https://geocode.search.hereapi.com/v1/geocode?q=${encodeURIComponent(lugar)}&limit=1&lang=${idioma(f.pais)}&apiKey=${k}`);
   const pos = g.items?.[0]?.position; if (!pos) throw new Error('Não encontrei essa cidade. Confira o nome, o estado e o país.');
-  const d = await pega(`https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(q)}&in=circle:${pos.lat},${pos.lng};r=${raioBusca(f)}&limit=100&lang=pt-BR&apiKey=${k}`);
+  const d = await pega(`https://discover.search.hereapi.com/v1/discover?q=${encodeURIComponent(q)}&in=circle:${pos.lat},${pos.lng};r=${raioBusca(f)}&limit=100&lang=${idioma(f.pais)}&apiKey=${k}`);
   const itens = (d.items || []).filter(x => !x.resultType || x.resultType === 'place').map(x => {
     const cs = Array.isArray(x.contacts) ? x.contacts : [x.contacts || {}], pick = k => cs.flatMap(c => c?.[k] || []).map(v => v.value).filter(Boolean);
     const tel = telefone(pick('mobile')[0] || pick('phone')[0], f.pais), www = pick('www');
@@ -939,8 +950,12 @@ async function buscaProspects(env, f) {
 // procura WhatsApp/telefone/Instagram/e-mail no site do estabelecimento (só sites próprios; plataformas são ignoradas)
 const PLATAFORMAS = /tuaagenda|booksy|linktr\.ee|wa\.me|whatsapp|instagram\.com|facebook\.com|negocio\.site|ifood|goomer|agendor|calendly|google\.|anota\.ai|cardapioweb|beacons\.ai/i;
 const normBR = d => { d = String(d || '').replace(/\D/g, '').replace(/^0+/, ''); return d.length === 10 || d.length === 11 ? '55' + d : d; };
+const normUS = d => { d = String(d || '').replace(/\D/g, '').replace(/^0+/, ''); return d.length === 10 ? '1' + d : d; };
 const ehCel = d => /^55\d{2}9\d{8}$/.test(d);
-async function contatosDoSite(url) {
+// número completo e válido para o país (Brasil: 55 + DDD + número · EUA: 1 + 10 dígitos)
+const foneOk = (d, pais) => ehEUA(pais) ? /^1[2-9]\d{9}$/.test(d) : d.length >= 12 && d.length <= 13;
+async function contatosDoSite(url, pais) {
+  const us = ehEUA(pais), norm = us ? normUS : normBR;
   let h;
   try {
     const u = new URL(url);
@@ -949,52 +964,54 @@ async function contatosDoSite(url) {
     if (!r.ok || !/html/i.test(r.headers.get('content-type') || '')) return null;
     h = (await r.text()).slice(0, 500000);
   } catch { return null; }
-  const wa = [...h.matchAll(/(?:wa\.me\/|whatsapp\.com\/send\/?\?(?:[^"'\s]*?&(?:amp;)?)?phone=)\+?(\d{10,15})/gi)].map(m => normBR(m[1]));
-  const tel = [...h.matchAll(/href=["']tel:([+\d\s().-]{8,22})/gi)].map(m => normBR(m[1]));
+  const wa = [...h.matchAll(/(?:wa\.me\/|whatsapp\.com\/send\/?\?(?:[^"'\s]*?&(?:amp;)?)?phone=)\+?(\d{10,15})/gi)].map(m => norm(m[1]));
+  const tel = [...h.matchAll(/href=["']tel:([+\d\s().-]{8,22})/gi)].map(m => norm(m[1]));
   const txt = h.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ');
-  const vis = [...txt.matchAll(/(?:\+?55[\s.-]?)?\(?\b([1-9]{2})\)?[\s.-]?(9[\s.-]?\d{4}|[2-5]\d{3})[\s.-]?(\d{4})\b/g)].map(m => normBR(m[1] + m[2] + m[3]));
-  const todos = [...wa, ...tel, ...vis].filter(d => d.length >= 12 && d.length <= 13);
-  const whats = wa.find(d => d.length >= 12), telefone = whats || todos.find(ehCel) || todos[0] || null;
+  const vis = us
+    ? [...txt.matchAll(/(?:\+?1[\s.-]?)?\(?\b([2-9]\d{2})\)?[\s.-]?([2-9]\d{2})[\s.-]?(\d{4})\b/g)].map(m => normUS(m[1] + m[2] + m[3]))
+    : [...txt.matchAll(/(?:\+?55[\s.-]?)?\(?\b([1-9]{2})\)?[\s.-]?(9[\s.-]?\d{4}|[2-5]\d{3})[\s.-]?(\d{4})\b/g)].map(m => normBR(m[1] + m[2] + m[3]));
+  const todos = [...wa, ...tel, ...vis].filter(d => foneOk(d, pais));
+  const whats = wa.find(d => foneOk(d, pais)), telefone = whats || (us ? null : todos.find(ehCel)) || todos[0] || null;
   const ig = [...h.matchAll(/instagram\.com\/([A-Za-z0-9_.]{2,30})/gi)].map(m => m[1]).find(x => !/^(p|explore|reel|reels|stories|accounts|sharer|tv)$/i.test(x));
   const email = (h.match(/mailto:([\w.+-]+@[\w-]+\.[\w.-]+)/i) || [])[1] || null;
   if (!telefone && !ig && !email) return null;
-  return { telefone, celular: telefone ? ehCel(telefone) : null, whatsapp: !!whats, instagram: ig ? 'https://instagram.com/' + ig : null, email };
+  return { telefone, celular: telefone && !us ? ehCel(telefone) : null, whatsapp: !!whats, instagram: ig ? 'https://instagram.com/' + ig : null, email };
 }
 // pega o telefone (e o site) de um estabelecimento no Google pelo nome + endereço/cidade
 // SERPER_KEY = pesquisa normal do Google (serper.dev) · GOOGLE_PLACES_KEY = API oficial do Google Maps
-const foneDe = v => { const d = normBR(String(v || '').replace(/^\+/, '')); return d.length >= 12 && d.length <= 13 ? d : null; };
-async function telDoGoogle(env, x) {
-  const q = [x.nome, x.endereco || x.cidade].filter(Boolean).join(' ').slice(0, 200);
+const foneDe = (v, pais) => { const d = (ehEUA(pais) ? normUS : normBR)(String(v || '').replace(/^\+/, '')); return foneOk(d, pais) ? d : null; };
+async function telDoGoogle(env, x, pais) {
+  const us = ehEUA(pais), q = [x.nome, x.endereco || x.cidade].filter(Boolean).join(' ').slice(0, 200);
   try {
     if (env.SERPER_KEY) {
-      const h = { 'Content-Type': 'application/json', 'X-API-KEY': env.SERPER_KEY }, corpo = JSON.stringify({ q, gl: 'br', hl: 'pt-br' });
+      const h = { 'Content-Type': 'application/json', 'X-API-KEY': env.SERPER_KEY }, corpo = JSON.stringify(us ? { q, gl: 'us', hl: 'en' } : { q, gl: 'br', hl: 'pt-br' });
       const r = await fetch('https://google.serper.dev/places', { method: 'POST', headers: h, body: corpo, signal: AbortSignal.timeout(8000) });
       const pl = r.ok ? (await r.json()).places?.[0] : null;
-      if (pl && (pl.phoneNumber || pl.website)) return { telefone: foneDe(pl.phoneNumber), site: pl.website || null };
+      if (pl && (pl.phoneNumber || pl.website)) return { telefone: foneDe(pl.phoneNumber, pais), site: pl.website || null };
       const s = await fetch('https://google.serper.dev/search', { method: 'POST', headers: h, body: corpo, signal: AbortSignal.timeout(8000) });
       const kg = s.ok ? (await s.json()).knowledgeGraph : null; if (!kg) return null;
       const at = Object.entries(kg.attributes || {}).find(([k]) => /telefone|phone/i.test(k));
-      return { telefone: foneDe(kg.phoneNumber || at?.[1]), site: kg.website || null };
+      return { telefone: foneDe(kg.phoneNumber || at?.[1], pais), site: kg.website || null };
     }
     const r = await fetch('https://places.googleapis.com/v1/places:searchText', { method: 'POST', signal: AbortSignal.timeout(8000),
       headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': env.GOOGLE_PLACES_KEY, 'X-Goog-FieldMask': 'places.internationalPhoneNumber,places.nationalPhoneNumber,places.websiteUri' },
-      body: JSON.stringify({ textQuery: q, languageCode: 'pt-BR', pageSize: 1 }) });
+      body: JSON.stringify({ textQuery: q, languageCode: idioma(pais), pageSize: 1 }) });
     const pl = r.ok ? (await r.json()).places?.[0] : null; if (!pl) return null;
-    return { telefone: foneDe(pl.internationalPhoneNumber || pl.nationalPhoneNumber), site: pl.websiteUri || null };
+    return { telefone: foneDe(pl.internationalPhoneNumber || pl.nationalPhoneNumber, pais), site: pl.websiteUri || null };
   } catch { return null; }
 }
-async function enriquece(env, itens) {
-  const google = !!(env.SERPER_KEY || env.GOOGLE_PLACES_KEY);
+async function enriquece(env, itens, pais) {
+  const google = !!(env.SERPER_KEY || env.GOOGLE_PLACES_KEY), us = ehEUA(pais);
   itens = (Array.isArray(itens) ? itens : []).slice(0, 25).filter(x => x && x.id && (urlOk(x.site) || (google && x.nome)));
   const out = {};
   for (let i = 0; i < itens.length; i += 6) // 6 por vez
     await Promise.all(itens.slice(i, i + 6).map(async x => {
-      let c = urlOk(x.site) ? await contatosDoSite(urlOk(x.site)) : null;
-      if (google && !c?.whatsapp && !c?.celular && x.nome) { // site não tinha celular: pergunta ao Google
-        const g = await telDoGoogle(env, x);
-        const s = g?.site && !urlOk(x.site) ? await contatosDoSite(urlOk(g.site)) : null; // site novo achado pelo Google
+      let c = urlOk(x.site) ? await contatosDoSite(urlOk(x.site), pais) : null;
+      if (google && !c?.whatsapp && !c?.celular && (us ? !c?.telefone : true) && x.nome) { // site não tinha celular (nos EUA: nenhum telefone): pergunta ao Google
+        const g = await telDoGoogle(env, x, pais);
+        const s = g?.site && !urlOk(x.site) ? await contatosDoSite(urlOk(g.site), pais) : null; // site novo achado pelo Google
         if (s?.telefone && (s.whatsapp || s.celular || !c?.telefone)) c = { ...c, ...s, google: false };
-        else if (g?.telefone && (!c?.telefone || ehCel(g.telefone))) c = { ...c, telefone: g.telefone, celular: ehCel(g.telefone), whatsapp: false, google: true };
+        else if (g?.telefone && (!c?.telefone || (!us && ehCel(g.telefone)))) c = { ...c, telefone: g.telefone, celular: us ? null : ehCel(g.telefone), whatsapp: false, google: true };
         if (c && g?.site && !urlOk(x.site)) c.site = g.site;
       }
       if (c) out[x.id] = c;
