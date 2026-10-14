@@ -331,5 +331,13 @@ console.log('• mensagens por idioma');
   ok('follow-up devolve o idioma das mensagens prontas', fuA.modelos.some(m => m.idioma === 'en'));
 }
 
+// ---- 14) lista de nichos ----
+{
+  const N = (await A.get('/api/prospeccao/nichos')).dados;
+  const ids = N.map(n => n.id);
+  ok('lista de nichos tem limpeza, metalúrgica e quase 100 opções', N.length >= 95 && ['limpeza', 'metalurgica', 'eletricista', 'marcenaria'].every(i => ids.includes(i)));
+  ok('nenhum nicho repetido', new Set(ids).size === ids.length);
+}
+
 console.log(`\n${passou} ok, ${falhou} falhou`);
 process.exit(falhou ? 1 : 0);

@@ -221,6 +221,64 @@ tr.ign td{opacity:.45}
   .side .foot{margin:0;padding:0;border:0;display:flex}
   .main{padding-bottom:110px}
 }
+
+/* ---------- prospecção ---------- */
+.pc{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.pc__hd{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:22px 24px 18px;border-bottom:1px solid var(--line)}
+.pc__hd h2{font:700 1.1rem Archivo;letter-spacing:-.02em}.pc__hd p{margin:4px 0 0;color:var(--mute);font:400 .88rem/1.45 Archivo}
+.pc__hd .uso{margin:0;padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:var(--soft)}
+#fBusca{display:grid}
+.pc__grupo{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:start;padding:20px 24px;border-bottom:1px solid var(--line)}
+.pc__passo{display:flex;align-items:center;gap:10px;margin:28px 0 0;font:600 .82rem Archivo;color:var(--fg)}
+.pc__passo b{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--fg);color:var(--bg);font:700 .72rem var(--mono)}
+.pc__linha{display:grid;gap:12px}.pc__linha--2{grid-template-columns:1.2fr 1fr}.pc__linha--3{grid-template-columns:1fr 1fr 1.2fr}
+.pc__campo{display:grid;gap:7px;min-width:0}
+.pc__campo>span,.pc__fonte>span{font:600 .7rem Archivo;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+#tProspec .pc__campo select,#tProspec .pc__campo input,#tProspec .pc__fonte select{width:100%;height:46px;border-radius:12px;padding:0 14px;font:500 .92rem Archivo;background:var(--bg);border-color:var(--line)}
+#tProspec .pc__campo select:hover,#tProspec .pc__campo input:hover{border-color:var(--mute)}
+#tProspec .pc__campo input::placeholder{color:var(--mute);opacity:.8}
+.pc__pe{display:flex;align-items:center;gap:22px;flex-wrap:wrap;padding:16px 24px;background:color-mix(in srgb,var(--soft) 55%,var(--card))}
+.pc__fonte{display:flex;align-items:center;gap:10px}#tProspec .pc__fonte select{height:40px;width:250px;font-size:.85rem;background:var(--card);text-overflow:ellipsis}
+.sw{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font:500 .86rem Archivo;color:var(--fg);user-select:none}
+.sw input{position:absolute;opacity:0;width:1px;height:1px}
+.sw i{position:relative;width:36px;height:20px;border-radius:999px;background:var(--line);transition:background .2s}
+.sw i::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--card);box-shadow:0 1px 2px #0004;transition:transform .2s}
+.sw input:checked+i{background:var(--ok)}.sw input:checked+i::after{transform:translateX(16px)}
+.sw input:focus-visible+i{outline:2px solid var(--mute);outline-offset:2px}
+.pc__ir{margin-left:auto;display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 24px;border-radius:12px;font:600 .92rem Archivo}
+.pc__ir svg{width:18px;height:18px}.pc__ir:disabled{opacity:.6;cursor:wait}
+#tProspec .pst{margin:0;border-radius:0;border-top:1px solid var(--line);padding:14px 24px;font:500 .86rem/1.55 Archivo}
+.pc__vazio{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+.pc__vazio div{display:grid;gap:6px;align-content:start;padding:18px 20px;border:1px dashed var(--line);border-radius:var(--r)}
+.pc__vazio svg{width:22px;height:22px;color:var(--mute);margin-bottom:6px}.pc__vazio b{font:600 .95rem Archivo}.pc__vazio small{color:var(--mute);font:400 .84rem/1.45 Archivo}
+/* resultados */
+.pr thead th{font:600 .68rem Archivo;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.pr #pRes tr{transition:background .15s}.pr #pRes tr:hover{background:color-mix(in srgb,var(--soft) 60%,transparent)}
+.pr #pRes td{padding-top:14px;padding-bottom:14px}
+.pr #pRes td b{font:600 .95rem Archivo}
+.pr .estrela{color:#e5b84e}
+.pr .pill{font-family:Archivo;font-size:.74rem}.pr .ic{width:13px;height:13px;vertical-align:-2px}
+.pr .busca{display:flex;gap:8px;flex-wrap:wrap}.pr .busca button{height:38px;padding:0 16px;border-radius:10px;font:600 .82rem Archivo}
+.pr #pRes td small{font:400 .78rem/1.45 Archivo}.pr .tag{font-family:Archivo;font-size:.68rem;font-weight:600}
+.pr #pRes button.ghost{height:34px;padding:0 14px;border-radius:10px;font:600 .8rem Archivo}
+.pr .hd h2{font:700 1.1rem Archivo;letter-spacing:-.02em}
+#tProspec .label,#tProspec .uso{font:500 .8rem/1.45 Archivo;letter-spacing:0;text-transform:none}
+#tProspec .kpi .top,#tProspec .kpi .top *{font:600 .7rem Archivo;letter-spacing:.06em;text-transform:uppercase}
+#tProspec .kpi small{font:400 .82rem/1.45 Archivo}
+#tProspec .kpi b{font-family:Archivo}
+/* mensagens */
+.pm .seg button{font:600 .78rem Archivo;padding:8px 16px}
+.pm__grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;padding:20px 24px}
+.pm__msg{display:grid;gap:10px}.pm__tit{font:500 .88rem Archivo;color:var(--mute)}.pm__tit b{color:var(--fg);font-weight:600}
+#tProspec .pm__msg textarea{border-radius:12px;background:var(--bg);font-size:.93rem;line-height:1.6;padding:14px 16px;min-height:170px}
+.pm__vars{display:flex;gap:6px;flex-wrap:wrap}
+.pm__vars button{padding:5px 10px;border-radius:8px;font:500 .74rem var(--mono);color:var(--mute);background:var(--soft);border-color:transparent}
+.pm__vars button:hover{color:var(--fg);border-color:var(--line)}
+.pm__pe{display:flex;align-items:center;gap:18px;justify-content:space-between;flex-wrap:wrap;padding:16px 24px;border-top:1px solid var(--line);background:color-mix(in srgb,var(--soft) 55%,var(--card))}
+.pm__aviso{display:flex;gap:10px;align-items:flex-start;margin:0;max-width:720px;color:var(--mute);font:400 .82rem/1.5 Archivo}
+.pm__aviso svg{width:18px;height:18px;flex:none;margin-top:1px}
+#sMsgs{height:42px;padding:0 20px;border-radius:12px;font:600 .88rem Archivo}
+@media(max-width:900px){.pc__grupo{grid-template-columns:1fr;gap:12px}.pc__passo{margin:0}.pc__linha--2,.pc__linha--3,.pm__grid,.pc__vazio{grid-template-columns:1fr}.pc__ir{width:100%;justify-content:center;margin-left:0}.pc__fonte{width:100%}#tProspec .pc__fonte select{flex:1;min-width:0}}
 </style></head><body>
 <button type="button" class="tema" id="tema" aria-label="Mudar tema claro/escuro" title="Claro / escuro"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
 
@@ -346,31 +404,62 @@ tr.ign td{opacity:.45}
 
     <!-- PROSPECÇÃO -->
     <div id="tProspec" hidden>
-      <section class="box"><div class="hd"><div><h2>Encontrar estabelecimentos</h2><p class="label" id="pFonteTxt">busque por nicho e cidade · nome, telefone, site, instagram e endereço</p></div></div>
-        <form class="pf" id="fBusca">
-          <label class="fl"><span>Nicho</span><select name="nicho" id="pNicho"><option value="">— escolha —</option></select></label>
-          <label class="fl"><span>ou palavra-chave</span><input name="termo" placeholder="Ex: hamburgueria artesanal" maxlength="60"></label>
-          <label class="fl"><span>País</span><select name="pais" id="pPais"><option value="Brasil">🇧🇷 Brasil</option><option value="Estados Unidos">🇺🇸 Estados Unidos</option><option value="Portugal">Portugal</option><option value="Argentina">Argentina</option><option value="Paraguai">Paraguai</option><option value="Uruguai">Uruguai</option><option value="Chile">Chile</option><option value="México">México</option><option value="Colômbia">Colômbia</option><option value="Espanha">Espanha</option></select></label>
-          <label class="fl"><span>Estado</span><select id="pUf"></select><select id="pUfUs" hidden></select><input id="pEstadoTxt" placeholder="Estado / província" maxlength="60" hidden></label>
-          <label class="fl"><span>Cidade</span><input name="cidade" id="pCidade" list="pCidades" placeholder="Escolha o estado primeiro" maxlength="80" autocomplete="off"><datalist id="pCidades"></datalist></label>
-          <div class="ops"><label class="fl" style="min-width:200px"><span>Fonte dos dados</span><select name="fonte" id="pFonte"><option value="tomtom">TomTom</option><option value="here">HERE</option><option value="serperMaps">Serper (Google Maps)</option><option value="google">Google Maps</option><option value="yelp">Yelp (EUA)</option><option value="osm">OpenStreetMap (grátis, poucos dados)</option></select></label>
-            <label class="chk"><input type="checkbox" id="pCel"> só com celular/WhatsApp</label><label class="chk"><input type="checkbox" id="pSem"> só sem site próprio</label>
-            <button class="solid" id="bBusca" style="margin-left:auto">Buscar estabelecimentos</button></div>
+      <section class="pc">
+        <header class="pc__hd">
+          <div><h2>Nova busca</h2><p id="pFonteTxt">Encontre empresas por nicho e cidade, com telefone, site, redes e endereço.</p></div>
+          <p class="uso" id="pUso" hidden></p>
+        </header>
+        <form id="fBusca" autocomplete="off">
+          <div class="pc__grupo">
+            <p class="pc__passo"><b>1</b>O que procurar</p>
+            <div class="pc__linha pc__linha--2">
+              <label class="pc__campo"><span>Nicho</span><select name="nicho" id="pNicho"><option value="">Escolha um nicho</option></select></label>
+              <label class="pc__campo"><span>Ou palavra-chave</span><input name="termo" placeholder="Ex.: hamburgueria artesanal" maxlength="60"></label>
+            </div>
+          </div>
+          <div class="pc__grupo">
+            <p class="pc__passo"><b>2</b>Onde</p>
+            <div class="pc__linha pc__linha--3">
+              <label class="pc__campo"><span>País</span><select name="pais" id="pPais"><option value="Brasil">Brasil</option><option value="Estados Unidos">Estados Unidos</option><option value="Portugal">Portugal</option><option value="Argentina">Argentina</option><option value="Paraguai">Paraguai</option><option value="Uruguai">Uruguai</option><option value="Chile">Chile</option><option value="México">México</option><option value="Colômbia">Colômbia</option><option value="Espanha">Espanha</option></select></label>
+              <label class="pc__campo"><span>Estado</span><select id="pUf"></select><select id="pUfUs" hidden></select><input id="pEstadoTxt" placeholder="Estado / província" maxlength="60" hidden></label>
+              <label class="pc__campo"><span>Cidade</span><input name="cidade" id="pCidade" list="pCidades" placeholder="Escolha o estado primeiro" maxlength="80" autocomplete="off"><datalist id="pCidades"></datalist></label>
+            </div>
+          </div>
+          <div class="pc__pe">
+            <label class="pc__fonte"><span>Fonte</span><select name="fonte" id="pFonte"><option value="tomtom">TomTom</option><option value="here">HERE</option><option value="serperMaps">Serper (Google Maps)</option><option value="google">Google Maps</option><option value="yelp">Yelp (EUA)</option><option value="osm">OpenStreetMap (grátis, poucos dados)</option></select></label>
+            <label class="sw"><input type="checkbox" id="pCel"><i></i><span>só com celular/WhatsApp</span></label>
+            <label class="sw"><input type="checkbox" id="pSem"><i></i><span>só sem site próprio</span></label>
+            <button class="solid pc__ir" id="bBusca"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Buscar estabelecimentos</span></button>
+          </div>
         </form>
         <p class="pst" id="pStatus" hidden></p>
-        <p class="uso" id="pUso" hidden></p>
-
       </section>
+
+      <section class="pc__vazio" id="pVazio">
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg><b>Escolha o nicho e a cidade</b><small>Funciona no Brasil, nos EUA e em mais 8 países.</small></div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><b>Revise a lista</b><small>Telefone, site, redes, nota no Google e endereço de cada empresa.</small></div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H8l-4 4z"/></svg><b>Aborde em segundos</b><small>Mensagem pronta no idioma do país e lembretes no follow-up.</small></div>
+      </section>
+
       <section class="kpis mt" id="kPros"></section>
-      <section class="box mt" id="pResBox" hidden><div class="hd"><div><h2 id="pResT">Resultados</h2><p class="label" id="pResS"></p></div>
+      <section class="box mt pr" id="pResBox" hidden><div class="hd"><div><h2 id="pResT">Resultados</h2><p class="label" id="pResS"></p></div>
         <div class="busca"><button class="ghost" id="pTodos">Selecionar todos</button><button class="ghost" id="pSalvar">Salvar no follow-up</button><button class="ghost" id="pCsv">Exportar CSV</button><button class="solid" id="pSeq">Iniciar sequência de mensagens →</button></div></div>
         <div class="tbl"><table><thead><tr><th></th><th>Estabelecimento</th><th>Telefone</th><th>Site</th><th>Redes</th><th>Endereço</th><th></th></tr></thead><tbody id="pRes"></tbody></table></div></section>
-      <div class="acts mt"><label class="fl" style="min-width:220px"><span>Idioma das mensagens</span><select id="msgIdioma"><option value="pt">🇧🇷 Português</option><option value="en">🇺🇸 English</option><option value="es">🇪🇸 Español</option></select></label><p class="dica">Muda sozinho conforme o país da busca. Cada idioma tem as suas mensagens.</p></div>
-      <section class="grid2">
-        <div class="box"><div class="hd"><div><h2>Mensagem · quem não tem site</h2><p class="dica">use {nome}, {nicho} e {cidade}</p></div></div><textarea id="msgSem" rows="6" maxlength="1500"></textarea></div>
-        <div class="box"><div class="hd"><div><h2>Mensagem · quem já tem site</h2><p class="dica">use {nome}, {nicho}, {cidade} e {site}</p></div></div><textarea id="msgCom" rows="6" maxlength="1500"></textarea></div>
+
+      <section class="pc mt pm">
+        <header class="pc__hd">
+          <div><h2>Mensagens de abordagem</h2><p>O idioma acompanha o país da busca. Cada idioma guarda as suas mensagens.</p></div>
+          <div class="seg" id="msgSeg" role="group" aria-label="Idioma das mensagens"><button type="button" data-idi="pt">Português</button><button type="button" data-idi="en">English</button><button type="button" data-idi="es">Español</button></div>
+          <select id="msgIdioma" hidden><option value="pt">Português</option><option value="en">English</option><option value="es">Español</option></select>
+        </header>
+        <div class="pm__grid">
+          <label class="pm__msg"><span class="pm__tit">Para quem <b>não tem site</b></span><textarea id="msgSem" rows="7" maxlength="1500"></textarea>
+            <span class="pm__vars" data-alvo="msgSem"><button type="button">{nome}</button><button type="button">{nicho}</button><button type="button">{cidade}</button></span></label>
+          <label class="pm__msg"><span class="pm__tit">Para quem <b>já tem site</b></span><textarea id="msgCom" rows="7" maxlength="1500"></textarea>
+            <span class="pm__vars" data-alvo="msgCom"><button type="button">{nome}</button><button type="button">{nicho}</button><button type="button">{cidade}</button><button type="button">{site}</button></span></label>
+        </div>
+        <div class="pm__pe"><p class="pm__aviso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/></svg><span>Os envios são feitos por você, um a um: o WhatsApp bloqueia números que disparam mensagens em massa para quem não te conhece. A sequência leva poucos segundos por contato e já agenda os lembretes no follow-up.</span></p><button class="solid" id="sMsgs">Salvar mensagens</button></div>
       </section>
-      <div class="acts mt"><button class="solid" id="sMsgs">Salvar mensagens</button><p class="dica">Por que não envio sozinho: o WhatsApp bane números que disparam mensagens automáticas para quem não te conhece. A sequência deixa cada envio em poucos segundos, com você no controle, e já agenda os lembretes no follow-up.</p></div>
     </div>
 
     <!-- CLIENTES -->
@@ -784,7 +873,7 @@ function mostraUso(u){const el=$('#pUso');if(!u||u.limite==null){el.hidden=true;
 async function carregaProspec(){
   mostraUso(window.SESSAO?.uso);
   if(!$('#pNicho').options[1]){const N=await api('/api/prospeccao/nichos').catch(()=>[]);const g={};N.forEach(n=>(g[n.grupo]=g[n.grupo]||[]).push(n));
-    $('#pNicho').innerHTML='<option value="">— escolha —</option>'+Object.entries(g).map(([k,v])=>'<optgroup label="'+esc(k)+'">'+v.map(n=>'<option value="'+n.id+'">'+esc(n.nome)+'</option>').join('')+'</optgroup>').join('')}
+    $('#pNicho').innerHTML='<option value="">Escolha um nicho</option>'+Object.entries(g).map(([k,v])=>'<optgroup label="'+esc(k)+'">'+v.map(n=>'<option value="'+n.id+'">'+esc(n.nome)+'</option>').join('')+'</optgroup>').join('')}
   pCfg=await api('/api/config').catch(()=>({}));
   MSG_PADRAO.pt={sem:MSG_SEM,com:MSG_COM};
   msgsNaTela=false;for(const i of ['pt','en','es']){const suf=i==='pt'?'':'_'+i;MSGS[i]={sem:pCfg['msg_semsite'+suf]||MSG_PADRAO[i].sem,com:pCfg['msg_comsite'+suf]||MSG_PADRAO[i].com}}
@@ -796,9 +885,12 @@ async function carregaProspec(){
   desenhaPros();
 }
 let msgsNaTela=false; // só guarda o que está na tela depois que as mensagens foram carregadas
-function mostraMsgs(i){guardaMsgs();msgIdi=i;$('#msgIdioma').value=i;$('#msgSem').value=MSGS[i].sem||'';$('#msgCom').value=MSGS[i].com||'';msgsNaTela=true}
+function mostraMsgs(i){guardaMsgs();msgIdi=i;$('#msgIdioma').value=i;$$('#msgSeg [data-idi]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.idi===i));$('#msgSem').value=MSGS[i].sem||'';$('#msgCom').value=MSGS[i].com||'';msgsNaTela=true}
 function guardaMsgs(){if(msgsNaTela&&MSGS[msgIdi]){MSGS[msgIdi].sem=$('#msgSem').value;MSGS[msgIdi].com=$('#msgCom').value}}
 $('#msgIdioma').onchange=()=>mostraMsgs($('#msgIdioma').value);
+$$('#msgSeg [data-idi]').forEach(b=>b.onclick=()=>mostraMsgs(b.dataset.idi));
+// botões de variável: inserem {nome}, {cidade}… onde está o cursor
+$$('.pm__vars').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=e=>{e.preventDefault();const t=$('#'+g.dataset.alvo),a=t.selectionStart??t.value.length,z=t.selectionEnd??a;t.value=t.value.slice(0,a)+b.textContent+t.value.slice(z);t.focus();t.selectionStart=t.selectionEnd=a+b.textContent.length}));
 $('#sMsgs').onclick=async()=>{guardaMsgs();const b={};for(const i of ['pt','en','es']){const suf=i==='pt'?'':'_'+i;b['msg_semsite'+suf]=MSGS[i].sem||'';b['msg_comsite'+suf]=MSGS[i].com||''}
   await api('/api/config',{method:'PUT',body:b});toast('Mensagens salvas ✓ (português, inglês e espanhol)')};
 const jaSalvo=x=>pJaSalvos.get('t'+x.telefone)||pJaSalvos.get('n'+semAcento(x.nome)+'|'+semAcento(x.cidade||''));
@@ -810,15 +902,15 @@ function desenhaPros(){
   const L=proFiltrados(),T=pros.itens;
   $('#kPros').innerHTML=T.length?[{l:'encontrados',v:T.length,s:esc(pros.lugar||'')},{l:'com telefone',v:T.filter(x=>x.telefone).length,s:'dá para chamar',meter:pct(T.filter(x=>x.telefone).length,T.length)},
     {l:'celular / whatsapp',v:T.filter(x=>x.celular||x.whatsapp).length,s:'chamar direto no WhatsApp',meter:pct(T.filter(x=>x.celular||x.whatsapp).length,T.length)},
-    {l:'sem site próprio',v:T.filter(x=>!x.site).length,s:'oportunidade de venda 🔥',meter:pct(T.filter(x=>!x.site).length,T.length)}].map(kpi).join(''):'';
-  $('#pResBox').hidden=!T.length;if(!T.length)return;
+    {l:'sem site próprio',v:T.filter(x=>!x.site).length,s:'oportunidade de venda',meter:pct(T.filter(x=>!x.site).length,T.length)}].map(kpi).join(''):'';
+  $('#pResBox').hidden=!T.length;$('#pVazio').hidden=!!T.length;if(!T.length)return;
   $('#pResT').textContent=(pros.nicho||'Resultados')+' · '+L.length;$('#pResS').textContent='fonte: '+NOME_FONTE(pros.fonte)+' · '+pros.sel.size+' selecionado'+(pros.sel.size===1?'':'s');
   if(!L.length&&T.length)$('#pRes').innerHTML='<tr><td colspan="7" class="vazio">'+T.length+' resultado(s) escondido(s) pelos filtros acima.</td></tr>';
   else $('#pRes').innerHTML=L.length?L.map(x=>{const j=jaSalvo(x);return '<tr><td><input type="checkbox" class="pchk" data-pid="'+esc(x.id)+'"'+(pros.sel.has(x.id)?' checked':'')+'></td>'+
-    '<td><b>'+esc(x.nome)+'</b><small>'+esc(x.categoria||'')+(x.avaliacao?' · ★ '+x.avaliacao+' ('+x.avaliacoes+')':'')+'</small>'+(j?'<span class="tag ok">no follow-up</span>':'')+'</td>'+
-    '<td>'+(x.telefone?'<span class="money">'+esc(fone(x.telefone))+'</span><br>'+(x.celular||x.whatsapp?'<span class="tag ok">whatsapp</span>':x.celular===false?'<span class="tag">fixo</span>':'')+(x.telSite?' <span class="tag">'+({google:'do Google',manual:'manual'}[x.telSite]||'do site')+'</span>':'')+' <button class="pill" data-pnum="'+esc(x.id)+'" title="corrigir o número">✏️</button>':
+    '<td><b>'+esc(x.nome)+'</b><small>'+esc(x.categoria||'')+(x.avaliacao?' · <span class="estrela">★</span> '+x.avaliacao+' ('+x.avaliacoes+')':'')+'</small>'+(j?'<span class="tag ok">no follow-up</span>':'')+'</td>'+
+    '<td>'+(x.telefone?'<span class="money">'+esc(fone(x.telefone))+'</span><br>'+(x.celular||x.whatsapp?'<span class="tag ok">whatsapp</span>':x.celular===false?'<span class="tag">fixo</span>':'')+(x.telSite?' <span class="tag">'+({google:'do Google',manual:'manual'}[x.telSite]||'do site')+'</span>':'')+' <button class="pill" data-pnum="'+esc(x.id)+'" title="corrigir o número" aria-label="corrigir o número"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></button>':
       // sem telefone na fonte: atalhos para achar o contato no Google e no Instagram
-      ((x.site||(pCfg?.google||pCfg?.serper))&&!x.doSite?'<span class="label">procurando…</span>':'<a class="pill" target="_blank" rel="noopener noreferrer" title="buscar o telefone no Google" href="https://www.google.com/search?q='+encodeURIComponent(x.nome+' '+(x.cidade||'')+' telefone')+'">🔎</a> <button class="pill" data-pnum="'+esc(x.id)+'" title="colar o número manualmente">+ número</button>'))+'</td>'+
+      ((x.site||(pCfg?.google||pCfg?.serper))&&!x.doSite?'<span class="label">procurando…</span>':'<a class="pill" target="_blank" rel="noopener noreferrer" title="buscar o telefone no Google" href="https://www.google.com/search?q='+encodeURIComponent(x.nome+' '+(x.cidade||'')+' telefone')+'" aria-label="buscar o telefone no Google"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></a> <button class="pill" data-pnum="'+esc(x.id)+'" title="colar o número manualmente">+ número</button>'))+'</td>'+
     '<td>'+(x.site?'<a class="pill" href="'+esc(x.site)+'" target="_blank" rel="noopener noreferrer">'+esc(host(x.site))+' ↗</a>':'<span class="tag hot">sem site</span>')+'</td>'+
     '<td>'+[x.instagram&&'<a class="pill" href="'+esc(/^https?:/.test(x.instagram)?x.instagram:'https://instagram.com/'+x.instagram.replace('@',''))+'" target="_blank" rel="noopener noreferrer">insta ↗</a>',x.redeSocial&&!x.instagram&&'<a class="pill" href="'+esc(x.redeSocial)+'" target="_blank" rel="noopener noreferrer">rede ↗</a>',x.email&&'<span class="pill">'+esc(x.email)+'</span>'].filter(Boolean).join(' ')+'</td>'+
     '<td><small style="margin:0">'+esc(x.endereco||'—')+'</small></td>'+
@@ -854,10 +946,10 @@ async function enriquecer(){
 const abrirWa=(x,txt)=>window.open('https://api.whatsapp.com/send?phone='+x.telefone+'&text='+encodeURIComponent(txt),'_blank','noopener');
 /* estados e cidades (IBGE) */
 const UFS=[['AC','Acre'],['AL','Alagoas'],['AP','Amapá'],['AM','Amazonas'],['BA','Bahia'],['CE','Ceará'],['DF','Distrito Federal'],['ES','Espírito Santo'],['GO','Goiás'],['MA','Maranhão'],['MT','Mato Grosso'],['MS','Mato Grosso do Sul'],['MG','Minas Gerais'],['PA','Pará'],['PB','Paraíba'],['PR','Paraná'],['PE','Pernambuco'],['PI','Piauí'],['RJ','Rio de Janeiro'],['RN','Rio Grande do Norte'],['RS','Rio Grande do Sul'],['RO','Rondônia'],['RR','Roraima'],['SC','Santa Catarina'],['SP','São Paulo'],['SE','Sergipe'],['TO','Tocantins']];
-$('#pUf').innerHTML='<option value="">— escolha o estado —</option>'+UFS.map(u=>'<option value="'+u[0]+'">'+u[1]+' ('+u[0]+')</option>').join('');
+$('#pUf').innerHTML='<option value="">Escolha o estado</option>'+UFS.map(u=>'<option value="'+u[0]+'">'+u[1]+' ('+u[0]+')</option>').join('');
 /* Estados Unidos: estados e as cidades principais de cada um (a cidade pode ser digitada livremente) */
 const UFS_US=[['AL','Alabama','Birmingham|Montgomery|Huntsville|Mobile'],['AK','Alaska','Anchorage|Fairbanks|Juneau'],['AZ','Arizona','Phoenix|Tucson|Mesa|Scottsdale|Chandler'],['AR','Arkansas','Little Rock|Fayetteville|Fort Smith'],['CA','California','Los Angeles|San Diego|San Jose|San Francisco|Sacramento|Fresno|Long Beach|Oakland|Anaheim|Irvine'],['CO','Colorado','Denver|Colorado Springs|Aurora|Boulder'],['CT','Connecticut','Bridgeport|New Haven|Stamford|Hartford'],['DE','Delaware','Wilmington|Dover|Newark'],['DC','District of Columbia','Washington'],['FL','Florida','Miami|Orlando|Tampa|Jacksonville|Fort Lauderdale|Boca Raton|Pompano Beach|West Palm Beach|Kissimmee|St. Petersburg|Hialeah|Deerfield Beach'],['GA','Georgia','Atlanta|Savannah|Augusta|Marietta|Alpharetta'],['HI','Hawaii','Honolulu|Hilo|Kailua'],['ID','Idaho','Boise|Meridian|Nampa'],['IL','Illinois','Chicago|Aurora|Naperville|Springfield'],['IN','Indiana','Indianapolis|Fort Wayne|Evansville'],['IA','Iowa','Des Moines|Cedar Rapids|Davenport'],['KS','Kansas','Wichita|Overland Park|Kansas City'],['KY','Kentucky','Louisville|Lexington|Bowling Green'],['LA','Louisiana','New Orleans|Baton Rouge|Shreveport'],['ME','Maine','Portland|Lewiston|Bangor'],['MD','Maryland','Baltimore|Rockville|Silver Spring|Annapolis'],['MA','Massachusetts','Boston|Worcester|Springfield|Cambridge|Framingham|Everett|Somerville|Lowell'],['MI','Michigan','Detroit|Grand Rapids|Ann Arbor|Lansing'],['MN','Minnesota','Minneapolis|Saint Paul|Rochester'],['MS','Mississippi','Jackson|Gulfport|Biloxi'],['MO','Missouri','Kansas City|St. Louis|Springfield'],['MT','Montana','Billings|Missoula|Bozeman'],['NE','Nebraska','Omaha|Lincoln'],['NV','Nevada','Las Vegas|Henderson|Reno'],['NH','New Hampshire','Manchester|Nashua|Concord'],['NJ','New Jersey','Newark|Jersey City|Paterson|Elizabeth|Long Branch|Kearny'],['NM','New Mexico','Albuquerque|Santa Fe|Las Cruces'],['NY','New York','New York|Brooklyn|Queens|Bronx|Buffalo|Rochester|Yonkers|Long Island|Mount Vernon|White Plains'],['NC','North Carolina','Charlotte|Raleigh|Greensboro|Durham'],['ND','North Dakota','Fargo|Bismarck'],['OH','Ohio','Columbus|Cleveland|Cincinnati|Toledo'],['OK','Oklahoma','Oklahoma City|Tulsa'],['OR','Oregon','Portland|Salem|Eugene'],['PA','Pennsylvania','Philadelphia|Pittsburgh|Allentown|Harrisburg'],['RI','Rhode Island','Providence|Warwick|Cranston'],['SC','South Carolina','Charleston|Columbia|Greenville|Myrtle Beach'],['SD','South Dakota','Sioux Falls|Rapid City'],['TN','Tennessee','Nashville|Memphis|Knoxville|Chattanooga'],['TX','Texas','Houston|Dallas|Austin|San Antonio|Fort Worth|El Paso|Plano|Arlington'],['UT','Utah','Salt Lake City|Provo|Orem'],['VT','Vermont','Burlington|Montpelier'],['VA','Virginia','Virginia Beach|Richmond|Arlington|Norfolk|Alexandria'],['WA','Washington','Seattle|Spokane|Tacoma|Bellevue'],['WV','West Virginia','Charleston|Huntington'],['WI','Wisconsin','Milwaukee|Madison|Green Bay'],['WY','Wyoming','Cheyenne|Casper']];
-$('#pUfUs').innerHTML='<option value="">— choose the state —</option>'+UFS_US.map(u=>'<option value="'+u[0]+'">'+u[1]+' ('+u[0]+')</option>').join('');
+$('#pUfUs').innerHTML='<option value="">Escolha o estado</option>'+UFS_US.map(u=>'<option value="'+u[0]+'">'+u[1]+' ('+u[0]+')</option>').join('');
 function cidadesUS(uf){const c=$('#pCidade'),u=UFS_US.find(x=>x[0]===uf);$('#pCidades').innerHTML=u?u[2].split('|').map(n=>'<option value="'+esc(n)+'">').join(''):'';c.placeholder=u?'Digite a cidade (ex.: '+u[2].split('|')[0]+')':'Escolha o estado primeiro'}
 $('#pUfUs').onchange=()=>{try{localStorage.setItem('pUfUs',$('#pUfUs').value)}catch(e){}cidadesUS($('#pUfUs').value)};
 const cacheCid={};
@@ -873,18 +965,19 @@ const ehBrasil=()=>/^bra[sz]il$/i.test(semAcento($('#fBusca').pais.value.trim())
 const ehEUA=()=>/^(estados unidos|eua|usa|united states)$/i.test(semAcento($('#fBusca').pais.value.trim()));
 function mudouPais(){const br=ehBrasil(),us=ehEUA();$('#pUf').hidden=!br;$('#pUfUs').hidden=!us;$('#pEstadoTxt').hidden=br||us;
   const fonte=$('#pFonte');if(us&&pCfg?.serperMaps)fonte.value='serperMaps';else if(us&&pCfg?.yelp)fonte.value='yelp';else if(!us&&fonte.value==='yelp')fonte.value=['serperMaps','tomtom','here','google'].find(id=>pCfg?.[id])||'osm';
-  $('#pCel').parentElement.lastChild.textContent=us?' só com telefone':' só com celular/WhatsApp';
+  $('#pCel').parentElement.querySelector('span').textContent=us?'só com telefone':'só com celular/WhatsApp';
   if(br)cidadesDo($('#pUf').value);else if(us)cidadesUS($('#pUfUs').value);else{$('#pCidades').innerHTML='';$('#pCidade').placeholder='Cidade'}
   try{localStorage.setItem('pPais',$('#fBusca').pais.value)}catch(e){}
   if(pCfg)mostraMsgs(idiomaDoPais($('#fBusca').pais.value))}
 $('#fBusca').pais.onchange=mudouPais;
-try{const u=localStorage.getItem('pUf');if(u){$('#pUf').value=u;cidadesDo(u)}const s=localStorage.getItem('pUfUs');if(s)$('#pUfUs').value=s;const p=localStorage.getItem('pPais');if(p&&[...$('#pPais').options].some(o=>o.value===p)){$('#pPais').value=p;mudouPais()}}catch(e){}
+try{const u=localStorage.getItem('pUf');if(u){$('#pUf').value=u;cidadesDo(u)}const s=localStorage.getItem('pUfUs');if(s)$('#pUfUs').value=s;const p=localStorage.getItem('pPais');if(p&&[...$('#pPais').options].some(o=>o.value===p))$('#pPais').value=p}catch(e){}
+setTimeout(mudouPais); // o navegador pode restaurar o país sozinho ao recarregar: deixa estado, cidades e filtros de acordo
 const estadoAtual=()=>ehBrasil()?(UFS.find(u=>u[0]===$('#pUf').value)||[])[1]||'':ehEUA()?(UFS_US.find(u=>u[0]===$('#pUfUs').value)||[])[1]||'':$('#pEstadoTxt').value.trim();
 
 const pStatus=(t,erro)=>{const e=$('#pStatus');e.hidden=!t;e.className='pst'+(erro?' erro':'');e.innerHTML=t||''};
-$('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca');b.disabled=true;b.textContent='Buscando…';
+$('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca');b.disabled=true;b.querySelector('span').textContent='Buscando…';
   const estado=estadoAtual();
-  if(!f.cidade.value.trim()&&!estado){b.disabled=false;b.textContent='Buscar estabelecimentos';return pStatus('Escolha o estado e a cidade.',true)}
+  if(!f.cidade.value.trim()&&!estado){b.disabled=false;b.querySelector('span').textContent='Buscar estabelecimentos';return pStatus('Escolha o estado e a cidade.',true)}
   pStatus('Buscando '+esc(f.nicho.selectedOptions[0]?.value?f.nicho.selectedOptions[0].textContent:f.termo.value||'')+' em '+esc(f.cidade.value||estado)+'… (pode levar até 30 segundos)');
   try{const q=new URLSearchParams({nicho:f.nicho.value,termo:f.termo.value,pais:f.pais.value,estado,cidade:f.cidade.value,fonte:f.fonte.value});
     const r=await api('/api/prospeccao?'+q);r.itens.forEach(x=>x.cidade=x.cidade||f.cidade.value||null);pros={...r,idioma:idiomaDoPais(f.pais.value),sel:new Set()};desenhaPros();if(r.uso){window.SESSAO.uso=r.uso;mostraUso(r.uso)}
@@ -893,7 +986,7 @@ $('#fBusca').onsubmit=async e=>{e.preventDefault();const f=e.target,b=$('#bBusca
     if(!r.total)pStatus('Nenhum estabelecimento encontrado em '+esc(r.lugar||'')+'.'+(osm?'<br>O OpenStreetMap tem poucos dados em muitas cidades. Use <b>TomTom</b>, <b>HERE</b> ou <b>Google Maps</b> (chaves no Worker) para listas bem mais completas.':' Tente outra palavra, um nicho parecido ou outra fonte.'),false);
     else if(!vis)pStatus(r.total+' encontrados, mas <b>todos foram escondidos pelos filtros</b> (“só com WhatsApp” / “só sem site”). Desmarque um filtro para ver.'+(r.itens.filter(x=>x.telefone).length<r.total*.2?'<br>Dica: a fonte trouxe poucos telefones. '+(f.termo.value?'Apague a palavra-chave e busque só pelo nicho, ou ':'')+'use o botão “🔎 achar WhatsApp” em cada resultado.':''));
     else pStatus(r.total+' encontrados'+(vis<r.total?' · '+vis+' aparecendo com os filtros':'')+' · fonte '+NOME_FONTE(r.fonte)+(osm?' (dados limitados)':'')+(r.aviso?'<br>⚠️ '+esc(r.aviso):''));
-  }catch(x){pStatus(esc(x.erro||'Erro na busca. Tente de novo.'),true)}finally{b.disabled=false;b.textContent='Buscar estabelecimentos'}};
+  }catch(x){pStatus(esc(x.erro||'Erro na busca. Tente de novo.'),true)}finally{b.disabled=false;b.querySelector('span').textContent='Buscar estabelecimentos'}};
 $('#pTodos').onclick=()=>{const L=proFiltrados(),todos=L.every(x=>pros.sel.has(x.id));L.forEach(x=>todos?pros.sel.delete(x.id):pros.sel.add(x.id));desenhaPros()};
 const selecionados=()=>{const L=proFiltrados().filter(x=>pros.sel.has(x.id));return L.length?L:[]};
 async function salvarPros(L){const r=await api('/api/prospeccao/salvar',{method:'POST',body:{itens:L.map(x=>({idioma:pros.idioma||'pt',nome:x.nome,telefone:x.telefone,site:x.site,instagram:x.instagram,endereco:x.endereco,cidade:x.cidade,nicho:pros.nicho,maps:x.maps,notas:[x.categoria,x.avaliacao&&'★ '+x.avaliacao+' ('+x.avaliacoes+')',x.email].filter(Boolean).join(' · ')}))}});
