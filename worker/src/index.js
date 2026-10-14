@@ -406,7 +406,7 @@ async function api(req, db, env, caminho) {
     }
     const cc = Object.fromEntries((await db.prepare('SELECT chave, valor FROM config_conta WHERE conta_id = ?').bind(conta).all()).results.map(x => [x.chave, x.valor]));
     const c = conta === CONTA_SITE ? Object.fromEntries((await db.prepare("SELECT chave, valor FROM config WHERE chave IN ('manutencao','mensagem')").all()).results.map(x => [x.chave, x.valor])) : {};
-    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: cc.msg_semsite || '', msg_comsite: cc.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY, serper: !!env.SERPER_KEY, tomtom: !!env.TOMTOM_KEY, here: !!env.HERE_KEY, yelp: !!env.YELP_KEY });
+    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', msg_semsite: cc.msg_semsite || '', msg_comsite: cc.msg_comsite || '', google: !!env.GOOGLE_PLACES_KEY, serper: !!env.SERPER_KEY, tomtom: !!env.TOMTOM_KEY, here: !!env.HERE_KEY, yelp: !!env.YELP_KEY, serperMaps: !!env.SERPER_KEY });
   }
 
   // cidades de um estado (IBGE), guardadas em cache por 30 dias
@@ -961,11 +961,37 @@ async function buscaYelp(env, f) {
   return { fonte: 'yelp', lugar, itens };
 }
 
+// Serper: resultados do Google Maps pela pesquisa do Google (chave em SERPER_KEY, a mesma do telefone)
+async function buscaSerper(env, f) {
+  const { q, n } = oQue(f), us = ehEUA(f.pais), local = [f.cidade, f.estado, us ? 'USA' : f.pais].filter(Boolean).join(', ');
+  const [cc] = codPais(f.pais), corpo = { q: us ? `${q} in ${local}` : `${q} em ${local}`, gl: (cc || 'BR').toLowerCase(), hl: us ? 'en' : 'pt-br' }, itens = [];
+  for (const page of [1, 2, 3]) { // até 60 resultados
+    const r = await fetch('https://google.serper.dev/maps', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-KEY': env.SERPER_KEY },
+      body: JSON.stringify({ ...corpo, page }), signal: AbortSignal.timeout(15000) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      if (page > 1) break;
+      throw new Error(r.status === 401 || r.status === 403 ? 'Serper: chave inválida ou sem créditos.' : r.status === 429 ? 'Serper: muitas buscas seguidas. Tente em 1 minuto.' : 'Serper: ' + (d.message || 'erro na busca'));
+    }
+    for (const pl of d.places || []) {
+      const tel = telefone(pl.phoneNumber, f.pais);
+      itens.push({ id: 's:' + (pl.cid || pl.placeId || pl.title + '|' + pl.address), nome: pl.title, categoria: pl.type || n?.nome || '', telefone: tel?.num || null, celular: tel?.cel ?? null, whatsapp: false,
+        site: pl.website || null, instagram: /instagram\.com/.test(pl.website || '') ? pl.website : null, email: null, endereco: pl.address || null,
+        maps: pl.cid ? 'https://maps.google.com/?cid=' + pl.cid : mapaLink(pl.title, pl.latitude, pl.longitude), avaliacao: pl.rating || null, avaliacoes: pl.ratingCount || 0 });
+    }
+    if ((d.places || []).length < 20) break;
+  }
+  return { fonte: 'serper', lugar: local, itens };
+}
+
 async function buscaProspects(env, f) {
   if (!f.cidade && !f.estado) throw new Error('Coloque a cidade ou o estado.');
+  if (f.fonte === 'serperMaps') f = { ...f, fonte: 'serper' }; // nome usado no painel
   if (f.fonte === 'yelp' && !env.YELP_KEY) throw new Error('Yelp: falta a chave YELP_KEY no Worker.');
+  if (f.fonte === 'serper' && !env.SERPER_KEY) throw new Error('Serper: falta a chave SERPER_KEY no Worker.');
   const r = f.fonte === 'google' && env.GOOGLE_PLACES_KEY ? await buscaGoogle(env, f)
     : f.fonte === 'yelp' ? await buscaYelp(env, f)
+    : f.fonte === 'serper' ? await buscaSerper(env, f)
     : f.fonte === 'tomtom' && env.TOMTOM_KEY ? await buscaTomTom(env, f)
     : f.fonte === 'here' && env.HERE_KEY ? await buscaHere(env, f) : await buscaOSM(f);
   const vistos = new Set(); r.itens = r.itens.filter(x => x.nome && !vistos.has(x.id) && vistos.add(x.id)); // sem repetidos
