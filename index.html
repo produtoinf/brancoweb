@@ -365,7 +365,7 @@ document.addEventListener('DOMContentLoaded',function(){
     <li><a class="menu__link" href="#servicos"><i>02</i>Serviços</a></li>
     <li><a class="menu__link" href="#processo"><i>03</i>Processo</a></li>
     <li><a class="menu__link" href="#contato"><i>04</i>Contato</a></li>
-    <li><a class="menu__link" href="./cliente/"><i>05</i>Área do cliente</a></li>
+    <li><a class="menu__link" href="#prospeccao"><i>05</i>Prospecção</a></li><li><a class="menu__link" href="./cliente/"><i>06</i>Área do cliente</a></li>
   </ol>
   <div class="menu__foot"><a href="https://wa.me/5541998999574" target="_blank" rel="noopener noreferrer">WhatsApp ↗</a><span>Sites, vídeos e tráfego pago para divulgar seu negócio</span></div>
 </nav>
@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>style.css</span></div><pre class="tb__code" data-tb="1"></pre><div class="tb__pe"><span class="tb__st">● build ok</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="hl">
-        <div class="hl__logo" id="hl-logo"><img src="img/logo-card.webp" alt="Logo da Branco: tubarão em 3D" width="760" height="803" decoding="async"></div>
+        <div class="hl__logo" id="hl-logo"><span class="hl__aura" aria-hidden="true"><i></i><i></i></span><span class="hl__cartao" id="hl-cartao"><img src="img/logo-card.webp" alt="Logo da Branco: tubarão em 3D" width="760" height="803" decoding="async"><span class="hl__brilho" aria-hidden="true"></span></span></div>
         <div class="hl__linha" aria-hidden="true"><i class="hl__fio"></i></div>
         <div class="hl__lado hl__lado--e">
           <h1 id="hero-title" class="hg__h">Imagine sem limites.<br><span>Nós tornamos possível.</span></h1>
@@ -401,6 +401,36 @@ document.addEventListener('DOMContentLoaded',function(){
         <video id="hg-video" src="video/branco-saas-18s-pb.mp4" poster="img/video-capa.webp" preload="none" playsinline controls aria-label="Vídeo de apresentação da Branco"></video>
         <button class="hg__play" id="hg-play" type="button"><span aria-hidden="true">▶</span> Play</button>
       </div>
+    </div>
+  </section>
+
+  <section class="px" id="prospeccao" aria-labelledby="px-title">
+    <div class="px__topo">
+      <p class="label">( branco prospecção · sistema próprio )</p>
+      <h2 id="px-title" class="px__h">Clientes novos.<br><span>No automático.</span></h2>
+      <p class="px__sub">Escolha o nicho e a cidade. O sistema encontra as empresas, completa WhatsApp, Instagram e site, e já deixa a mensagem pronta para você enviar. Tudo organizado num follow-up que lembra você de voltar a falar.</p>
+    </div>
+    <div class="px__grade">
+      <div class="px__demo" aria-hidden="true" id="px-demo">
+        <div class="px__bar"><i></i><i></i><i></i><span>branco · prospecção</span></div>
+        <div class="px__busca">
+          <div class="px__campo"><small>Nicho</small><b id="px-nicho"></b></div>
+          <div class="px__campo"><small>Cidade</small><b id="px-cidade"></b></div>
+          <div class="px__btn" id="px-btn">Buscar</div>
+        </div>
+        <div class="px__status"><span id="px-st">pronto para buscar</span><span><b id="px-n">0</b> empresas</span></div>
+        <ul class="px__lista" id="px-lista"></ul>
+      </div>
+      <ol class="px__passos">
+        <li><i>01</i><b>Busque</b><span>Nicho + cidade. Em segundos aparece a lista de empresas da região, de várias fontes de mapas.</span></li>
+        <li><i>02</i><b>Encontre o contato</b><span>WhatsApp, Instagram, site e nota no Google. Filtre só quem tem WhatsApp ou só quem ainda não tem site.</span></li>
+        <li><i>03</i><b>Converse</b><span>Mensagem pronta com o nome da empresa, em português, inglês ou espanhol. Um clique e abre no WhatsApp.</span></li>
+        <li><i>04</i><b>Não esqueça ninguém</b><span>O follow-up guarda cada contato no funil e lembra você em 2, 7 e 15 dias.</span></li>
+      </ol>
+    </div>
+    <div class="px__cta">
+      <div><b>Quer encontrar clientes no automático?</b><span>Crie sua conta e teste grátis, sem cartão.</span></div>
+      <div class="px__cta-bt"><a class="hg__btn hg__btn--claro" href="https://branco-admin.brancowebs.workers.dev/admin" target="_blank" rel="noopener noreferrer">Testar grátis <span aria-hidden="true">→</span></a><a class="hg__btn" href="https://wa.me/5541998999574?text=Ol%C3%A1!%20Quero%20saber%20mais%20sobre%20a%20Branco%20Prospec%C3%A7%C3%A3o." target="_blank" rel="noopener noreferrer">Saber mais no WhatsApp</a></div>
     </div>
   </section>
 
@@ -1684,15 +1714,22 @@ html[data-theme=light] .ln__linha i{background:linear-gradient(#111,#444 85%,tra
   function pede(){ if(!pend){pend=true;requestAnimationFrame(atualiza);} }
   addEventListener('scroll',pede,{passive:true}); addEventListener('resize',pede); atualiza();
   if(logo && matchMedia('(hover:hover)').matches){
-    var img=logo.querySelector('img');
+    var img=document.getElementById('hl-cartao')||logo.querySelector('img'), sobre=false;
     hero.addEventListener('mousemove',function(e){
-      var x=e.clientX/innerWidth-.5, y=e.clientY/innerHeight-.5;
-      img.style.transform='perspective(800px) rotateY('+(x*14).toFixed(2)+'deg) rotateX('+(-y*10).toFixed(2)+'deg)';
+      var rx,ry,esc='';
+      if(sobre){
+        var r=logo.getBoundingClientRect(), px=(e.clientX-r.left)/r.width-.5, py=(e.clientY-r.top)/r.height-.5;
+        rx=px*26; ry=-py*20; esc=' translateY(-8px) scale(1.06)';
+        logo.style.setProperty('--gx',Math.round((px+.5)*100)+'%');
+        logo.style.setProperty('--gy',Math.round((py+.5)*100)+'%');
+      } else { var x=e.clientX/innerWidth-.5, y=e.clientY/innerHeight-.5; rx=x*14; ry=-y*10; }
+      img.style.transform='perspective(800px) rotateY('+rx.toFixed(2)+'deg) rotateX('+ry.toFixed(2)+'deg)'+esc;
     });
+    logo.addEventListener('mouseenter',function(){ sobre=true; logo.classList.add('ativo'); try{ if(window.__marBrilho) window.__marBrilho(1); }catch(_){} });
+    logo.addEventListener('mouseleave',function(){ sobre=false; logo.classList.remove('ativo'); try{ if(window.__marBrilho) window.__marBrilho(0); }catch(_){} });
     hero.addEventListener('mouseleave',function(){img.style.transform='';});
-    img.style.transition='transform .4s ease-out';
-  }
-})();
+    img.style.transition='transform .45s cubic-bezier(.2,.8,.2,1)';
+  }})();
 </script>
 <style id="hv-css">
 /* ===== capa: fundo com grade em perspectiva + tablets de código nas laterais ===== */
@@ -1908,6 +1945,7 @@ html[data-theme=light] .hf__veu{background:radial-gradient(46% 40% at 50% 34%,rg
   var cv=document.getElementById('hf-mar'), hero=document.getElementById('inicio'); if(!cv||!hero) return;
   var cx=cv.getContext('2d'), W=0,H=0,dpr=1, COLS=0, ROWS=34, vis=true, t0=performance.now();
   var red=matchMedia('(prefers-reduced-motion:reduce)').matches, mx=0,my=0, tx=0,ty=0;
+  var brilho=0, brilhoAlvo=0; window.__marBrilho=function(v){ brilhoAlvo=v?1:0; };
   function tam(){
     dpr=Math.min(devicePixelRatio||1,1.5); W=hero.clientWidth; H=hero.clientHeight;
     cv.width=W*dpr; cv.height=H*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
@@ -1918,11 +1956,12 @@ html[data-theme=light] .hf__veu{background:radial-gradient(46% 40% at 50% 34%,rg
     // ondas lentas cruzadas + onda de luz (anel) saindo do centro a cada 7s
     var y=Math.sin(x*1.6+t*.55)*Math.cos(z*1.1+t*.4)*.16+Math.sin(x*.7-z*.9+t*.3)*.12;
     var d=Math.sqrt(x*x+(z-1.2)*(z-1.2)), r=(t%7)/7*5.5, anel=Math.exp(-Math.pow((d-r)*3,2))*(1-r/5.5);
-    return {y:y+anel*.22, luz:anel};
+    var perto=Math.exp(-d*.9)*brilho; // em volta do logo o mar sobe e acende quando o cursor está nele
+    return {y:y+anel*.22+perto*.18*Math.sin(t*2.2-d*3), luz:Math.min(1,anel+perto*.8)};
   }
   function quadro(agora){
     var t=(agora-t0)/1000; if(red) t=8;
-    tx+=(mx-tx)*.04; ty+=(my-ty)*.04;
+    tx+=(mx-tx)*.04; ty+=(my-ty)*.04; brilho+=(brilhoAlvo-brilho)*.06;
     cx.clearRect(0,0,W,H);
     var hz=H*(W<700?.50:.46)+ty*18, f=W*.62, camY=.95, cor=claro()?'0,0,0':'255,255,255';
     var x0=-3.2, x1=3.2, z0=.55, z1=7.5;
@@ -1954,6 +1993,180 @@ html[data-theme=light] .hf__veu{background:radial-gradient(46% 40% at 50% 34%,rg
   if(matchMedia('(hover:hover)').matches) hero.addEventListener('mousemove',function(e){mx=e.clientX/innerWidth-.5; my=e.clientY/innerHeight-.5;});
   if('IntersectionObserver' in window) new IntersectionObserver(function(es){var v=es[0].isIntersecting; if(v&&!vis){vis=true;requestAnimationFrame(quadro);} vis=v;}).observe(hero);
   requestAnimationFrame(quadro);
+})();
+</script>
+<style id="px-css">
+/* ===== seção: Branco Prospecção (sistema de achar clientes) ===== */
+.px{position:relative;padding:clamp(90px,14vh,150px) var(--pad);max-width:1280px;margin:0 auto}
+.px__topo{max-width:760px}
+.px__h{margin:14px 0 0;font:600 clamp(2.2rem,4.6vw,4.2rem)/1.04 "Inter","Helvetica Neue",Arial,sans-serif;letter-spacing:-.04em;color:var(--fg);text-transform:none}
+.px__h span{color:var(--mute)}
+.px__sub{margin:22px 0 0;max-width:36em;font:400 clamp(15px,1.15vw,18px)/1.6 "Inter","Helvetica Neue",Arial,sans-serif;color:var(--mute)}
+.px__grade{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:clamp(28px,5vw,72px);align-items:start;margin-top:clamp(40px,7vh,70px)}
+/* demo */
+.px__demo{border:1px solid var(--line);border-radius:18px;background:linear-gradient(180deg,#121214,#0c0c0e);box-shadow:0 40px 80px -40px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06);overflow:hidden;font-family:"Inter","Helvetica Neue",Arial,sans-serif}
+.px__bar{display:flex;align-items:center;gap:6px;padding:12px 16px;border-bottom:1px solid var(--line);font:500 11px "JetBrains Mono",monospace;color:var(--mute)}
+.px__bar i{width:9px;height:9px;border-radius:50%;background:#2c2c31}.px__bar i:first-child{background:#d9d9d9}.px__bar span{margin-left:10px}
+.px__busca{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;padding:16px}
+.px__campo{border:1px solid var(--line);border-radius:10px;padding:8px 12px;min-height:52px;background:#0a0a0b}
+.px__campo small{display:block;font:500 10px "JetBrains Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.px__campo b{font:600 15px/1.5 "Inter",sans-serif;color:var(--fg)}
+.px__campo b::after{content:"";display:inline-block;width:2px;height:1em;margin-left:2px;vertical-align:-.15em;background:var(--fg);opacity:0}
+.px__campo.digitando b::after{opacity:1;animation:pxCur .8s steps(1) infinite}
+@keyframes pxCur{50%{opacity:0}}
+.px__btn{align-self:stretch;display:grid;place-items:center;padding:0 20px;border-radius:10px;background:#f2f2f2;color:#0a0a0b;font:600 14px "Inter",sans-serif;transition:transform .15s,background .2s}
+.px__btn.on{transform:scale(.95);background:#fff}
+.px__status{display:flex;justify-content:space-between;padding:0 16px 10px;font:500 11px "JetBrains Mono",monospace;color:var(--mute)}
+.px__status b{color:var(--fg)}
+.px__lista{list-style:none;margin:0;padding:0 8px 10px;height:300px;overflow:hidden}
+.px__it{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;padding:10px 8px;border-top:1px solid var(--line);opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s}
+.px__it.on{opacity:1;transform:none}
+.px__av{width:34px;height:34px;border-radius:9px;background:#1b1b1f;display:grid;place-items:center;font:700 13px "Inter",sans-serif;color:#cfcfd4}
+.px__nm b{display:block;font:600 14px "Inter",sans-serif;color:var(--fg)}
+.px__nm span{font:400 12px "Inter",sans-serif;color:var(--mute)}
+.px__tags{display:flex;gap:6px}
+.px__tags em{font:500 10px "JetBrains Mono",monospace;font-style:normal;padding:4px 7px;border-radius:6px;border:1px solid var(--line);color:var(--mute)}
+.px__tags em.ok{color:#0a0a0b;background:#ececee;border-color:#ececee}
+/* passos */
+.px__passos{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.px__passos li{display:grid;grid-template-columns:44px 1fr;column-gap:10px;padding:18px 0;border-top:1px solid var(--line)}
+.px__passos li:last-child{border-bottom:1px solid var(--line)}
+.px__passos i{grid-row:span 2;font:500 12px "JetBrains Mono",monospace;font-style:normal;color:var(--mute);padding-top:4px}
+.px__passos b{font:600 19px "Inter",sans-serif;color:var(--fg);letter-spacing:-.02em}
+.px__passos span{margin-top:6px;font:400 14px/1.55 "Inter",sans-serif;color:var(--mute)}
+/* planos */
+.px__planos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:clamp(48px,8vh,80px)}
+.px__pl{display:flex;flex-direction:column;gap:6px;padding:22px;border:1px solid var(--line);border-radius:16px;background:#0e0e10;transition:border-color .2s,transform .2s}
+.px__pl:hover{border-color:#3a3a40;transform:translateY(-3px)}
+.px__pl small{font:500 11px "JetBrains Mono",monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.px__pl b{font:600 clamp(24px,2.2vw,30px) "Inter",sans-serif;letter-spacing:-.03em;color:var(--fg)}
+.px__pl b em{font:400 14px "Inter",sans-serif;font-style:normal;color:var(--mute);margin-left:2px}
+.px__pl span{font:400 14px "Inter",sans-serif;color:var(--mute)}
+.px__pl a{margin-top:auto;padding-top:18px;font:600 14px "Inter",sans-serif;color:var(--fg);text-decoration:none}
+.px__pl a:hover{text-decoration:underline}
+.px__pl--dest{background:#f2f2f2;border-color:#f2f2f2}
+.px__pl--dest small,.px__pl--dest span,.px__pl--dest b em{color:#55555c}.px__pl--dest b,.px__pl--dest a{color:#0a0a0b}
+.px__nota{margin:16px 0 0;font:400 13px "Inter",sans-serif;color:var(--mute)}
+html[data-theme=light] .px__demo{background:#fff}html[data-theme=light] .px__campo{background:#f6f6f7}
+html[data-theme=light] .px__av{background:#ededf0;color:#333}
+html[data-theme=light] .px__pl{background:#fff}
+html[data-theme=light] .px__pl--dest{background:#0e0e10;border-color:#0e0e10}
+html[data-theme=light] .px__pl--dest b,html[data-theme=light] .px__pl--dest a{color:#fff}
+html[data-theme=light] .px__tags em.ok{background:#111;color:#fff;border-color:#111}
+@media (max-width:900px){.px__grade{grid-template-columns:1fr}.px__planos{grid-template-columns:1fr 1fr}.px__busca{grid-template-columns:1fr 1fr}.px__btn{grid-column:1/-1;height:42px}.px__lista{height:260px}}
+@media (max-width:520px){.px__planos{grid-template-columns:1fr}.px__tags em:not(.ok){display:none}}
+</style>
+<script id="px-js">
+/* demo da prospecção: digita nicho e cidade, aperta Buscar e a lista de empresas vai aparecendo (em loop) */
+(function(){
+  var demo=document.getElementById('px-demo'); if(!demo) return;
+  var eN=document.getElementById('px-nicho'), eC=document.getElementById('px-cidade'), btn=document.getElementById('px-btn'),
+      st=document.getElementById('px-st'), n=document.getElementById('px-n'), lista=document.getElementById('px-lista');
+  var B=[
+    {nicho:'Barbearia',cidade:'Curitiba, PR',it:[['Barbearia Navalha','4,8 ★ · Centro',1,1,0],['Studio Corte Fino','4,6 ★ · Batel',1,1,1],['Barber Club 41','4,9 ★ · Água Verde',1,0,0],['Dom Bigode','4,5 ★ · Portão',1,1,0],['Corte & Cia','4,7 ★ · Bigorrilho',0,1,1],['Barbearia do Zé','4,4 ★ · Boqueirão',1,0,0]]},
+    {nicho:'Clínica de estética',cidade:'São Paulo, SP',it:[['Estética Bella Pele','4,9 ★ · Moema',1,1,1],['Clínica Renova','4,7 ★ · Pinheiros',1,1,0],['Espaço Leveza','4,8 ★ · Tatuapé',1,0,0],['Derma Studio','4,6 ★ · Vila Mariana',1,1,1],['Instituto Glow','4,5 ★ · Santana',0,1,0],['Pele & Arte','4,8 ★ · Lapa',1,1,0]]},
+    {nicho:'Pet shop',cidade:'Belo Horizonte, MG',it:[['Pet Feliz','4,7 ★ · Savassi',1,1,0],['Mundo Animal','4,6 ★ · Pampulha',1,0,0],['Bicho Mimado','4,9 ★ · Funcionários',1,1,1],['Patas & Cia','4,5 ★ · Buritis',1,1,0],['Cão Chique','4,8 ★ · Lourdes',0,1,1],['Pet Center BH','4,4 ★ · Centro',1,0,0]]}
+  ];
+  var red=matchMedia('(prefers-reduced-motion:reduce)').matches, vez=0, rodando=false, vis=false, tm=[];
+  function espera(ms){return new Promise(function(r){tm.push(setTimeout(r,ms));});}
+  async function digita(el,txt){ var c=el.parentNode; c.classList.add('digitando'); el.textContent=''; for(var i=1;i<=txt.length;i++){ el.textContent=txt.slice(0,i); await espera(55+Math.random()*40);} c.classList.remove('digitando'); }
+  function item(d){
+    var li=document.createElement('li'); li.className='px__it';
+    li.innerHTML='<span class="px__av">'+d[0].charAt(0)+'</span><span class="px__nm"><b>'+d[0]+'</b><span>'+d[1]+'</span></span><span class="px__tags"><em class="'+(d[2]?'ok':'')+'">'+(d[2]?'WhatsApp ✓':'sem WhatsApp')+'</em><em>'+(d[3]?'Instagram':'—')+'</em><em>'+(d[4]?'site':'sem site')+'</em></span>';
+    return li;
+  }
+  async function ciclo(){
+    if(rodando) return; rodando=true;
+    while(vis){
+      var b=B[vez++%B.length]; lista.innerHTML=''; n.textContent='0'; st.textContent='pronto para buscar'; eN.textContent=''; eC.textContent='';
+      await digita(eN,b.nicho); await espera(250); await digita(eC,b.cidade); await espera(400);
+      btn.classList.add('on'); await espera(180); btn.classList.remove('on');
+      st.textContent='buscando empresas…'; await espera(900);
+      st.textContent='completando WhatsApp e Instagram…';
+      for(var i=0;i<b.it.length;i++){ var li=item(b.it[i]); lista.appendChild(li); requestAnimationFrame(function(x){return function(){x.classList.add('on');};}(li)); n.textContent=String(Math.min(48,(i+1)*8)); await espera(420); }
+      st.textContent='✓ 48 empresas · 37 com WhatsApp'; n.textContent='48';
+      await espera(3600);
+    }
+    rodando=false;
+  }
+  if(red){ var b=B[0]; eN.textContent=b.nicho; eC.textContent=b.cidade; b.it.forEach(function(d){var li=item(d); li.classList.add('on'); lista.appendChild(li);}); n.textContent='48'; st.textContent='✓ 48 empresas · 37 com WhatsApp'; return; }
+  if('IntersectionObserver' in window) new IntersectionObserver(function(es){ vis=es[0].isIntersecting; if(vis) ciclo(); },{threshold:.25}).observe(demo);
+  else { vis=true; ciclo(); }
+})();
+</script>
+<style id="hl-hover-css">
+/* ===== logo da capa: efeitos ao passar o cursor ===== */
+.hl__cartao{position:relative;display:block;transform-style:preserve-3d;will-change:transform}
+.hl__cartao img{position:relative;transition:filter .4s}
+/* reflexo que corre pelo logo seguindo o cursor (recortado no formato do logo) */
+.hl__brilho{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;
+  -webkit-mask:url(img/logo-card.webp) center/100% 100% no-repeat;mask:url(img/logo-card.webp) center/100% 100% no-repeat;
+  background:radial-gradient(40% 30% at var(--gx,50%) var(--gy,40%),rgba(255,255,255,.55),transparent 70%),linear-gradient(115deg,transparent 35%,rgba(255,255,255,.28) 48%,transparent 60%);
+  background-size:100% 100%,260% 100%;background-position:0 0,var(--gx,50%) 0;mix-blend-mode:screen}
+.hl__logo.ativo .hl__brilho{opacity:1}
+.hl__logo.ativo .hl__cartao img{filter:drop-shadow(0 40px 50px rgba(0,0,0,.7)) drop-shadow(0 0 30px rgba(255,255,255,.18))}
+/* aura de luz na base + anéis que se espalham */
+.hl__aura{position:absolute;left:50%;bottom:4%;width:90%;height:22%;transform:translateX(-50%);pointer-events:none;z-index:-1}
+.hl__aura::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.22),transparent);opacity:.35;transition:opacity .4s,transform .4s}
+.hl__logo.ativo .hl__aura::before{opacity:1;transform:scale(1.15)}
+.hl__aura i{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,.5);opacity:0}
+.hl__logo.ativo .hl__aura i{animation:hlAnel 2.2s cubic-bezier(.2,.7,.3,1) infinite}
+.hl__logo.ativo .hl__aura i+i{animation-delay:1.1s}
+@keyframes hlAnel{0%{transform:scale(.6);opacity:.7}100%{transform:scale(1.8);opacity:0}}
+.hl__logo.ativo{animation-play-state:paused}
+html[data-theme=light] .hl__aura::before{background:radial-gradient(closest-side,rgba(0,0,0,.18),transparent)}
+html[data-theme=light] .hl__aura i{border-color:rgba(0,0,0,.35)}
+@media (prefers-reduced-motion:reduce){.hl__logo.ativo .hl__aura i{animation:none}}
+</style>
+<style id="px-hover-css">
+/* ===== prospecção: efeitos ao passar o cursor ===== */
+.px__demo{transition:transform .5s cubic-bezier(.2,.8,.2,1),box-shadow .4s;transform:perspective(1200px) rotateY(var(--ry,0deg)) rotateX(var(--rx,0deg))}
+.px__demo:hover{box-shadow:0 50px 90px -40px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.08),inset 0 1px 0 rgba(255,255,255,.08)}
+.px__it{position:relative;border-radius:10px;transition:opacity .35s,transform .35s,background .2s}
+.px__it:hover{background:rgba(255,255,255,.04)}
+.px__it::after{content:"Enviar mensagem →";position:absolute;right:8px;top:50%;transform:translate(8px,-50%);opacity:0;padding:7px 12px;border-radius:8px;background:#f2f2f2;color:#0a0a0b;font:600 12px "Inter",sans-serif;transition:opacity .2s,transform .2s;pointer-events:none}
+.px__it:hover::after{opacity:1;transform:translate(0,-50%)}
+.px__it:hover .px__tags{opacity:0;transition:opacity .2s}
+.px__it:hover .px__av{background:#ececee;color:#0a0a0b;transition:background .2s,color .2s}
+.px__btn{cursor:pointer}.px__btn:hover{background:#fff;box-shadow:0 0 24px rgba(255,255,255,.25)}
+.px__passos li{position:relative;cursor:default}
+.px__passos li::before{content:"";position:absolute;left:0;top:-1px;height:1px;width:0;background:var(--fg);transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.px__passos li:hover::before{width:100%}
+.px__passos li b,.px__passos li span{transition:transform .35s cubic-bezier(.2,.8,.2,1),color .3s}
+.px__passos li:hover b{transform:translateX(8px)}.px__passos li:hover span{transform:translateX(8px);color:var(--fg)}
+.px__passos li:hover i{color:var(--fg)}
+/* planos: luz que segue o cursor dentro do card */
+.px__pl{position:relative;overflow:hidden}
+.px__pl::before{content:"";position:absolute;inset:0;background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.10),transparent 60%);opacity:0;transition:opacity .3s;pointer-events:none}
+.px__pl:hover::before{opacity:1}
+.px__pl--dest::before{background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%),rgba(0,0,0,.08),transparent 60%)}
+.px__pl a span,.px__pl a{transition:letter-spacing .25s}
+.px__pl:hover a{letter-spacing:.02em}
+html[data-theme=light] .px__it:hover{background:rgba(0,0,0,.04)}
+html[data-theme=light] .px__it::after{background:#111;color:#fff}
+@media (hover:none){.px__it::after{display:none}.px__it:hover .px__tags{opacity:1}}
+@media (prefers-reduced-motion:reduce){.px__demo{transform:none!important}}
+.px__cta{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-top:clamp(48px,8vh,80px);padding:clamp(22px,3vw,34px);border:1px solid var(--line);border-radius:18px;background:#0e0e10;transition:border-color .3s}
+.px__cta:hover{border-color:#3a3a40}
+.px__cta::before{content:"";position:absolute;inset:0;background:radial-gradient(320px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.09),transparent 60%);opacity:0;transition:opacity .3s;pointer-events:none}
+.px__cta:hover::before{opacity:1}
+.px__cta b{display:block;font:600 clamp(20px,1.8vw,26px) "Inter",sans-serif;letter-spacing:-.03em;color:var(--fg)}
+.px__cta span{font:400 15px "Inter",sans-serif;color:var(--mute)}
+.px__cta-bt{position:relative;display:flex;gap:12px;flex-wrap:wrap}
+.px__cta-bt span{color:inherit}
+html[data-theme=light] .px__cta{background:#fff}
+</style>
+<script id="px-hover-js">
+(function(){
+  if(!matchMedia('(hover:hover)').matches) return;
+  var d=document.getElementById('px-demo');
+  if(d && !matchMedia('(prefers-reduced-motion:reduce)').matches){
+    d.addEventListener('mousemove',function(e){var r=d.getBoundingClientRect();d.style.setProperty('--ry',(((e.clientX-r.left)/r.width-.5)*6).toFixed(2)+'deg');d.style.setProperty('--rx',(-((e.clientY-r.top)/r.height-.5)*5).toFixed(2)+'deg');});
+    d.addEventListener('mouseleave',function(){d.style.setProperty('--ry','0deg');d.style.setProperty('--rx','0deg');});
+  }
+  [].forEach.call(document.querySelectorAll('.px__pl,.px__cta'),function(c){
+    c.addEventListener('mousemove',function(e){var r=c.getBoundingClientRect();c.style.setProperty('--mx',(e.clientX-r.left)+'px');c.style.setProperty('--my',(e.clientY-r.top)+'px');});
+  });
 })();
 </script>
 </body></html>
