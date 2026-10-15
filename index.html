@@ -373,7 +373,7 @@ document.addEventListener('DOMContentLoaded',function(){
 <main id="conteudo">
   <div class="pin">
     <section class="hero hg" id="inicio" aria-labelledby="hero-title">
-      <div class="hf" aria-hidden="true"><div class="hf__aco"></div><div class="hf__feixe"><i></i><b></b></div><div class="hf__lamp"></div><canvas class="hf__mar" id="hf-mar"></canvas><div class="hf__luz"></div><div class="hf__veu"></div></div>
+      <div class="hf" aria-hidden="true"><div class="hf__aco"></div><div class="hf__feixe"><i></i><b></b></div><div class="hf__lamp"></div><div class="hf__luz"></div><div class="hf__veu"></div></div>
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>style.css</span></div><pre class="tb__code" data-tb="1"></pre><div class="tb__pe"><span class="tb__st">● build ok</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="hl">
@@ -1940,46 +1940,7 @@ html[data-theme=light] .tbl .p{stroke:#111;filter:none}html[data-theme=light] .t
 .hf__veu{position:absolute;inset:0;background:radial-gradient(46% 40% at 50% 34%,rgba(10,10,11,.55),transparent 75%),linear-gradient(transparent 78%,var(--bg))}
 html[data-theme=light] .hf__veu{background:radial-gradient(46% 40% at 50% 34%,rgba(245,245,245,.6),transparent 75%),linear-gradient(transparent 78%,var(--bg))}
 </style>
-<script id="hf-mar-js">
-/* fundo da capa: pedaços de código voando em 3D (vêm do fundo em direção à tela), leve parallax com o mouse */
-(function(){
-  var cv=document.getElementById('hf-mar'), hero=document.getElementById('inicio'); if(!cv||!hero) return;
-  var cx=cv.getContext('2d'), W=0,H=0,dpr=1, vis=true, red=matchMedia('(prefers-reduced-motion:reduce)').matches;
-  var TOK=['<div>','</>','{ }','=>','const','let','return','flex','grid','#fff','async','await','import','export','<a href>','.css','.js','<h1>','</section>','npm run','git push','()','[ ]','::','0101','if','else','map()','fetch()','px','rem','100vh','@media','z-index','opacity','transform','<p>','</div>','function','true','null','===','&&','||','/* */','//','${}','`html`','0x1F','deploy','api','json'];
-  var P=[], N=0, mx=0,my=0, tx=0,ty=0, vel=1, velAlvo=1;
-  window.__marBrilho=function(v){ velAlvo=v?1.8:1; };
-  function claro(){return document.documentElement.getAttribute('data-theme')==='light';}
-  function novo(p,longe){ p.x=(Math.random()-.5)*2.4; p.y=(Math.random()-.5)*1.6; p.z=longe?Math.random()*1+.15:1; p.t=TOK[(Math.random()*TOK.length)|0]; p.v=.0009+Math.random()*.0012; p.mono=Math.random()<.75; return p; }
-  function tam(){
-    dpr=Math.min(devicePixelRatio||1,1.5); W=hero.clientWidth; H=hero.clientHeight;
-    cv.width=W*dpr; cv.height=H*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
-    N=W<700?16:42; while(P.length<N) P.push(novo({},true)); P.length=N;
-  }
-  function quadro(){
-    tx+=(mx-tx)*.05; ty+=(my-ty)*.05; vel+=(velAlvo-vel)*.05;
-    cx.clearRect(0,0,W,H);
-    var cor=claro()?'0,0,0':'255,255,255', f=Math.min(W,H)*.55, ox=W/2-tx*40, oy=H*.42-ty*24;
-    cx.textAlign='center'; cx.textBaseline='middle';
-    for(var i=0;i<P.length;i++){
-      var p=P[i];
-      if(!red){ p.z-=p.v*vel; if(p.z<.06) novo(p,false); }
-      var sx=ox+p.x/p.z*f*.5, sy=oy+p.y/p.z*f*.5;
-      if(sx<-80||sx>W+80||sy<-40||sy>H+40){ if(!red) novo(p,false); continue; }
-      var perto=1-p.z, tamF=Math.max(8,Math.min(24,10/p.z*.8));
-      var a=Math.min(.3,perto*perto*.42)*(p.z<.18?p.z/.18:1); // some suavemente ao chegar muito perto
-      if(a<.01) continue;
-      cx.font=(p.mono?'500 ':'600 ')+tamF.toFixed(1)+'px "JetBrains Mono",monospace';
-      cx.fillStyle='rgba('+cor+','+a.toFixed(3)+')';
-      cx.fillText(p.t,sx,sy);
-    }
-    if(!red&&vis) requestAnimationFrame(quadro);
-  }
-  tam(); addEventListener('resize',function(){tam(); if(red) quadro();});
-  if(matchMedia('(hover:hover)').matches) hero.addEventListener('mousemove',function(e){mx=e.clientX/innerWidth-.5; my=e.clientY/innerHeight-.5;});
-  if('IntersectionObserver' in window) new IntersectionObserver(function(es){var v=es[0].isIntersecting; if(v&&!vis){vis=true;requestAnimationFrame(quadro);} vis=v;}).observe(hero);
-  requestAnimationFrame(quadro);
-})();
-</script>
+
 <style id="px-css">
 /* ===== seção: Branco Prospecção (sistema de achar clientes) ===== */
 .px{position:relative;padding:clamp(90px,14vh,150px) var(--pad);max-width:1280px;margin:0 auto}
@@ -2246,7 +2207,7 @@ html[data-theme=light] .hf__aco{background:linear-gradient(118deg,transparent 18
 <style id="hf-luz-css">
 /* ===== fundo da capa (imagem) + feixe de luz de cima clareando o logo ===== */
 .hero.hg{background:#05070a}
-.hf__aco{inset:0;background:url(img/fundo-capa.webp) center top/cover no-repeat!important;animation:hfRespira2 24s ease-in-out infinite alternate!important}
+.hf__aco{inset:0;filter:brightness(.72);background:url(img/fundo-capa.webp) center top/cover no-repeat!important;animation:hfRespira2 24s ease-in-out infinite alternate!important}
 @keyframes hfRespira2{from{transform:scale(1)}to{transform:scale(1.05)}}
 @media (max-width:700px){.hf__aco{background-image:url(img/fundo-capa-m.webp)!important}}
 .hf__luz{display:none}
