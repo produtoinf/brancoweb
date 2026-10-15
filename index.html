@@ -411,15 +411,16 @@ document.addEventListener('DOMContentLoaded',function(){
       <p class="px__sub">Escolha o nicho e a cidade. O sistema encontra as empresas, completa WhatsApp, Instagram e site, e já deixa a mensagem pronta para você enviar. Tudo organizado num follow-up que lembra você de voltar a falar.</p>
     </div>
     <div class="px__grade">
-      <div class="px__demo" aria-hidden="true" id="px-demo">
+      <div class="px__demo" id="px-demo"><p class="px__teste">● Teste agora: digite um nicho e a sua cidade</p>
         <div class="px__bar"><i></i><i></i><i></i><span>branco · prospecção</span></div>
-        <div class="px__busca">
-          <div class="px__campo"><small>Nicho</small><b id="px-nicho"></b></div>
-          <div class="px__campo"><small>Cidade</small><b id="px-cidade"></b></div>
-          <div class="px__btn" id="px-btn">Buscar</div>
-        </div>
+        <form class="px__busca" id="px-form" autocomplete="off">
+          <label class="px__campo"><small>Nicho</small><input id="px-nicho" name="nicho" placeholder="ex.: barbearia" maxlength="40" required></label>
+          <label class="px__campo"><small>Cidade</small><input id="px-cidade" name="cidade" placeholder="ex.: Curitiba" maxlength="40" required></label>
+          <button class="px__btn" id="px-btn" type="submit">Buscar</button>
+        </form>
         <div class="px__status"><span id="px-st">pronto para buscar</span><span><b id="px-n">0</b> empresas</span></div>
-        <ul class="px__lista" id="px-lista"></ul>
+        <ul class="px__lista" id="px-lista" aria-live="polite"></ul>
+        <p class="px__fonte">dados de teste: © colaboradores do OpenStreetMap · no sistema completo a busca usa várias fontes e completa o WhatsApp</p>
       </div>
       <ol class="px__passos">
         <li><i>01</i><b>Busque</b><span>Nicho + cidade. Em segundos aparece a lista de empresas da região, de várias fontes de mapas.</span></li>
@@ -2055,41 +2056,117 @@ html[data-theme=light] .px__pl--dest b,html[data-theme=light] .px__pl--dest a{co
 html[data-theme=light] .px__tags em.ok{background:#111;color:#fff;border-color:#111}
 @media (max-width:900px){.px__grade{grid-template-columns:1fr}.px__planos{grid-template-columns:1fr 1fr}.px__busca{grid-template-columns:1fr 1fr}.px__btn{grid-column:1/-1;height:42px}.px__lista{height:260px}}
 @media (max-width:520px){.px__planos{grid-template-columns:1fr}.px__tags em:not(.ok){display:none}}
+.px__teste{margin:0;padding:10px 16px;border-bottom:1px solid var(--line);font:500 11px "JetBrains Mono",monospace;letter-spacing:.04em;color:var(--fg);background:rgba(255,255,255,.03)}
+.px__campo{display:block;cursor:text}
+.px__campo input{display:block;width:100%;border:0;outline:0;background:transparent;padding:0;font:600 15px/1.5 "Inter",sans-serif;color:var(--fg)}
+.px__campo input::placeholder{color:#55555c;font-weight:400}
+.px__campo:focus-within{border-color:var(--mute)}
+.px__btn{border:0;cursor:pointer}.px__btn:disabled{opacity:.6;cursor:wait}
+.px__mais{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:6px;padding:14px 12px;border:1px dashed var(--line);border-radius:10px;font:400 13px "Inter",sans-serif;color:var(--mute)}
+.px__mais a{font:600 13px "Inter",sans-serif;color:var(--fg);white-space:nowrap}
+.px__lista{height:auto;min-height:300px;max-height:420px}
+.px__fonte{margin:0;padding:8px 16px 12px;font:400 10.5px/1.5 "JetBrains Mono",monospace;color:#55555c}
+html[data-theme=light] .px__campo input::placeholder{color:#9a9aa2}
 </style>
 <script id="px-js">
-/* demo da prospecção: digita nicho e cidade, aperta Buscar e a lista de empresas vai aparecendo (em loop) */
+/* prospecção: demo automática até a pessoa mexer; depois busca de verdade no OpenStreetMap (Overpass) */
 (function(){
-  var demo=document.getElementById('px-demo'); if(!demo) return;
+  var demo=document.getElementById('px-demo'), form=document.getElementById('px-form'); if(!demo||!form) return;
   var eN=document.getElementById('px-nicho'), eC=document.getElementById('px-cidade'), btn=document.getElementById('px-btn'),
       st=document.getElementById('px-st'), n=document.getElementById('px-n'), lista=document.getElementById('px-lista');
+  var CONTA='https://branco-admin.brancowebs.workers.dev/admin';
   var B=[
-    {nicho:'Barbearia',cidade:'Curitiba, PR',it:[['Barbearia Navalha','4,8 ★ · Centro',1,1,0],['Studio Corte Fino','4,6 ★ · Batel',1,1,1],['Barber Club 41','4,9 ★ · Água Verde',1,0,0],['Dom Bigode','4,5 ★ · Portão',1,1,0],['Corte & Cia','4,7 ★ · Bigorrilho',0,1,1],['Barbearia do Zé','4,4 ★ · Boqueirão',1,0,0]]},
-    {nicho:'Clínica de estética',cidade:'São Paulo, SP',it:[['Estética Bella Pele','4,9 ★ · Moema',1,1,1],['Clínica Renova','4,7 ★ · Pinheiros',1,1,0],['Espaço Leveza','4,8 ★ · Tatuapé',1,0,0],['Derma Studio','4,6 ★ · Vila Mariana',1,1,1],['Instituto Glow','4,5 ★ · Santana',0,1,0],['Pele & Arte','4,8 ★ · Lapa',1,1,0]]},
-    {nicho:'Pet shop',cidade:'Belo Horizonte, MG',it:[['Pet Feliz','4,7 ★ · Savassi',1,1,0],['Mundo Animal','4,6 ★ · Pampulha',1,0,0],['Bicho Mimado','4,9 ★ · Funcionários',1,1,1],['Patas & Cia','4,5 ★ · Buritis',1,1,0],['Cão Chique','4,8 ★ · Lourdes',0,1,1],['Pet Center BH','4,4 ★ · Centro',1,0,0]]}
+    {nicho:'Barbearia',cidade:'Curitiba',it:[['Barbearia Navalha','Centro',1,1,0],['Studio Corte Fino','Batel',1,1,1],['Barber Club 41','Água Verde',1,0,0],['Dom Bigode','Portão',1,1,0],['Corte & Cia','Bigorrilho',0,1,1],['Barbearia do Zé','Boqueirão',1,0,0]]},
+    {nicho:'Clínica de estética',cidade:'São Paulo',it:[['Estética Bella Pele','Moema',1,1,1],['Clínica Renova','Pinheiros',1,1,0],['Espaço Leveza','Tatuapé',1,0,0],['Derma Studio','Vila Mariana',1,1,1],['Instituto Glow','Santana',0,1,0],['Pele & Arte','Lapa',1,1,0]]},
+    {nicho:'Pet shop',cidade:'Belo Horizonte',it:[['Pet Feliz','Savassi',1,1,0],['Mundo Animal','Pampulha',1,0,0],['Bicho Mimado','Funcionários',1,1,1],['Patas & Cia','Buritis',1,1,0],['Cão Chique','Lourdes',0,1,1],['Pet Center BH','Centro',1,0,0]]}
   ];
-  var red=matchMedia('(prefers-reduced-motion:reduce)').matches, vez=0, rodando=false, vis=false, tm=[];
+  var red=matchMedia('(prefers-reduced-motion:reduce)').matches, vez=0, rodando=false, vis=false, manual=false, tm=[];
+  function esc(x){return String(x).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function espera(ms){return new Promise(function(r){tm.push(setTimeout(r,ms));});}
-  async function digita(el,txt){ var c=el.parentNode; c.classList.add('digitando'); el.textContent=''; for(var i=1;i<=txt.length;i++){ el.textContent=txt.slice(0,i); await espera(55+Math.random()*40);} c.classList.remove('digitando'); }
-  function item(d){
+  function para(){ manual=true; tm.forEach(clearTimeout); tm=[]; rodando=false; }
+  async function digita(el,txt){ el.value=''; for(var i=1;i<=txt.length;i++){ if(manual) return; el.value=txt.slice(0,i); await espera(55+Math.random()*40);} }
+  function item(nome,local,tel,insta,site,fake){
     var li=document.createElement('li'); li.className='px__it';
-    li.innerHTML='<span class="px__av">'+d[0].charAt(0)+'</span><span class="px__nm"><b>'+d[0]+'</b><span>'+d[1]+'</span></span><span class="px__tags"><em class="'+(d[2]?'ok':'')+'">'+(d[2]?'WhatsApp ✓':'sem WhatsApp')+'</em><em>'+(d[3]?'Instagram':'—')+'</em><em>'+(d[4]?'site':'sem site')+'</em></span>';
+    li.innerHTML='<span class="px__av">'+esc(nome.charAt(0).toUpperCase())+'</span><span class="px__nm"><b>'+esc(nome)+'</b><span>'+esc(local||'')+'</span></span><span class="px__tags"><em class="'+(tel?'ok':'')+'">'+(fake?(tel?'WhatsApp ✓':'sem WhatsApp'):(tel?'telefone ✓':'sem telefone'))+'</em><em>'+(insta?'Instagram':'—')+'</em><em>'+(site?'site':'sem site')+'</em></span>';
     return li;
   }
+  function mostra(li){ lista.appendChild(li); requestAnimationFrame(function(){ li.classList.add('on'); }); }
   async function ciclo(){
-    if(rodando) return; rodando=true;
-    while(vis){
-      var b=B[vez++%B.length]; lista.innerHTML=''; n.textContent='0'; st.textContent='pronto para buscar'; eN.textContent=''; eC.textContent='';
-      await digita(eN,b.nicho); await espera(250); await digita(eC,b.cidade); await espera(400);
-      btn.classList.add('on'); await espera(180); btn.classList.remove('on');
-      st.textContent='buscando empresas…'; await espera(900);
-      st.textContent='completando WhatsApp e Instagram…';
-      for(var i=0;i<b.it.length;i++){ var li=item(b.it[i]); lista.appendChild(li); requestAnimationFrame(function(x){return function(){x.classList.add('on');};}(li)); n.textContent=String(Math.min(48,(i+1)*8)); await espera(420); }
-      st.textContent='✓ 48 empresas · 37 com WhatsApp'; n.textContent='48';
-      await espera(3600);
+    if(rodando||manual) return; rodando=true;
+    while(vis&&!manual){
+      var b=B[vez++%B.length]; lista.innerHTML=''; n.textContent='0'; st.textContent='demonstração · digite para testar de verdade';
+      await digita(eN,b.nicho); if(manual) break; await espera(250); await digita(eC,b.cidade); if(manual) break; await espera(400);
+      btn.classList.add('on'); await espera(180); btn.classList.remove('on'); st.textContent='buscando empresas…'; await espera(900);
+      for(var i=0;i<b.it.length&&!manual;i++){ var d=b.it[i]; mostra(item(d[0],d[1],d[2],d[3],d[4],true)); n.textContent=String((i+1)*8); await espera(420); }
+      if(manual) break; st.textContent='✓ demonstração · agora teste com o seu nicho'; await espera(3600);
     }
     rodando=false;
   }
-  if(red){ var b=B[0]; eN.textContent=b.nicho; eC.textContent=b.cidade; b.it.forEach(function(d){var li=item(d); li.classList.add('on'); lista.appendChild(li);}); n.textContent='48'; st.textContent='✓ 48 empresas · 37 com WhatsApp'; return; }
+  // a pessoa começou a mexer: para a demo e limpa os campos
+  function assume(){ if(manual) return; para(); eN.value=''; eC.value=''; lista.innerHTML=''; n.textContent='0'; st.textContent='digite o nicho e a cidade e clique em Buscar'; }
+  eN.addEventListener('focus',assume); eC.addEventListener('focus',assume);
+
+  // ---- busca real (Overpass / OpenStreetMap) ----
+  function dobra(t){ return t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim(); }
+  function rx(t){ var m={a:'[aáàâã]',e:'[eéê]',i:'[ií]',o:'[oóôõ]',u:'[uúü]',c:'[cç]'}; return dobra(t).split('').map(function(ch){return m[ch]||ch;}).join(''); }
+  var MAPA=[
+    [/barb/,['"shop"="hairdresser"']],[/salao|cabele|cabelo/,['"shop"="hairdresser"']],[/estetic|beleza|manicure|unha/,['"shop"="beauty"']],
+    [/pet|animal/,['"shop"="pet"']],[/veterin/,['"amenity"="veterinary"']],[/restaurante|comida/,['"amenity"="restaurant"']],
+    [/lanch|hamburg|burger/,['"amenity"="fast_food"']],[/pizz/,['"cuisine"="pizza"']],[/padaria|panific/,['"shop"="bakery"']],
+    [/cafe|cafeteria/,['"amenity"="cafe"']],[/academia|crossfit|pilates/,['"leisure"="fitness_centre"']],[/dentist|odonto/,['"amenity"="dentist"']],
+    [/clinica|medic|consultorio/,['"amenity"="clinic"','"amenity"="doctors"']],[/farmac|drogaria/,['"amenity"="pharmacy"']],
+    [/oficina|mecanic|auto ?center/,['"shop"="car_repair"']],[/imobili/,['"office"="estate_agent"']],[/advoga|advocacia/,['"office"="lawyer"']],
+    [/contab|contador/,['"office"="accountant"']],[/hotel|pousada|hostel/,['"tourism"="hotel"','"tourism"="guest_house"']],
+    [/roupa|moda|boutique/,['"shop"="clothes"']],[/mercado|supermerc/,['"shop"="supermarket"']],[/otica/,['"shop"="optician"']],
+    [/flor/,['"shop"="florist"']],[/sorvet|acai/,['"amenity"="ice_cream"']],[/bar$|boteco|pub/,['"amenity"="bar"','"amenity"="pub"']]
+  ];
+  var ultima=0, cache={};
+  async function busca(nicho,cidade){
+    var cid=cidade.split(/[,\-\/]/)[0].trim(), nd=dobra(nicho), filtros=[];
+    MAPA.forEach(function(m){ if(m[0].test(nd)) filtros=filtros.concat(m[1]); });
+    var palavra=nd.split(' ').filter(function(w){return w.length>2&&['de','da','do','para'].indexOf(w)<0;})[0]||nd;
+    var partes=filtros.map(function(f){return 'nwr(area.a)['+f+']["name"];';});
+    partes.push('nwr(area.a)["name"~"'+rx(palavra)+'",i][~"^(shop|amenity|office|craft|leisure|healthcare)$"~"."];');
+    var q='[out:json][timeout:25];area["boundary"="administrative"]["admin_level"="8"]["name"~"^'+rx(cid)+'$",i]->.a;('+partes.join('')+');out center tags 80;';
+    if(cache[q]) return cache[q];
+    // tenta o servidor principal e, se falhar, um servidor reserva
+    var SERV=['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'], d=null, ocupado=false;
+    for(var si=0;si<SERV.length&&!d;si++){
+      try{
+        var r=await fetch(SERV[si],{method:'POST',body:'data='+encodeURIComponent(q),headers:{'Content-Type':'application/x-www-form-urlencoded'}});
+        if(r.status===429||r.status===504){ ocupado=true; continue; }
+        if(r.ok) d=await r.json();
+      }catch(_){}
+    }
+    if(!d) throw new Error(ocupado?'ocupado':'erro');
+    var vistos={}, out=[];
+    (d.elements||[]).forEach(function(e){ var t=e.tags||{}; if(!t.name) return; var k=dobra(t.name); if(vistos[k]) return; vistos[k]=1;
+      out.push({nome:t.name,local:t['addr:suburb']||t['addr:neighbourhood']||t['addr:street']||cid,tel:!!(t.phone||t['contact:phone']||t['contact:mobile']||t['contact:whatsapp']),insta:!!(t['contact:instagram']||t.instagram),site:!!(t.website||t['contact:website'])}); });
+    out.sort(function(a,b){return (b.tel+b.site+b.insta)-(a.tel+a.site+a.insta);});
+    cache[q]=out; return out;
+  }
+  form.addEventListener('submit',async function(e){
+    e.preventDefault(); assume();
+    var nicho=eN.value.trim(), cidade=eC.value.trim(); if(!nicho||!cidade) return;
+    var agora=Date.now(); if(agora-ultima<3000){ st.textContent='aguarde um instante e tente de novo'; return; } ultima=agora;
+    btn.disabled=true; btn.textContent='Buscando…'; lista.innerHTML=''; n.textContent='0'; st.textContent='buscando '+nicho+' em '+cidade+'…';
+    try{
+      var res=await busca(nicho,cidade);
+      if(!res.length){ st.textContent='nada encontrado · confira o nome da cidade ou tente outro nicho'; }
+      else{
+        var mostrar=res.slice(0,5);
+        for(var i=0;i<mostrar.length;i++){ var x=mostrar[i]; mostra(item(x.nome,x.local,x.tel,x.insta,x.site,false)); await new Promise(function(r){setTimeout(r,160);}); }
+        n.textContent=String(res.length);
+        st.textContent='✓ '+res.length+' empresas encontradas no teste';
+        var li=document.createElement('li'); li.className='px__mais on';
+        li.innerHTML='<span>'+(res.length>5?'+ '+(res.length-5)+' empresas · ':'')+'No sistema completo: mais fontes, WhatsApp e mensagem pronta.</span><a href="'+CONTA+'" target="_blank" rel="noopener noreferrer">Criar conta grátis →</a>';
+        lista.appendChild(li);
+      }
+    }catch(err){ st.textContent=err.message==='ocupado'?'o servidor de mapas está ocupado · tente de novo em alguns segundos':'não foi possível buscar agora · tente de novo'; }
+    btn.disabled=false; btn.textContent='Buscar';
+  });
+
+  if(red){ var b=B[0]; eN.value=b.nicho; eC.value=b.cidade; b.it.forEach(function(d){var li=item(d[0],d[1],d[2],d[3],d[4],true); li.classList.add('on'); lista.appendChild(li);}); st.textContent='demonstração · digite para testar de verdade'; return; }
   if('IntersectionObserver' in window) new IntersectionObserver(function(es){ vis=es[0].isIntersecting; if(vis) ciclo(); },{threshold:.25}).observe(demo);
   else { vis=true; ciclo(); }
 })();
