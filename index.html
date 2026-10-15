@@ -376,6 +376,20 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="hf" aria-hidden="true"><div class="hf__aco"></div><div class="hf__feixe"><i></i><b></b></div><div class="hf__lamp"></div><div class="hf__luz"></div><div class="hf__veu"></div></div>
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d tb--globo" aria-hidden="true"><div class="tb__vidro tb__globo"><canvas id="gl-terra"></canvas></div></div>
+      <div class="cel" aria-hidden="true"><div class="cel__corpo"><div class="cel__tela">
+        <div class="cel__ilha"></div>
+        <div class="cel__st"><span>9:41</span><span>●●● ▮</span></div>
+        <div class="cel__topo"><img src="img/logo-3d.webp" alt=""><b>Branco</b><i>● ao vivo</i></div>
+        <div class="cel__card"><small>Clientes novos · mês</small><strong id="cel-n">48</strong><svg viewBox="0 0 120 34"><path d="M0 30 L15 26 L30 28 L45 18 L60 21 L75 12 L90 14 L105 6 L120 3" fill="none" stroke="#fff" stroke-width="1.6"/><path d="M0 30 L15 26 L30 28 L45 18 L60 21 L75 12 L90 14 L105 6 L120 3 V34 H0Z" fill="rgba(255,255,255,.1)"/></svg></div>
+        <div class="cel__tit">Prospecção</div>
+        <ul class="cel__lista">
+          <li><span>B</span><div><b>Barbearia Navalha</b><em>Curitiba · WhatsApp ✓</em></div><i>novo</i></li>
+          <li><span>E</span><div><b>Estética Bella Pele</b><em>São Paulo · respondeu</em></div><i>●</i></li>
+          <li><span>P</span><div><b>Pet Feliz</b><em>BH · proposta</em></div><i>R$</i></li>
+          <li><span>C</span><div><b>Clínica Renova</b><em>Pinheiros · follow-up</em></div><i>2d</i></li>
+        </ul>
+        <div class="cel__nav"><i class="on"></i><i></i><i></i><i></i></div>
+      </div></div></div>
       <div class="hl">
         <div class="hl__logo" id="hl-logo"><span class="hl__aura" aria-hidden="true"><i></i><i></i></span><span class="hl__cartao" id="hl-cartao"><img src="img/logo-3d.webp" alt="Logo da Branco: tubarão em 3D" width="609" height="720" decoding="async"><span class="hl__brilho" aria-hidden="true"></span><span class="hl__luztopo" aria-hidden="true"></span></span></div>
         <div class="hl__linha" aria-hidden="true"><i class="hl__fio"></i></div>
@@ -2412,4 +2426,42 @@ html[data-theme=light] .tb--e .tb__vidro{background:linear-gradient(150deg,rgba(
 .tb--e .tb__vidro::after{border-radius:22px}
 @media (max-width:900px){.hero.hg .tb--e .tb__vidro{border-radius:10px!important;padding:3% 7% 7%!important}}
 </style>
+<style id="cel-css">
+/* celular na quina da capa com o app Branco aberto */
+.hero.hg{overflow:hidden}
+.cel{position:absolute;right:-60px;bottom:-140px;z-index:3;width:300px;perspective:1600px;pointer-events:none}
+.cel__corpo{position:relative;aspect-ratio:9/19;border-radius:46px;padding:11px;background:linear-gradient(145deg,#3a3c42,#16171a 40%,#2a2b30);
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18),inset 0 0 0 4px #0b0b0d,0 50px 80px -30px rgba(0,0,0,.9),-30px 40px 60px -40px rgba(0,0,0,.8);
+  transform:rotateX(48deg) rotateZ(-28deg) rotateY(8deg);transform-origin:50% 60%;animation:celFlut 8s ease-in-out infinite}
+@keyframes celFlut{0%,100%{translate:0 0}50%{translate:0 -10px}}
+.cel__tela{position:relative;height:100%;border-radius:36px;overflow:hidden;background:linear-gradient(180deg,#101114,#0a0a0c);padding:14px 14px 0;font-family:"Inter",sans-serif;color:#ececee}
+.cel__tela::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.10),transparent 35%);pointer-events:none}
+.cel__ilha{position:absolute;left:50%;top:9px;width:86px;height:24px;margin-left:-43px;border-radius:14px;background:#000}
+.cel__st{display:flex;justify-content:space-between;font:600 11px "Inter",sans-serif;padding:0 8px;height:20px;align-items:center;color:#ddd}
+.cel__topo{display:flex;align-items:center;gap:8px;margin:16px 0 14px}
+.cel__topo img{width:22px;height:22px;object-fit:contain}.cel__topo b{font:700 17px "Inter",sans-serif;letter-spacing:-.02em}
+.cel__topo i{margin-left:auto;font:500 9px "JetBrains Mono",monospace;font-style:normal;color:#8e8e96;letter-spacing:.06em;text-transform:uppercase}
+.cel__card{border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:12px;background:rgba(255,255,255,.04)}
+.cel__card small{display:block;font:500 10px "Inter",sans-serif;color:#8e8e96}
+.cel__card strong{display:block;font:700 30px/1.1 "Inter",sans-serif;letter-spacing:-.03em;margin:2px 0 6px}
+.cel__card svg{width:100%;height:34px;display:block}
+.cel__tit{margin:16px 0 6px;font:600 12px "Inter",sans-serif;color:#cfcfd4}
+.cel__lista{list-style:none;margin:0;padding:0}
+.cel__lista li{display:grid;grid-template-columns:28px 1fr auto;gap:9px;align-items:center;padding:9px 0;border-top:1px solid rgba(255,255,255,.07);opacity:0;transform:translateY(6px);animation:celItem .5s ease forwards}
+.cel__lista li:nth-child(1){animation-delay:.6s}.cel__lista li:nth-child(2){animation-delay:.9s}.cel__lista li:nth-child(3){animation-delay:1.2s}.cel__lista li:nth-child(4){animation-delay:1.5s}
+@keyframes celItem{to{opacity:1;transform:none}}
+.cel__lista span{width:28px;height:28px;border-radius:8px;background:#1d1e22;display:grid;place-items:center;font:700 11px "Inter",sans-serif}
+.cel__lista b{display:block;font:600 11.5px "Inter",sans-serif}.cel__lista em{font:400 10px "Inter",sans-serif;font-style:normal;color:#8e8e96}
+.cel__lista i{font:600 9px "JetBrains Mono",monospace;font-style:normal;padding:3px 6px;border-radius:6px;background:#ececee;color:#0a0a0b}
+.cel__nav{position:absolute;left:14px;right:14px;bottom:14px;display:flex;justify-content:space-around;padding:10px;border-radius:18px;background:rgba(255,255,255,.06)}
+.cel__nav i{width:6px;height:6px;border-radius:50%;background:#55555c}.cel__nav i.on{background:#fff}
+@media (max-width:1100px){.cel{width:230px;right:-70px;bottom:-150px}}
+@media (max-width:900px){.cel{display:none}}
+@media (prefers-reduced-motion:reduce){.cel__corpo{animation:none}.cel__lista li{animation:none;opacity:1;transform:none}}
+</style>
+<script id="cel-js">
+/* número do app sobe quando a capa aparece */
+(function(){ var n=document.getElementById('cel-n'); if(!n||matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  var v=0, alvo=48; (function sobe(){ v+=Math.max(1,(alvo-v)*.12); n.textContent=Math.min(alvo,Math.round(v)); if(v<alvo) setTimeout(sobe,40); })(); })();
+</script>
 </body></html>
