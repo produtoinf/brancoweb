@@ -373,11 +373,11 @@ document.addEventListener('DOMContentLoaded',function(){
 <main id="conteudo">
   <div class="pin">
     <section class="hero hg" id="inicio" aria-labelledby="hero-title">
-      <div class="hf" aria-hidden="true"><canvas class="hf__mar" id="hf-mar"></canvas><div class="hf__luz"></div><div class="hf__veu"></div></div>
+      <div class="hf" aria-hidden="true"><div class="hf__aco"></div><canvas class="hf__mar" id="hf-mar"></canvas><div class="hf__luz"></div><div class="hf__veu"></div></div>
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>style.css</span></div><pre class="tb__code" data-tb="1"></pre><div class="tb__pe"><span class="tb__st">● build ok</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="hl">
-        <div class="hl__logo" id="hl-logo"><span class="hl__aura" aria-hidden="true"><i></i><i></i></span><span class="hl__cartao" id="hl-cartao"><img src="img/logo-card.webp" alt="Logo da Branco: tubarão em 3D" width="760" height="803" decoding="async"><span class="hl__brilho" aria-hidden="true"></span></span></div>
+        <div class="hl__logo" id="hl-logo"><span class="hl__aura" aria-hidden="true"><i></i><i></i></span><span class="hl__cartao" id="hl-cartao"><img src="img/logo-card.webp" alt="Logo da Branco: tubarão em 3D" width="760" height="763" decoding="async"><span class="hl__brilho" aria-hidden="true"></span></span></div>
         <div class="hl__linha" aria-hidden="true"><i class="hl__fio"></i></div>
         <div class="hl__lado hl__lado--e">
           <h1 id="hero-title" class="hg__h">Imagine sem limites.<br><span>Nós tornamos possível.</span></h1>
@@ -1649,7 +1649,7 @@ html[data-theme=light] .hg__btn--claro{background:#0e0e10;color:#fff;border-colo
 .hero.hg{background:radial-gradient(50% 40% at 50% 18%,rgba(255,255,255,.06),transparent 70%),var(--bg);padding-top:clamp(96px,12vh,130px)}
 .hl{position:relative;display:grid;grid-template-columns:1fr 1fr;column-gap:clamp(56px,9vw,140px);max-width:1180px;margin:0 auto}
 .hl__logo{grid-column:1/-1;justify-self:center;width:clamp(220px,26vw,340px);position:relative;z-index:2;animation:hlFlut 6s ease-in-out infinite}
-.hl__logo img{display:block;width:100%;height:auto;filter:contrast(.82) brightness(.9) drop-shadow(0 30px 40px rgba(0,0,0,.6))}
+.hl__logo img{display:block;width:100%;height:auto;filter:contrast(.92) brightness(.95) drop-shadow(0 30px 40px rgba(0,0,0,.6))}
 @keyframes hlFlut{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 /* a linha: trilho apagado + fio aceso que cresce com o scroll + pulso de luz descendo */
 .hl__linha{position:absolute;left:50%;top:clamp(200px,24vw,310px);bottom:-1px;width:2px;margin-left:-1px;background:linear-gradient(var(--line),var(--line));z-index:1;pointer-events:none}
@@ -1953,7 +1953,7 @@ html[data-theme=light] .hf__veu{background:radial-gradient(46% 40% at 50% 34%,rg
   function tam(){
     dpr=Math.min(devicePixelRatio||1,1.5); W=hero.clientWidth; H=hero.clientHeight;
     cv.width=W*dpr; cv.height=H*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
-    N=W<700?32:90; while(P.length<N) P.push(novo({},true)); P.length=N;
+    N=W<700?16:42; while(P.length<N) P.push(novo({},true)); P.length=N;
   }
   function quadro(){
     tx+=(mx-tx)*.05; ty+=(my-ty)*.05; vel+=(velAlvo-vel)*.05;
@@ -2229,4 +2229,18 @@ html[data-theme=light] .px__cta{background:#fff}
   });
 })();
 </script>
+<style id="hf-aco-css">
+/* fundo da capa mais escuro, com faixas metálicas suaves que se movem devagar */
+.hero.hg{background:#060607}
+.hf__aco{position:absolute;inset:-10%;background:
+  linear-gradient(118deg,transparent 18%,rgba(255,255,255,.075) 27%,rgba(255,255,255,.02) 31%,transparent 38%),
+  linear-gradient(242deg,transparent 52%,rgba(255,255,255,.06) 62%,rgba(255,255,255,.015) 66%,transparent 74%),
+  radial-gradient(70% 55% at 50% 30%,#141416,#08080a 60%,#050506);
+  background-size:220% 100%,220% 100%,100% 100%;animation:hfAco 26s ease-in-out infinite alternate}
+@keyframes hfAco{0%{background-position:0% 0,100% 0,0 0}100%{background-position:100% 0,0% 0,0 0}}
+.hf__luz{opacity:.55}
+html[data-theme=light] .hero.hg{background:#f2f2f3}
+html[data-theme=light] .hf__aco{background:linear-gradient(118deg,transparent 18%,rgba(0,0,0,.04) 27%,transparent 38%),linear-gradient(242deg,transparent 52%,rgba(0,0,0,.03) 62%,transparent 74%),radial-gradient(70% 55% at 50% 30%,#fafafa,#ececee 60%,#e4e4e6);background-size:220% 100%,220% 100%,100% 100%}
+@media (prefers-reduced-motion:reduce){.hf__aco{animation:none}}
+</style>
 </body></html>
