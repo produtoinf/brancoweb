@@ -2386,4 +2386,18 @@ html[data-theme=light] .ly__p{background:linear-gradient(135deg,#fff,#f1f1f4);bo
 html[data-theme=light] .ly__p .l,html[data-theme=light] .ly__p .d{stroke:#111;fill:#111;filter:none}
 html[data-theme=light] .ly__p .b rect,html[data-theme=light] .ly__p .f3{fill:#222}
 </style>
+<style id="tb-vidro2-css">
+/* código flutuante com um vidro fosco suave por trás (sem moldura pesada) */
+.tb--e .tb__vidro{padding:16px 18px 14px!important;border-radius:16px!important;
+  background:linear-gradient(150deg,rgba(255,255,255,.075),rgba(255,255,255,.02) 45%,rgba(160,180,220,.035))!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 0 30px rgba(255,255,255,.02),0 30px 60px -30px rgba(0,0,0,.8)!important;
+  backdrop-filter:blur(10px) saturate(120%)!important;-webkit-backdrop-filter:blur(10px) saturate(120%)!important}
+.tb--e .tb__vidro::after{display:block!important;content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.07) 45%,transparent 58%);background-size:260% 100%;animation:tbBrilho 7s ease-in-out infinite}
+.tb--e .tb__top{opacity:.6;border-bottom:1px solid rgba(255,255,255,.07)!important;padding-bottom:8px!important;margin-bottom:2px}
+.tb--e .tb__code{-webkit-mask-image:none!important;mask-image:none!important;min-height:clamp(140px,13vw,190px)}
+html[data-theme=light] .tb--e .tb__vidro{background:linear-gradient(150deg,rgba(255,255,255,.75),rgba(255,255,255,.45))!important;border-color:rgba(0,0,0,.08)!important}
+@media (max-width:900px){.hero.hg .tb--e .tb__vidro{padding:7px 8px!important;border-radius:10px!important}}
+</style>
 </body></html>
