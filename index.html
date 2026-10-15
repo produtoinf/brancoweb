@@ -378,7 +378,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="tb tb--d" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>style.css</span></div><pre class="tb__code" data-tb="1"></pre><div class="tb__pe"><span class="tb__st">● build ok</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="hl">
         <div class="hl__logo" id="hl-logo"><img src="img/logo-card.webp" alt="Logo da Branco: tubarão em 3D" width="760" height="779" decoding="async"></div>
-        <div class="hl__linha" aria-hidden="true"><i class="hl__fio"></i><b></b></div>
+        <div class="hl__linha" aria-hidden="true"><i class="hl__fio"></i></div>
         <div class="hl__lado hl__lado--e">
           <h1 id="hero-title" class="hg__h">Imagine sem limites.<br><span>Nós tornamos possível.</span></h1>
           <p class="hg__sub">Sites profissionais, vídeos de divulgação e gestão de tráfego pago para apresentar seu negócio, valorizar sua marca e aproximar novos clientes.</p>
@@ -395,8 +395,7 @@ document.addEventListener('DOMContentLoaded',function(){
   </div>
 
   <section class="ln" aria-label="Do código à tela">
-    <div class="ln__linha" aria-hidden="true"><i class="hl__fio"></i><b></b></div>
-    <div class="hl__no" aria-hidden="true"><span class="hl__pt"></span><img src="img/code-card.webp" alt="" width="900" height="855" decoding="async" loading="lazy"></div>
+    <div class="ln__linha" aria-hidden="true"><i class="hl__fio"></i></div>
     <div class="ln__video"><span class="hl__pt"></span>
       <div class="hg__video">
         <video id="hg-video" src="video/branco-saas-18s-pb.mp4" poster="img/video-capa.webp" preload="none" playsinline controls aria-label="Vídeo de apresentação da Branco"></video>
@@ -1623,7 +1622,7 @@ html[data-theme=light] .hg__btn--claro{background:#0e0e10;color:#fff;border-colo
 @keyframes hlFlut{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 /* a linha: trilho apagado + fio aceso que cresce com o scroll + pulso de luz descendo */
 .hl__linha{position:absolute;left:50%;top:clamp(200px,24vw,310px);bottom:-1px;width:2px;margin-left:-1px;background:linear-gradient(var(--line),var(--line));z-index:1;pointer-events:none}
-.hl__linha i{position:absolute;inset:0 0 auto;height:100%;background:linear-gradient(rgba(255,255,255,.9),rgba(255,255,255,.55));box-shadow:0 0 12px rgba(255,255,255,.5);transform-origin:top;transform:scaleY(var(--p,.12))}
+.hl__linha i{position:absolute;inset:0 0 auto;height:100%;background:linear-gradient(rgba(255,255,255,.7),rgba(255,255,255,.35));box-shadow:0 0 6px rgba(255,255,255,.25);transform-origin:top;transform:scaleY(var(--p,.12))}
 .hl__linha b{position:absolute;left:-3px;width:8px;height:90px;border-radius:8px;background:linear-gradient(transparent,#fff,transparent);filter:blur(1.5px);opacity:.9;animation:hlPulso 3.2s linear infinite}
 @keyframes hlPulso{0%{top:0;opacity:0}10%{opacity:.9}90%{opacity:.9}100%{top:100%;opacity:0}}
 .hl__lado{padding-top:clamp(40px,7vh,80px)}
@@ -1639,10 +1638,10 @@ html[data-theme=light] .hg__btn--claro{background:#0e0e10;color:#fff;border-colo
 /* seção logo depois da capa: a linha continua, passa pela janela de código e chega no vídeo */
 .ln{position:relative;padding:0 var(--pad) clamp(90px,14vh,160px);background:var(--bg);display:flex;flex-direction:column;align-items:center}
 .ln__linha{position:absolute;left:50%;top:0;bottom:0;width:2px;margin-left:-1px;background:linear-gradient(var(--line) 85%,transparent);pointer-events:none}
-.ln__linha i{position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,.9),rgba(255,255,255,.4) 85%,transparent);box-shadow:0 0 12px rgba(255,255,255,.45);transform-origin:top;transform:scaleY(var(--p,0))}
+.ln__linha i{position:absolute;inset:0;background:linear-gradient(rgba(255,255,255,.7),rgba(255,255,255,.3) 85%,transparent);box-shadow:0 0 6px rgba(255,255,255,.25);transform-origin:top;transform:scaleY(var(--p,0))}
 .ln__linha b{position:absolute;left:-3px;width:8px;height:90px;border-radius:8px;background:linear-gradient(transparent,#fff,transparent);filter:blur(1.5px);animation:hlPulso 4s linear infinite}
 .ln .hl__no{margin-top:clamp(90px,14vh,150px)}
-.ln__video{position:relative;z-index:2;width:100%;max-width:1080px;margin-top:clamp(80px,12vh,130px)}
+.ln__video{position:relative;z-index:2;width:100%;max-width:1080px;margin-top:clamp(110px,16vh,170px)}
 .ln__video .hl__pt{top:-6px;z-index:3}
 .ln .hg__video{margin:0;max-width:none}
 html[data-theme=light] .hl__linha i{background:linear-gradient(#111,#444);box-shadow:none}
@@ -1668,12 +1667,19 @@ html[data-theme=light] .ln__linha i{background:linear-gradient(#111,#444 85%,tra
   var hero=document.getElementById('inicio'), logo=document.getElementById('hl-logo');
   var fios=[].slice.call(document.querySelectorAll('.hl__fio')); if(!hero||!fios.length) return;
   var pend=false;
+  var alvo=[], cur=[], vivo=false;
   function atualiza(){
     pend=false; var H=innerHeight;
     fios.forEach(function(f,n){
       var r=f.parentNode.getBoundingClientRect(), p=(H*.75-r.top)/Math.max(r.height,1);
-      f.parentNode.style.setProperty('--p',Math.max(n?0:.12,Math.min(1,p)).toFixed(3));
+      alvo[n]=Math.max(n?0:.12,Math.min(1,p)); if(cur[n]==null) cur[n]=alvo[n];
     });
+    if(!vivo){vivo=true;requestAnimationFrame(suave);}
+  }
+  function suave(){
+    var mexe=false;
+    fios.forEach(function(f,n){var d=alvo[n]-cur[n]; cur[n]+=d*.05; if(Math.abs(d)>.001) mexe=true; f.parentNode.style.setProperty('--p',cur[n].toFixed(4));});
+    if(mexe) requestAnimationFrame(suave); else vivo=false;
   }
   function pede(){ if(!pend){pend=true;requestAnimationFrame(atualiza);} }
   addEventListener('scroll',pede,{passive:true}); addEventListener('resize',pede); atualiza();
@@ -1731,10 +1737,10 @@ html[data-theme=light] .tb__vidro{background:linear-gradient(160deg,rgba(20,20,2
 .fio{position:absolute;left:0;top:0;width:100%;pointer-events:none;z-index:6;overflow:visible}
 .fio path{fill:none;stroke-linecap:round;stroke-linejoin:round}
 .fio .fio__trilho{stroke:rgba(255,255,255,.12);stroke-width:1.5}
-.fio .fio__aceso{stroke:rgba(255,255,255,.85);stroke-width:2;filter:drop-shadow(0 0 5px rgba(255,255,255,.6))}
-.fio circle{fill:var(--bg);stroke:rgba(255,255,255,.35);stroke-width:1.5;transition:fill .3s,stroke .3s}
-.fio circle.on{fill:#fff;stroke:#fff;filter:drop-shadow(0 0 6px rgba(255,255,255,.8))}
-.fio .fio__cab{fill:#fff;stroke:none;filter:drop-shadow(0 0 8px #fff)}
+.fio .fio__aceso{stroke:rgba(255,255,255,.6);stroke-width:1.5;filter:drop-shadow(0 0 3px rgba(255,255,255,.3))}
+.fio circle{fill:var(--bg);stroke:rgba(255,255,255,.3);stroke-width:1.2;transition:fill .8s,stroke .8s}
+.fio circle.on{fill:#fff;stroke:#fff;filter:drop-shadow(0 0 3px rgba(255,255,255,.5))}
+.fio .fio__cab{fill:#fff;stroke:none;filter:drop-shadow(0 0 4px rgba(255,255,255,.7))}
 html[data-theme=light] .fio .fio__trilho{stroke:rgba(0,0,0,.14)}
 html[data-theme=light] .fio .fio__aceso{stroke:#111;filter:none}
 html[data-theme=light] .fio circle{stroke:rgba(0,0,0,.35)}
@@ -1744,8 +1750,8 @@ html[data-theme=light] .fio circle.on,html[data-theme=light] .fio .fio__cab{fill
 .tbl{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:visible}
 .tbl path{fill:none;stroke-linecap:round}
 .tbl .b{stroke:rgba(255,255,255,.14);stroke-width:1.5}
-.tbl .p{stroke:#fff;stroke-width:2;stroke-dasharray:60 1000;filter:drop-shadow(0 0 5px rgba(255,255,255,.8));animation:tblCorre 3.4s linear infinite}
-.tbl .p2{animation-delay:-1.7s}
+.tbl .p{stroke:rgba(255,255,255,.7);stroke-width:1.5;stroke-dasharray:40 1000;filter:drop-shadow(0 0 3px rgba(255,255,255,.4));animation:tblCorre 9s ease-in-out infinite}
+.tbl .p2{display:none}
 .tbl circle{fill:#fff;filter:drop-shadow(0 0 6px #fff)}
 @keyframes tblCorre{from{stroke-dashoffset:1060}to{stroke-dashoffset:0}}
 html[data-theme=light] .tbl .b{stroke:rgba(0,0,0,.18)}
@@ -1796,7 +1802,7 @@ html[data-theme=light] .tbl .p{stroke:#111;filter:none}html[data-theme=light] .t
   if(secs.length<2) return;
   var NS='http://www.w3.org/2000/svg', svg=document.createElementNS(NS,'svg'); svg.setAttribute('class','fio'); svg.setAttribute('aria-hidden','true');
   var trilho=document.createElementNS(NS,'path'), aceso=document.createElementNS(NS,'path'), cab=document.createElementNS(NS,'circle');
-  trilho.setAttribute('class','fio__trilho'); aceso.setAttribute('class','fio__aceso'); cab.setAttribute('class','fio__cab'); cab.setAttribute('r','3.5');
+  trilho.setAttribute('class','fio__trilho'); aceso.setAttribute('class','fio__aceso'); cab.setAttribute('class','fio__cab'); cab.setAttribute('r','2.5');
   svg.appendChild(trilho); svg.appendChild(aceso);
   var nos=[], L=0, pend=false;
   if(getComputedStyle(main).position==='static') main.style.position='relative';
@@ -1819,7 +1825,7 @@ html[data-theme=light] .tbl .p{stroke:#111;filter:none}html[data-theme=light] .t
     trilho.setAttribute('d',d); aceso.setAttribute('d',d);
     L=aceso.getTotalLength(); aceso.style.strokeDasharray=L; 
     nos.forEach(function(n){n.c.remove()}); nos=[];
-    pts.forEach(function(q){var c=document.createElementNS(NS,'circle');c.setAttribute('cx',q[0]);c.setAttribute('cy',q[1]);c.setAttribute('r','5');svg.insertBefore(c,cab);nos.push({c:c,y:q[1]});});
+    pts.forEach(function(q){var c=document.createElementNS(NS,'circle');c.setAttribute('cx',q[0]);c.setAttribute('cy',q[1]);c.setAttribute('r','4');svg.insertBefore(c,cab);nos.push({c:c,y:q[1]});});
     atualiza();
   }
   // acha o ponto da linha que está na altura alvo (busca binária no comprimento)
@@ -1828,13 +1834,21 @@ html[data-theme=light] .tbl .p{stroke:#111;filter:none}html[data-theme=light] .t
     for(var k=0;k<22;k++){var m=(lo+hi)/2; if(aceso.getPointAtLength(m).y<y) lo=m; else hi=m;}
     return lo;
   }
+  var atual=-1, alvoLen=0, rodando=false;
   function atualiza(){
     pend=false; if(!L) return;
-    var m=main.getBoundingClientRect(), alvo=innerHeight*.6-m.top, len=compPara(alvo);
-    aceso.style.strokeDashoffset=L-len;
-    var pt=aceso.getPointAtLength(len); cab.setAttribute('cx',pt.x); cab.setAttribute('cy',pt.y);
-    cab.style.opacity=len>2&&len<L-2?1:0;
-    nos.forEach(function(n){n.c.classList.toggle('on',n.y<alvo)});
+    var m=main.getBoundingClientRect(); alvoLen=compPara(innerHeight*.6-m.top);
+    if(atual<0) atual=alvoLen;
+    if(!rodando){rodando=true;requestAnimationFrame(anda);}
+  }
+  function anda(){
+    var dif=alvoLen-atual; atual+=dif*.045;
+    if(Math.abs(dif)<.5){atual=alvoLen;rodando=false;}
+    aceso.style.strokeDashoffset=L-atual;
+    var pt=aceso.getPointAtLength(atual); cab.setAttribute('cx',pt.x); cab.setAttribute('cy',pt.y);
+    cab.style.opacity=atual>2&&atual<L-2?1:0;
+    nos.forEach(function(n){n.c.classList.toggle('on',n.y<pt.y+4)});
+    if(rodando) requestAnimationFrame(anda);
   }
   function pede(){if(!pend){pend=true;requestAnimationFrame(atualiza);}}
   var tm; function remonta(){clearTimeout(tm);tm=setTimeout(monta,150);}
