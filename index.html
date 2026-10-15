@@ -2496,8 +2496,8 @@ html[data-theme=light] .tb--e .tb__vidro{background:linear-gradient(150deg,rgba(
 /* celular: entrada única para imagem + animações; número em perspectiva real (matrix3d) */
 .cel--img img{animation:none!important}
 .cel__in{position:relative;animation:celSobe 1.2s .3s cubic-bezier(.2,.8,.2,1) both}
-.cel__card{position:absolute;left:0;top:0;width:400px;height:150px;transform-origin:0 0;pointer-events:none}
-.cel__num2{position:absolute;left:44px;top:58px;font:700 56px/1 "Inter","Helvetica Neue",Arial,sans-serif;letter-spacing:-1px;color:#f4f4f6;font-variant-numeric:tabular-nums}
+.cel__card{position:absolute;left:0;top:0;width:0;height:0;transform-origin:0 0;pointer-events:none}
+.cel__num2{position:absolute;left:0;top:0;transform:translate(-50%,-50%);font:700 52px/1 "Inter","Helvetica Neue",Arial,sans-serif;letter-spacing:-1px;color:#f4f4f6;font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){.cel__in{animation:none}}
 </style>
 <script id="cel-pro-js">
@@ -2508,9 +2508,7 @@ html[data-theme=light] .tb--e .tb__vidro{background:linear-gradient(150deg,rgba(
   function mul(a,b){var c=[];for(var i=0;i<3;i++)for(var j=0;j<3;j++){var t=0;for(var k=0;k<3;k++)t+=a[3*i+k]*b[3*k+j];c[3*i+j]=t}return c}
   function mv(m,v){return[m[0]*v[0]+m[1]*v[1]+m[2]*v[2],m[3]*v[0]+m[4]*v[1]+m[5]*v[2],m[6]*v[0]+m[7]*v[1]+m[8]*v[2]]}
   function base(p){var m=[p[0],p[2],p[4],p[1],p[3],p[5],1,1,1],v=mv(adj(m),[p[6],p[7],1]);return mul(m,[v[0],0,0,0,v[1],0,0,0,v[2]])}
-  function ajusta(){ var k=cel.getBoundingClientRect().width/W||1, q=Q.map(function(v){return v*k});
-    var t=mul(base(q),adj(base([0,0,400,0,400,150,0,150]))); for(var i=0;i<9;i++) t[i]/=t[8];
-    card.style.transform='matrix3d('+[t[0],t[3],0,t[6],t[1],t[4],0,t[7],0,0,1,0,t[2],t[5],0,1].join(',')+')'; }
+  function ajusta(){ var k=cel.getBoundingClientRect().width/W||1; card.style.transform='scale('+k+') translate(492px,194px) rotate(-13deg) skewX(-12deg) scaleY(.85)'; }
   ajusta(); addEventListener('resize',ajusta); addEventListener('load',ajusta);
 })();
 </script>
