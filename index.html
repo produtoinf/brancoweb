@@ -376,23 +376,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="hf" aria-hidden="true"><div class="hf__aco"></div><div class="hf__feixe"><i></i><b></b></div><div class="hf__lamp"></div><div class="hf__luz"></div><div class="hf__veu"></div></div>
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d tb--globo" aria-hidden="true"><div class="tb__vidro tb__globo"><canvas id="gl-terra"></canvas></div></div>
-      <div class="cel" aria-hidden="true"><div class="cn">
-        <div class="cn__mesa"><div class="cn__topo"><i class="cn__tex"></i><i class="cn__painel"></i><i class="cn__grade"></i><i class="cn__arco"></i><i class="cn__ponto"></i></div><div class="cn__frente"></div><div class="cn__lado"></div></div>
-        <div class="cn__cel"><span class="cn__esp"></span><span class="cn__bt cn__bt--a"></span><span class="cn__bt cn__bt--b"></span><div class="cel__corpo"><div class="cel__tela">
-        <div class="cel__ilha"></div>
-        <div class="cel__st"><span>9:41</span><span>●●● ▮</span></div>
-        <div class="cel__topo"><img src="img/logo-3d.webp" alt=""><b>Branco</b><i>● ao vivo</i></div>
-        <div class="cel__card"><small>Clientes novos · mês</small><strong id="cel-n">48</strong><svg viewBox="0 0 120 34"><path d="M0 30 L15 26 L30 28 L45 18 L60 21 L75 12 L90 14 L105 6 L120 3" fill="none" stroke="#fff" stroke-width="1.6"/><path d="M0 30 L15 26 L30 28 L45 18 L60 21 L75 12 L90 14 L105 6 L120 3 V34 H0Z" fill="rgba(255,255,255,.1)"/></svg></div>
-        <div class="cel__tit">Prospecção</div>
-        <ul class="cel__lista">
-          <li><span>B</span><div><b>Barbearia Navalha</b><em>Curitiba · WhatsApp ✓</em></div><i>novo</i></li>
-          <li><span>E</span><div><b>Estética Bella Pele</b><em>São Paulo · respondeu</em></div><i>●</i></li>
-          <li><span>P</span><div><b>Pet Feliz</b><em>BH · proposta</em></div><i>R$</i></li>
-          <li><span>C</span><div><b>Clínica Renova</b><em>Pinheiros · follow-up</em></div><i>2d</i></li>
-        </ul>
-        <div class="cel__nav"><i class="on"></i><i></i><i></i><i></i></div>
-      </div></div></div>
-      </div></div>
+      <div class="cel cel--img" aria-hidden="true"><img src="img/mesa-celular.webp" alt="" width="900" height="451" decoding="async"></div>
       <div class="hl">
         <div class="hl__logo" id="hl-logo"><span class="hl__aura" aria-hidden="true"><i></i><i></i></span><span class="hl__cartao" id="hl-cartao"><img src="img/logo-3d.webp" alt="Logo da Branco: tubarão em 3D" width="609" height="720" decoding="async"><span class="hl__brilho" aria-hidden="true"></span><span class="hl__luztopo" aria-hidden="true"></span></span></div>
         <div class="hl__linha" aria-hidden="true"><i class="hl__fio"></i></div>
@@ -2429,44 +2413,8 @@ html[data-theme=light] .tb--e .tb__vidro{background:linear-gradient(150deg,rgba(
 .tb--e .tb__vidro::after{border-radius:22px}
 @media (max-width:900px){.hero.hg .tb--e .tb__vidro{border-radius:10px!important;padding:3% 7% 7%!important}}
 </style>
-<style id="cel-css">
-/* celular na quina da capa com o app Branco aberto */
-.hero.hg{overflow:hidden}
-.cel{position:absolute;right:-60px;bottom:-140px;z-index:3;width:300px;perspective:1600px;pointer-events:none}
-.cel__corpo{position:relative;aspect-ratio:9/19;border-radius:46px;padding:11px;background:linear-gradient(145deg,#3a3c42,#16171a 40%,#2a2b30);
-  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18),inset 0 0 0 4px #0b0b0d,0 50px 80px -30px rgba(0,0,0,.9),-30px 40px 60px -40px rgba(0,0,0,.8);
-  transform:rotateX(48deg) rotateZ(-28deg) rotateY(8deg);transform-origin:50% 60%;animation:celFlut 8s ease-in-out infinite}
-@keyframes celFlut{0%,100%{translate:0 0}50%{translate:0 -10px}}
-.cel__tela{position:relative;height:100%;border-radius:36px;overflow:hidden;background:linear-gradient(180deg,#101114,#0a0a0c);padding:14px 14px 0;font-family:"Inter",sans-serif;color:#ececee}
-.cel__tela::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.10),transparent 35%);pointer-events:none}
-.cel__ilha{position:absolute;left:50%;top:9px;width:86px;height:24px;margin-left:-43px;border-radius:14px;background:#000}
-.cel__st{display:flex;justify-content:space-between;font:600 11px "Inter",sans-serif;padding:0 8px;height:20px;align-items:center;color:#ddd}
-.cel__topo{display:flex;align-items:center;gap:8px;margin:16px 0 14px}
-.cel__topo img{width:22px;height:22px;object-fit:contain}.cel__topo b{font:700 17px "Inter",sans-serif;letter-spacing:-.02em}
-.cel__topo i{margin-left:auto;font:500 9px "JetBrains Mono",monospace;font-style:normal;color:#8e8e96;letter-spacing:.06em;text-transform:uppercase}
-.cel__card{border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:12px;background:rgba(255,255,255,.04)}
-.cel__card small{display:block;font:500 10px "Inter",sans-serif;color:#8e8e96}
-.cel__card strong{display:block;font:700 30px/1.1 "Inter",sans-serif;letter-spacing:-.03em;margin:2px 0 6px}
-.cel__card svg{width:100%;height:34px;display:block}
-.cel__tit{margin:16px 0 6px;font:600 12px "Inter",sans-serif;color:#cfcfd4}
-.cel__lista{list-style:none;margin:0;padding:0}
-.cel__lista li{display:grid;grid-template-columns:28px 1fr auto;gap:9px;align-items:center;padding:9px 0;border-top:1px solid rgba(255,255,255,.07);opacity:0;transform:translateY(6px);animation:celItem .5s ease forwards}
-.cel__lista li:nth-child(1){animation-delay:.6s}.cel__lista li:nth-child(2){animation-delay:.9s}.cel__lista li:nth-child(3){animation-delay:1.2s}.cel__lista li:nth-child(4){animation-delay:1.5s}
-@keyframes celItem{to{opacity:1;transform:none}}
-.cel__lista span{width:28px;height:28px;border-radius:8px;background:#1d1e22;display:grid;place-items:center;font:700 11px "Inter",sans-serif}
-.cel__lista b{display:block;font:600 11.5px "Inter",sans-serif}.cel__lista em{font:400 10px "Inter",sans-serif;font-style:normal;color:#8e8e96}
-.cel__lista i{font:600 9px "JetBrains Mono",monospace;font-style:normal;padding:3px 6px;border-radius:6px;background:#ececee;color:#0a0a0b}
-.cel__nav{position:absolute;left:14px;right:14px;bottom:14px;display:flex;justify-content:space-around;padding:10px;border-radius:18px;background:rgba(255,255,255,.06)}
-.cel__nav i{width:6px;height:6px;border-radius:50%;background:#55555c}.cel__nav i.on{background:#fff}
-@media (max-width:1100px){.cel{width:230px;right:-70px;bottom:-150px}}
-@media (max-width:900px){.cel{display:none}}
-@media (prefers-reduced-motion:reduce){.cel__corpo{animation:none}.cel__lista li{animation:none;opacity:1;transform:none}}
-</style>
-<script id="cel-js">
-/* número do app sobe quando a capa aparece */
-(function(){ var n=document.getElementById('cel-n'); if(!n||matchMedia('(prefers-reduced-motion:reduce)').matches) return;
-  var v=0, alvo=48; (function sobe(){ v+=Math.max(1,(alvo-v)*.12); n.textContent=Math.min(alvo,Math.round(v)); if(v<alvo) setTimeout(sobe,40); })(); })();
-</script>
+
+
 <style id="tb-card2-css">
 /* tablet: card escuro novo + efeitos (luz que segue o mouse, reflexo, borda acesa, cursor brilhando) */
 .tb--e .tb__vidro{box-shadow:0 0 0 1px rgba(255,255,255,.05),0 40px 70px -30px rgba(0,0,0,.9),0 0 50px -20px rgba(170,195,255,.25)!important;transition:box-shadow .4s}
@@ -2485,47 +2433,13 @@ html[data-theme=light] .tb--e .tb__vidro{background:linear-gradient(150deg,rgba(
   t.addEventListener('pointerleave',function(){v.style.setProperty('--lx','30%');v.style.setProperty('--ly','20%');}); })();
 </script>
 
-<style id="cn-css">
-/* ===== cena 3D na quina: mesa (bloco com espessura e textura), cartão Branco e celular com corpo de metal ===== */
-.cel{position:absolute;right:0;bottom:0;width:640px;height:520px;perspective:1700px;perspective-origin:30% 0%;z-index:3;pointer-events:none}
-.cn{position:absolute;left:150px;top:150px;width:820px;height:640px;transform-style:preserve-3d;transform:rotateX(56deg) rotateZ(-32deg);transform-origin:30% 20%}
-.cn *{transform-style:preserve-3d}
-.cn__mesa{position:absolute;inset:0}
-.cn__topo{position:absolute;inset:0;border-radius:64px 64px 0 0;overflow:hidden;
-  background:radial-gradient(70% 60% at 30% 25%,#2b2d33,#1a1b20 55%,#121317);
-  box-shadow:inset 0 2px 1px rgba(255,255,255,.22),inset 2px 0 1px rgba(255,255,255,.08)}
-.cn__tex{position:absolute;inset:0;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");opacity:.10;mix-blend-mode:overlay}
-.cn__painel{position:absolute;left:40px;top:40px;right:-40px;bottom:-40px;border-radius:40px;background:linear-gradient(140deg,rgba(255,255,255,.05),rgba(255,255,255,.015));
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.09),inset 0 1px 0 rgba(255,255,255,.18),0 1px 0 rgba(0,0,0,.6)}
-.cn__grade{position:absolute;left:470px;top:150px;width:360px;height:420px;opacity:.5;background-image:radial-gradient(circle,rgba(255,255,255,.7) 1.2px,transparent 1.6px);background-size:42px 42px;-webkit-mask-image:linear-gradient(135deg,transparent,#000 40%);mask-image:linear-gradient(135deg,transparent,#000 40%)}
-.cn__arco{position:absolute;left:150px;top:-260px;width:820px;height:640px;border-radius:50%;border:1.5px solid rgba(225,232,255,.35);filter:drop-shadow(0 0 4px rgba(200,215,255,.5))}
-.cn__ponto{position:absolute;left:300px;top:60px;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 0 5px rgba(255,255,255,.1),0 0 14px #fff;animation:cnPulse 2.4s ease-in-out infinite}
-@keyframes cnPulse{50%{box-shadow:0 0 0 10px rgba(255,255,255,0),0 0 22px #fff}}
-/* espessura da mesa: frente e lado */
-.cn__frente{position:absolute;left:64px;right:0;top:100%;height:150px;transform-origin:top;transform:rotateX(-90deg);
-  background:linear-gradient(180deg,#24262b,#0f1013 70%);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
-.cn__lado{position:absolute;top:64px;bottom:0;left:0;width:150px;transform-origin:left;transform:rotateY(90deg);
-  background:linear-gradient(90deg,#1c1d22,#0b0c0e);box-shadow:inset 1px 0 0 rgba(255,255,255,.18)}
-/* cartão Branco */
-.cn__cartao{position:absolute;left:70px;top:110px;width:300px;height:190px;border-radius:16px;transform:translateZ(3px) rotateZ(-4deg);
-  background:linear-gradient(135deg,#1b1c20,#08080a 55%,#141519);box-shadow:0 0 0 1px rgba(255,255,255,.12),0 1px 0 #3a3b40,0 2px 0 #26272b,0 3px 0 #1a1b1f,12px 18px 24px -6px rgba(0,0,0,.8);overflow:hidden}
-.cn__cartao::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.12) 45%,transparent 60%);background-size:250% 100%;animation:tbBrilho 6s ease-in-out infinite}
-.cn__cartao img{position:absolute;right:20px;top:18px;width:26px;height:26px;object-fit:contain}
-.cn__cartao b{position:absolute;right:54px;top:22px;font:700 15px "Archivo",sans-serif;letter-spacing:.14em;color:#e9e9ee}
-.cn__chip{position:absolute;left:24px;top:78px;width:38px;height:28px;border-radius:6px;background:linear-gradient(135deg,#d9d9de,#8d8e94);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
-.cn__cartao em{position:absolute;left:24px;bottom:20px;font:500 12px "JetBrains Mono",monospace;font-style:normal;color:#9a9aa2;letter-spacing:.1em}
-/* celular: corpo com espessura de metal e botões */
-.cn__cel{position:absolute;left:110px;top:90px;width:260px;transform:translateZ(14px) rotateZ(6deg)}
-.cn__cel .cel__corpo{transform:none!important;animation:none!important;
-  background:linear-gradient(145deg,#4a4c52,#1d1e22 40%,#36383d);
-  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.25),inset 0 0 0 4px #0b0b0d,
-   0 1px 0 #8d9097,0 2px 0 #7a7d84,0 3px 0 #686b72,0 4px 0 #575a60,0 5px 0 #46484d,0 6px 0 #36383c,0 7px 0 #2a2b2f,
-   16px 26px 28px -4px rgba(0,0,0,.85)}
-.cn__esp{position:absolute;inset:0;border-radius:46px;transform:translateZ(-12px);background:#000;filter:blur(10px);opacity:.6}
-.cn__bt{position:absolute;left:-3px;width:4px;border-radius:2px;background:linear-gradient(90deg,#9a9ca2,#55575c)}
-.cn__bt--a{top:22%;height:44px}.cn__bt--b{top:33%;height:44px}
-@media (max-width:1100px){.cel{transform:scale(.8);transform-origin:100% 100%}}
-@media (max-width:900px){.cel{display:none}}
-@media (prefers-reduced-motion:reduce){.cn__ponto,.cn__cartao::after{animation:none}}
+
+<style id="cel-img-css">
+/* quina: imagem da mesa com o celular (render enviado) */
+.cel.cel--img{position:absolute;right:0;bottom:0;width:min(720px,52vw);height:auto;perspective:none;z-index:3;pointer-events:none}
+.cel--img img{display:block;width:100%;height:auto;animation:celSobe 1.2s .3s cubic-bezier(.2,.8,.2,1) both}
+@keyframes celSobe{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+@media (max-width:900px){.cel.cel--img{display:none}}
+@media (prefers-reduced-motion:reduce){.cel--img img{animation:none}}
 </style>
 </body></html>
