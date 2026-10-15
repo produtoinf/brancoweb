@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>style.css</span></div><pre class="tb__code" data-tb="1"></pre><div class="tb__pe"><span class="tb__st">● build ok</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="hl">
-        <div class="hl__logo" id="hl-logo"><img src="img/logo-card.webp" alt="Logo da Branco: tubarão em 3D" width="760" height="803" decoding="async"></div>
+        <a class="hl__logo" id="hl-logo" href="admin/painel.html" aria-label="Abrir o sistema Branco (painel)"><img src="img/logo-card.webp" alt="" width="760" height="803" decoding="async"><img class="hl__aberto" src="img/logo-aberto.webp" alt="" width="760" height="800" decoding="async" loading="lazy"><span class="hl__dica" aria-hidden="true">clique para abrir o sistema</span></a>
         <div class="hl__linha" aria-hidden="true"><i class="hl__fio"></i></div>
         <div class="hl__lado hl__lado--e">
           <h1 id="hero-title" class="hg__h">Imagine sem limites.<br><span>Nós tornamos possível.</span></h1>
@@ -1908,6 +1908,10 @@ html[data-theme=light] .hf__veu{background:radial-gradient(46% 40% at 50% 34%,rg
   var cv=document.getElementById('hf-mar'), hero=document.getElementById('inicio'); if(!cv||!hero) return;
   var cx=cv.getContext('2d'), W=0,H=0,dpr=1, COLS=0, ROWS=34, vis=true, t0=performance.now();
   var red=matchMedia('(prefers-reduced-motion:reduce)').matches, mx=0,my=0, tx=0,ty=0;
+  // interação: pulso forte (clique no logo) e brilho ao passar o mouse no logo
+  var pulso=-99, sobe=0, sobeAlvo=0, brilho=0, brilhoAlvo=0;
+  window.__marPulso=function(){ pulso=(performance.now()-t0)/1000; sobeAlvo=1; };
+  window.__marBrilho=function(v){ brilhoAlvo=v?1:0; };
   function tam(){
     dpr=Math.min(devicePixelRatio||1,1.5); W=hero.clientWidth; H=hero.clientHeight;
     cv.width=W*dpr; cv.height=H*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
@@ -1918,11 +1922,14 @@ html[data-theme=light] .hf__veu{background:radial-gradient(46% 40% at 50% 34%,rg
     // ondas lentas cruzadas + onda de luz (anel) saindo do centro a cada 7s
     var y=Math.sin(x*1.6+t*.55)*Math.cos(z*1.1+t*.4)*.16+Math.sin(x*.7-z*.9+t*.3)*.12;
     var d=Math.sqrt(x*x+(z-1.2)*(z-1.2)), r=(t%7)/7*5.5, anel=Math.exp(-Math.pow((d-r)*3,2))*(1-r/5.5);
-    return {y:y+anel*.22, luz:anel};
+    var dt=t-pulso, anel2=0;
+    if(dt>=0&&dt<3){ var r2=dt*3.2; anel2=Math.exp(-Math.pow((d-r2)*2.2,2))*(1-dt/3); }
+    y+=Math.sin(x*2.2+t*2)*.12*sobe; // o mar agita quando o sistema abre
+    return {y:y+anel*.22+anel2*.55+sobe*.25*Math.exp(-d*.4), luz:Math.min(1,anel+anel2*1.4+brilho*.25)};
   }
   function quadro(agora){
     var t=(agora-t0)/1000; if(red) t=8;
-    tx+=(mx-tx)*.04; ty+=(my-ty)*.04;
+    tx+=(mx-tx)*.04; ty+=(my-ty)*.04; sobe+=(sobeAlvo-sobe)*.03; brilho+=(brilhoAlvo-brilho)*.08;
     cx.clearRect(0,0,W,H);
     var hz=H*(W<700?.50:.46)+ty*18, f=W*.62, camY=.95, cor=claro()?'0,0,0':'255,255,255';
     var x0=-3.2, x1=3.2, z0=.55, z1=7.5;
@@ -1954,6 +1961,66 @@ html[data-theme=light] .hf__veu{background:radial-gradient(46% 40% at 50% 34%,rg
   if(matchMedia('(hover:hover)').matches) hero.addEventListener('mousemove',function(e){mx=e.clientX/innerWidth-.5; my=e.clientY/innerHeight-.5;});
   if('IntersectionObserver' in window) new IntersectionObserver(function(es){var v=es[0].isIntersecting; if(v&&!vis){vis=true;requestAnimationFrame(quadro);} vis=v;}).observe(hero);
   requestAnimationFrame(quadro);
+})();
+</script>
+<style id="sys-css">
+/* ===== logo clicável: abre em camadas e o site "vira" o sistema (painel) ===== */
+.hl__logo{display:block;cursor:pointer;text-decoration:none;outline-offset:8px}
+.hl__logo img{transition:opacity .5s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
+.hl__aberto{position:absolute;left:50%;top:50%;width:118%!important;height:auto;transform:translate(-50%,-50%) scale(.9);opacity:0;pointer-events:none;filter:drop-shadow(0 30px 40px rgba(0,0,0,.6))!important}
+.hl__dica{position:absolute;left:50%;bottom:-6px;transform:translate(-50%,8px);white-space:nowrap;font:500 11px "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);opacity:0;transition:opacity .3s,transform .3s;pointer-events:none}
+.hl__logo:hover .hl__dica,.hl__logo:focus-visible .hl__dica{opacity:1;transform:translate(-50%,0)}
+.hl__logo:hover img:first-child{filter:drop-shadow(0 30px 40px rgba(0,0,0,.6)) drop-shadow(0 0 26px rgba(255,255,255,.18))}
+/* estado "abrindo" */
+.sys-abrindo .hl__logo{animation:none}
+.sys-abrindo .hl__logo img:first-child{opacity:0;transform:scale(1.1)}
+.sys-abrindo .hl__aberto{opacity:1;transform:translate(-50%,-50%) scale(1.12) rotateY(-8deg)}
+.sys-abrindo .hl__dica{opacity:0!important}
+.sys-abrindo .hl__lado,.sys-abrindo .hl__linha{opacity:0;filter:blur(6px);transition:opacity .5s,filter .5s}
+.sys-abrindo .tb--e{transform:translateX(-60px);opacity:0;transition:transform .7s cubic-bezier(.5,0,.2,1),opacity .6s}
+.sys-abrindo .tb--d{transform:translateX(60px);opacity:0;transition:transform .7s cubic-bezier(.5,0,.2,1),opacity .6s}
+.sys-abrindo .tbl{opacity:0;transition:opacity .4s}
+/* tela do sistema iniciando (abre em círculo a partir do logo) */
+.sys{position:fixed;inset:0;z-index:9999;background:#060607;color:#ececee;display:grid;place-items:center;clip-path:circle(0 at var(--sx,50%) var(--sy,40%));transition:clip-path .9s cubic-bezier(.7,0,.2,1);pointer-events:none}
+.sys.on{clip-path:circle(150% at var(--sx,50%) var(--sy,40%));pointer-events:auto}
+.sys::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:40px 40px;-webkit-mask-image:radial-gradient(closest-side,#000,transparent);mask-image:radial-gradient(closest-side,#000,transparent)}
+.sys__box{position:relative;width:min(440px,86vw);font:500 13px/1.9 "JetBrains Mono",monospace}
+.sys__topo{display:flex;align-items:center;gap:12px;margin-bottom:18px;font:700 15px "Archivo",sans-serif;letter-spacing:.2em}
+.sys__topo img{width:30px;height:30px;object-fit:contain}
+.sys__l{opacity:0;transform:translateY(4px);transition:opacity .25s,transform .25s;color:#9a9aa2}
+.sys__l.on{opacity:1;transform:none}.sys__l b{color:#ececee;font-weight:500}.sys__l i{font-style:normal;color:#5fd38d}
+.sys__bar{height:2px;margin-top:18px;background:rgba(255,255,255,.1);overflow:hidden;border-radius:2px}
+.sys__bar span{display:block;height:100%;width:0;background:#fff;transition:width 1.4s cubic-bezier(.4,0,.2,1)}
+.sys.on .sys__bar span{width:100%}
+</style>
+<script id="sys-js">
+(function(){
+  var logo=document.getElementById('hl-logo'); if(!logo) return;
+  var destino=logo.getAttribute('href'), indo=false;
+  try{ var pre=new Image(); pre.src='img/logo-aberto.webp'; }catch(e){}
+  logo.addEventListener('mouseenter',function(){ if(window.__marBrilho) window.__marBrilho(1); });
+  logo.addEventListener('mouseleave',function(){ if(window.__marBrilho) window.__marBrilho(0); });
+  logo.addEventListener('click',function(e){
+    if(e.metaKey||e.ctrlKey||e.shiftKey||e.button>0) return; // nova aba: deixa o navegador abrir normal
+    e.preventDefault(); if(indo) return; indo=true;
+    if(matchMedia('(prefers-reduced-motion:reduce)').matches){ location.href=destino; return; }
+    var r=logo.getBoundingClientRect();
+    document.documentElement.classList.add('sys-abrindo');
+    try{ if(window.__marPulso) window.__marPulso(); }catch(_){}
+    try{ if(window.__blip) window.__blip(); }catch(_){}
+    var sys=document.createElement('div'); sys.className='sys'; sys.setAttribute('role','status'); sys.setAttribute('aria-live','polite');
+    sys.style.setProperty('--sx',Math.round(r.left+r.width/2)+'px'); sys.style.setProperty('--sy',Math.round(r.top+r.height/2)+'px');
+    var L=['<b>branco</b> sistema v2.6','carregando módulos <i>✓</i>','conectando ao painel <i>✓</i>','abrindo área administrativa…'];
+    sys.innerHTML='<div class="sys__box"><div class="sys__topo"><img src="img/logo-3d.webp" alt="">BRANCO · SISTEMA</div>'+L.map(function(x){return '<div class="sys__l">&gt; '+x+'</div>';}).join('')+'<div class="sys__bar"><span></span></div></div>';
+    setTimeout(function(){
+      document.body.appendChild(sys);
+      requestAnimationFrame(function(){ requestAnimationFrame(function(){ sys.classList.add('on'); }); });
+      [].forEach.call(sys.querySelectorAll('.sys__l'),function(l,i){ setTimeout(function(){l.classList.add('on');},500+i*280); });
+      setTimeout(function(){ location.href=destino; },2300);
+    },1000);
+  });
+  // ao voltar pelo botão "voltar" do navegador, desfaz o estado
+  addEventListener('pageshow',function(ev){ if(ev.persisted){ indo=false; document.documentElement.classList.remove('sys-abrindo'); var s=document.querySelector('.sys'); if(s) s.remove(); } });
 })();
 </script>
 </body></html>
