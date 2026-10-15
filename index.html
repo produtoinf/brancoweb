@@ -2263,12 +2263,13 @@ html[data-theme=light] .hf__feixe b,html[data-theme=light] .hf__lamp,html[data-t
     function orbita(a0,a1,alpha,w){ cx.save(); cx.translate(X,Y); cx.rotate(rot); cx.beginPath(); cx.ellipse(0,0,oa,ob,0,a0,a1); cx.strokeStyle='rgba(255,255,255,'+alpha+')'; cx.lineWidth=w; cx.stroke(); cx.restore(); }
     orbita(Math.PI,2*Math.PI,.12,1);
     // disco da Terra
-    var g=cx.createRadialGradient(X-R*.35,Y-R*.4,R*.1,X,Y,R*1.05); g.addColorStop(0,'#16171b'); g.addColorStop(.7,'#08090b'); g.addColorStop(1,'#040405');
-    cx.beginPath(); cx.arc(X,Y,R,0,7); cx.fillStyle=g; cx.fill();
-    cx.strokeStyle='rgba(255,255,255,.10)'; cx.lineWidth=1; cx.stroke();
+
     // pontos dos continentes
     var ds=Math.max(.7,S/420*1.15);
-    for(var k=0;k<P.length;k++){ var q=proj(P[k][0],P[k][1]); if(q[2]<=0) continue; cx.fillStyle='rgba(255,255,255,'+(.12+q[2]*.5).toFixed(3)+')'; cx.fillRect(X+q[0]*R-ds/2,Y-q[1]*R-ds/2,ds,ds); }
+    for(var k=0;k<P.length;k++){ var q=proj(P[k][0],P[k][1]);
+      if(q[2]<=0){ cx.fillStyle='rgba(255,255,255,'+(.035+q[2]*.03).toFixed(3)+')'; cx.fillRect(X+q[0]*R-ds/3,Y-q[1]*R-ds/3,ds*.66,ds*.66); continue; }
+      var bob=Math.sin(t*1.1+k*.37)*.6*q[2]; // cada ponto "respira" um pouco: terras flutuando
+      cx.fillStyle='rgba(255,255,255,'+(.14+q[2]*.6).toFixed(3)+')'; cx.fillRect(X+q[0]*R-ds/2,Y-q[1]*R-ds/2+bob,ds,ds); }
     // cidades com pulso
     for(var c=0;c<CID.length;c++){
       var d=CID[c], q2=proj(d[2]*Math.PI/180,d[1]*Math.PI/180); if(q2[2]<=.08) continue;
@@ -2283,13 +2284,12 @@ html[data-theme=light] .hf__feixe b,html[data-theme=light] .hf__lamp,html[data-t
       }
     }
     // brilho na borda
-    var bl=cx.createRadialGradient(X,Y,R*.92,X,Y,R*1.12); bl.addColorStop(0,'rgba(190,210,255,0)'); bl.addColorStop(.5,'rgba(190,210,255,.10)'); bl.addColorStop(1,'rgba(190,210,255,0)');
-    cx.beginPath(); cx.arc(X,Y,R*1.12,0,7); cx.fillStyle=bl; cx.fill();
+
     // órbita (parte da frente) + luz correndo nela
     orbita(0,Math.PI,.35,1.2);
     var ang=(t*.35)%(2*Math.PI), ex=Math.cos(ang)*oa, ey=Math.sin(ang)*ob, cr=Math.cos(rot), sr=Math.sin(rot);
     var fx=X+ex*cr-ey*sr, fy=Y+ex*sr+ey*cr, frente=Math.sin(ang)>0;
-    if(frente || Math.hypot(fx-X,fy-Y)>R){ var lg=cx.createRadialGradient(fx,fy,0,fx,fy,10); lg.addColorStop(0,'rgba(255,255,255,.95)'); lg.addColorStop(1,'rgba(255,255,255,0)'); cx.fillStyle=lg; cx.beginPath(); cx.arc(fx,fy,10,0,7); cx.fill(); }
+    if(true){ var lg=cx.createRadialGradient(fx,fy,0,fx,fy,10); lg.addColorStop(0,'rgba(255,255,255,.95)'); lg.addColorStop(1,'rgba(255,255,255,0)'); cx.fillStyle=lg; cx.beginPath(); cx.arc(fx,fy,10,0,7); cx.fill(); }
     if(!red&&vis) requestAnimationFrame(quadro);
   }
   addEventListener('resize',function(){tam(); if(red) quadro(performance.now());}); tam();
@@ -2297,4 +2297,15 @@ html[data-theme=light] .hf__feixe b,html[data-theme=light] .hf__lamp,html[data-t
   requestAnimationFrame(quadro);
 })();
 </script>
+<style id="tb-flut-css">
+/* tablet da esquerda: só o código flutuando no ar, como holograma */
+.tb--e .tb__vidro{background:none!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;padding:0!important}
+.tb--e .tb__vidro::after{display:none}
+.tb--e .tb__top{border:0;padding:0 0 6px;opacity:.55}.tb--e .tb__top i{display:none}.tb--e .tb__top span{margin:0;letter-spacing:.12em;text-transform:uppercase;font-size:10px}
+.tb--e .tb__pe{display:none}
+.tb--e .tb__code{height:auto;min-height:clamp(150px,15vw,200px);color:#d9dce4;text-shadow:0 0 12px rgba(200,215,255,.35),0 0 2px rgba(255,255,255,.4);
+  -webkit-mask-image:linear-gradient(180deg,#000 70%,transparent);mask-image:linear-gradient(180deg,#000 70%,transparent)}
+.tb--e .tb__code .k{color:#fff}.tb--e .tb__code .c{color:#6c7080}
+html[data-theme=light] .tb--e .tb__code{color:#222;text-shadow:none}html[data-theme=light] .tb--e .tb__code .k{color:#000}
+</style>
 </body></html>
