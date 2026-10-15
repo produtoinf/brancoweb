@@ -12,3 +12,18 @@ REELS COM A SUA FILMAGEM (video/branco-reels.mp4)
   node render.mjs "apresentacao.html?vert" 1080 1920 vertical && python3 sfx.py vertical && python3 sfx.py intro && node legenda.mjs
   sh reel.sh <sua-filmagem.mp4>
   (em reel.sh: CX/CY = centro da tela do notebook no vídeo; Z0 = quando o zoom começa)
+
+MOTION DO SAAS (PB: video/branco-saas-18s-pb.mp4; laranja antiga de 16 s: video/branco-saas-16s.mp4) — 18 s, 1920x1080, 60 fps, trilha a 120 BPM
+  Página: video/saas.html (abra no navegador para ver tocando em tempo real)
+  Cenas (1 compasso = 2 s cada; todo corte cai no tempo forte):
+    0-2 visor ligando · 2-4 tipografia (1 palavra por batida) · 4-6 grade de formas (99 nichos)
+    6-8 esfera de partículas (países) · 8-10 glóbulos 3D (dados de cada empresa)
+    10-12 painel com cursor · 12-14 faixas + halftone (idiomas) · 14-16 revelação do logo
+  Para gerar de novo:
+    FPS=60 node render.mjs saas.html 1920 1080 saas
+    python3 musica.py
+    ffmpeg -y -i saas_mudo.mp4 -i saas.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 256k -shortest -movflags +faststart ../branco-saas-16s.mp4
+  Prévia de quadros soltos: node previa.mjs <pasta> 1.0 5.2 9.1 ...
+  Versão preto e branco (video/branco-saas-18s-pb.mp4): use "saas.html?pb" no render e PB=1 na prévia
+    FPS=60 node render.mjs "saas.html?pb" 1920 1080 saas_pb
+    ffmpeg -y -i saas_pb_mudo.mp4 -i saas.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 256k -shortest -movflags +faststart ../branco-saas-18s-pb.mp4

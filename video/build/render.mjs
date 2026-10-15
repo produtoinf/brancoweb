@@ -6,11 +6,11 @@ import { chromium } from 'playwright';
 import { spawn } from 'child_process';
 import { writeFileSync } from 'fs';
 const [page = 'feed.html', W = '1080', H = '1350', nome = 'feed'] = process.argv.slice(2);
-const FPS = 30, here = new URL('.', import.meta.url).pathname;
+const FPS = +(process.env.FPS || 30), here = new URL('.', import.meta.url).pathname;
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: +W, height: +H } });
 await p.goto('file://' + here + '../' + page + (page.includes('?') ? '&' : '?') + 'render');
-await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(800);
+await p.evaluate(() => document.fonts.ready); await p.evaluate(() => Promise.all([...document.images].map(i => i.complete ? 0 : new Promise(r => { i.onload = i.onerror = r; })))); await p.waitForTimeout(800);
 const { DUR, SFX } = await p.evaluate(() => ({ DUR: window.DUR, SFX: window.SFX }));
 writeFileSync(`${here}${nome}_sfx.json`, JSON.stringify({ dur: DUR, sfx: SFX }));
 const ff = spawn('ffmpeg', ['-loglevel','error','-y','-f','image2pipe','-framerate',String(FPS),'-i','-',

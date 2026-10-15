@@ -1,0 +1,485 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<title>Branco — Motion SaaS 16s</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;background:#000;overflow:hidden}
+canvas{display:block;width:1920px;height:1080px}
+</style></head>
+<body><canvas id="c" width="1920" height="1080"></canvas>
+<img id="logo" src="logo.png" alt="" hidden>
+<script>
+/* Motion de 18 s para divulgar a prospecção do SaaS da Branco.
+   120 BPM: 1 batida = 0,5 s, 1 compasso = 2 s. Cada cena dura 1 compasso e todo corte cai no tempo forte.
+   render(t) desenha o quadro do instante t (em segundos): é o que o render.mjs grava a 60 fps. */
+const W = 1920, H = 1080, DUR = 18, BEAT = .5, BAR = 2;   // 9 compassos de 2 s
+let TG = 0;   // tempo global (o visor mostra o timecode do vídeo inteiro)
+// ?pb = versão preto e branco: o destaque vira branco e o branco vira cinza claro
+const PB = location.search.includes('pb');
+const OR = PB ? '#FFFFFF' : '#FF4924', BK = '#0A0A0A', WH = PB ? '#A9A9AF' : '#F4F2EE', GR = PB ? '#6E6E74' : '#8A8A90';
+const QUENTE = PB ? '#161616' : '#1a0e0b';                         // fundo das cenas com brilho
+const VERDE = PB ? '#FFFFFF' : '#25D366', VERDE_T = PB ? BK : '#06210f', ESTRELA = PB ? '#FFFFFF' : '#e5b84e';
+const c = document.getElementById('c'), x = c.getContext('2d');
+const DISP = '"Archivo", "Helvetica Neue", Arial, sans-serif', MONO = '"JetBrains Mono", Menlo, monospace';
+window.DUR = DUR; window.SFX = [];
+
+/* ---------- utilidades ---------- */
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, k) => a + (b - a) * k;
+const ease = k => (k = clamp(k), k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+const out = k => 1 - Math.pow(1 - clamp(k), 3);
+const outBack = k => { k = clamp(k); const s = 1.7; return 1 + (s + 1) * Math.pow(k - 1, 3) + s * Math.pow(k - 1, 2); };
+const inn = k => Math.pow(clamp(k), 3);
+const span = (t, a, b) => clamp((t - a) / (b - a));
+function rnd(seed) { let s = seed >>> 0 || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+const pulse = t => Math.exp(-((t % BEAT + BEAT) % BEAT) * 9);   // pico em cada batida
+function font(px, w = 800, f = DISP) { x.font = `${w} ${px}px ${f}`; }
+function txt(s, X, Y, { size = 40, w = 800, f = DISP, col = WH, al = 'left', bl = 'alphabetic', sp = 0, a = 1 } = {}) {
+  font(size, w, f); x.fillStyle = col; x.textAlign = al; x.textBaseline = bl; x.letterSpacing = sp + 'px'; x.globalAlpha = a;
+  x.fillText(s, X, Y); x.globalAlpha = 1; x.letterSpacing = '0px';
+}
+function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; }
+
+/* logo colorido (o PNG é claro: pinta com a cor da marca) */
+const logoImg = document.getElementById('logo'); let logoOr = null, logoWh = null;
+function tinge(cor) { const k = document.createElement('canvas'); k.width = logoImg.naturalWidth; k.height = logoImg.naturalHeight;
+  const g = k.getContext('2d'); g.drawImage(logoImg, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = cor; g.fillRect(0, 0, k.width, k.height); return k; }
+
+/* ---------- camadas comuns ---------- */
+function hud(t, cor = WH, a = .55) {   // sobreposição de visor: cantos, timecode, batida, REC
+  t = TG;
+  x.save(); x.globalAlpha = a; x.strokeStyle = cor; x.lineWidth = 3;
+  const m = 56, L = 70;
+  [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]].forEach(([px, py, sx, sy]) => {
+    x.beginPath(); x.moveTo(px, py + sy * L); x.lineTo(px, py); x.lineTo(px + sx * L, py); x.stroke(); });
+  x.globalAlpha = 1;
+  const f = Math.floor(t * 60), tc = `00:${String(Math.floor(t)).padStart(2, '0')}:${String(f % 60).padStart(2, '0')}`;
+  txt(tc, m + 6, H - m - 22, { size: 22, w: 500, f: MONO, col: cor, a: a });
+  txt('BRANCO // PROSPECÇÃO', W - m - 6, H - m - 22, { size: 22, w: 500, f: MONO, col: cor, al: 'right', sp: 3, a: a });
+  // REC + batidas
+  x.globalAlpha = a; x.fillStyle = OR; x.beginPath(); x.arc(m + 18, m + 40, 9, 0, 7); x.globalAlpha = a * (.5 + .5 * pulse(t)); x.fill();
+  txt('REC', m + 38, m + 48, { size: 22, w: 700, f: MONO, col: cor, a: a, sp: 3 });
+  const b = Math.floor(t / BEAT);
+  for (let i = 0; i < 4; i++) { x.globalAlpha = a * (i === b % 4 ? 1 : .25); x.fillStyle = i === b % 4 ? OR : cor; x.fillRect(W - m - 150 + i * 38, m + 30, 26, 10); }
+  txt('BPM 120', W - m - 6, m + 70, { size: 18, w: 500, f: MONO, col: cor, al: 'right', a: a * .8, sp: 2 });
+  x.restore();
+}
+function scan(a = .05) {   // linhas de varredura finas
+  x.save(); x.globalAlpha = a; x.fillStyle = '#000'; for (let y = 0; y < H; y += 4) x.fillRect(0, y, W, 2); x.restore();
+}
+function grao(t, a = .06) {   // granulado leve (determinístico)
+  const r = rnd(Math.floor(t * 60) * 7919 + 13); x.save(); x.globalAlpha = a; x.fillStyle = '#fff';
+  for (let i = 0; i < 900; i++) x.fillRect(r() * W, r() * H, 2, 2); x.restore();
+}
+function vinheta(a = .55) { const g = x.createRadialGradient(W / 2, H / 2, H * .35, W / 2, H / 2, H * .95); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${a})`); x.fillStyle = g; x.fillRect(0, 0, W, H); }
+
+/* halftone: pontos cujo tamanho segue uma função (0..1) */
+function halftone(fn, cor, passo = 28, ang = .35) {
+  x.save(); x.fillStyle = cor; const ca = Math.cos(ang), sa = Math.sin(ang), R = Math.hypot(W, H) / 2;
+  for (let gy = -R; gy < R; gy += passo) for (let gx = -R; gx < R; gx += passo) {
+    const px = W / 2 + gx * ca - gy * sa, py = H / 2 + gx * sa + gy * ca;
+    if (px < -passo || px > W + passo || py < -passo || py > H + passo) continue;
+    const v = fn(px, py); if (v <= .02) continue;
+    x.beginPath(); x.arc(px, py, Math.min(1, v) * passo * .72, 0, 7); x.fill();
+  }
+  x.restore();
+}
+/* faixas diagonais que cobrem (k: 0→1) ou descobrem a tela */
+function faixas(k, cores, cobre = true, n = 7) {
+  x.save(); x.translate(W / 2, H / 2); x.rotate(-.32);
+  const L = Math.hypot(W, H) + 200, bh = L / n;
+  for (let i = 0; i < n; i++) {
+    const e = ease(clamp(k * 1.5 - i * .5 / n));   // cada faixa um pouco depois da outra
+    x.fillStyle = cores[i % cores.length];
+    if (cobre) x.fillRect(-L / 2, -L / 2 + i * bh, e * L, bh + 1);          // entra da esquerda
+    else x.fillRect(-L / 2 + e * L, -L / 2 + i * bh, (1 - e) * L, bh + 1);   // sai para a direita
+  }
+  x.restore();
+}
+
+/* gráfico subindo: barras crescendo em sequência, linha de tendência e contador */
+function grafico(X, Y, w, h, k, t, { barras = 9, alfa = 1, rotulo = true, cont = 312 } = {}) {
+  x.save(); x.globalAlpha = alfa;
+  const bw = w / barras * .62, passo = w / barras;
+  x.strokeStyle = hexA(WH, .25); x.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) { x.beginPath(); x.moveTo(X, Y + h - h * i / 4); x.lineTo(X + w, Y + h - h * i / 4); x.stroke(); }
+  const pts = [];
+  for (let i = 0; i < barras; i++) {
+    const alvo = .16 + .8 * Math.pow((i + 1) / barras, 1.6) + .05 * Math.sin(i * 2.1);
+    const kb = outBack(clamp(k * 1.7 - i * .7 / barras)), bh = h * alvo * kb;
+    const bx = X + i * passo + (passo - bw) / 2;
+    x.fillStyle = i === barras - 1 ? OR : hexA(WH, .28 + .5 * i / barras); x.fillRect(bx, Y + h - bh, bw, bh);
+    pts.push([bx + bw / 2, Y + h - bh - 18]);
+  }
+  // linha subindo por cima das barras
+  const nl = Math.max(2, Math.ceil(pts.length * clamp(k * 1.25)));
+  x.strokeStyle = OR; x.lineWidth = 4; x.lineJoin = 'round'; x.beginPath(); pts.slice(0, nl).forEach((p, i) => i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.stroke();
+  const ult = pts[nl - 1]; x.fillStyle = OR; x.beginPath(); x.arc(ult[0], ult[1], 8 + 5 * pulse(t), 0, 7); x.fill();
+  // seta para cima
+  x.save(); x.translate(ult[0], ult[1] - 34); x.fillStyle = OR; x.beginPath(); x.moveTo(0, -18); x.lineTo(14, 4); x.lineTo(-14, 4); x.closePath(); x.globalAlpha = alfa * clamp(k * 2 - 1); x.fill(); x.restore();
+  if (rotulo) { txt('+' + Math.round(cont * out(k)) + '%', X, Y - 24, { size: 64, w: 900, col: OR, a: alfa });
+    txt('CONTATOS POR SEMANA', X, Y + h + 40, { size: 18, w: 700, f: MONO, col: GR, sp: 3, a: alfa }); }
+  x.restore();
+}
+
+/* ---------- formas para a grade (64 pontos cada, para poder interpolar) ---------- */
+const NP = 64;
+function forma(tipo) {
+  const p = [];
+  for (let i = 0; i < NP; i++) {
+    const a = i / NP * Math.PI * 2, cx = Math.cos(a), sy = Math.sin(a);
+    if (tipo === 0) p.push([cx, sy]);                                            // círculo
+    else if (tipo === 1) { const m = Math.max(Math.abs(cx), Math.abs(sy)); p.push([cx / m * .86, sy / m * .86]); } // quadrado
+    else if (tipo === 2) { const m = Math.abs(cx) + Math.abs(sy); p.push([cx / m, sy / m]); }                      // losango
+    else { // cruz
+      const ang = a + Math.PI / 4, r = .34 + .66 * Math.pow(Math.abs(Math.cos(2 * ang)), 6);
+      p.push([Math.cos(a) * r, Math.sin(a) * r]);
+    }
+  }
+  return p;
+}
+const FORMAS = [0, 1, 2, 3].map(forma);
+function desenhaForma(cx, cy, s, k, rot) {   // k contínuo: 0 círculo, 1 quadrado, 2 losango, 3 cruz, 4 círculo...
+  const i = Math.floor(k) % 4, j = (i + 1) % 4, f = ease(k - Math.floor(k)), A = FORMAS[i], B = FORMAS[j];
+  const cr = Math.cos(rot), sr = Math.sin(rot);
+  x.beginPath();
+  for (let n = 0; n < NP; n++) { const px = lerp(A[n][0], B[n][0], f) * s, py = lerp(A[n][1], B[n][1], f) * s;
+    const X = cx + px * cr - py * sr, Y = cy + px * sr + py * cr; n ? x.lineTo(X, Y) : x.moveTo(X, Y); }
+  x.closePath();
+}
+
+/* ---------- esfera de partículas ---------- */
+const NS = 2600, ESF = []; { const r = rnd(42); const ga = Math.PI * (3 - Math.sqrt(5));
+  for (let i = 0; i < NS; i++) { const y = 1 - i / (NS - 1) * 2, rr = Math.sqrt(1 - y * y), th = ga * i;
+    ESF.push({ x: Math.cos(th) * rr, y, z: Math.sin(th) * rr, sx: (r() - .5) * 6, sy: (r() - .5) * 4, sz: (r() - .5) * 4, quente: r() < .05 }); } }
+
+/* ---------- cenas (1 compasso cada) ---------- */
+const CENAS = [];
+
+// 1) visor ligando
+CENAS.push(function (t, u) {
+  x.fillStyle = BK; x.fillRect(0, 0, W, H);
+  const cx = W / 2, cy = H / 2, ab = out(span(t, 0, .7));
+  // grade fina do visor
+  x.save(); x.strokeStyle = hexA(WH, .06); x.lineWidth = 1;
+  for (let gx = 0; gx <= W; gx += 80) { x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, H * ab); x.stroke(); }
+  for (let gy = 0; gy <= H; gy += 80) { x.beginPath(); x.moveTo(0, gy); x.lineTo(W * ab, gy); x.stroke(); }
+  x.restore();
+  // retícula girando
+  const zoom = 1 + inn(span(t, 1.55, 2)) * 5;
+  x.save(); x.translate(cx, cy); x.scale(zoom, zoom);
+  [[330, 1, .25, 3], [260, -1.6, .55, 2], [200, .8, .9, 6]].forEach(([R, vel, ini, lw], i) => {
+    const k = out(span(t, ini * .5, ini * .5 + .6)); x.strokeStyle = i === 1 ? OR : WH; x.lineWidth = lw; x.globalAlpha = .9;
+    x.beginPath(); x.arc(0, 0, R, t * vel, t * vel + k * Math.PI * (i === 1 ? 1.4 : 2)); x.stroke();
+  });
+  for (let i = 0; i < 72; i++) { const a = i / 72 * Math.PI * 2 + t * .2, l = i % 6 ? 10 : 24; x.strokeStyle = hexA(WH, .5); x.lineWidth = 2;
+    x.beginPath(); x.moveTo(Math.cos(a) * 360, Math.sin(a) * 360); x.lineTo(Math.cos(a) * (360 + l), Math.sin(a) * (360 + l)); x.stroke(); }
+  // varredura de radar
+  const g = x.createConicGradient(t * 3, 0, 0); g.addColorStop(0, hexA(OR, .45)); g.addColorStop(.12, hexA(OR, 0)); g.addColorStop(1, hexA(OR, 0));
+  x.fillStyle = g; x.beginPath(); x.arc(0, 0, 330, 0, 7); x.fill();
+  // mira
+  x.strokeStyle = OR; x.lineWidth = 3; [[-60, 0, -18, 0], [60, 0, 18, 0], [0, -60, 0, -18], [0, 60, 0, 18]].forEach(l => { x.beginPath(); x.moveTo(l[0], l[1]); x.lineTo(l[2], l[3]); x.stroke(); });
+  x.fillStyle = OR; x.beginPath(); x.arc(0, 0, 6 + 6 * pulse(t), 0, 7); x.fill();
+  // alvos detectados
+  const r = rnd(9); for (let i = 0; i < 9; i++) { const a = r() * 7, d = 80 + r() * 230, ap = span(t, .5 + i * .1, .6 + i * .1);
+    if (!ap) continue; const px = Math.cos(a) * d, py = Math.sin(a) * d; x.globalAlpha = ap; x.strokeStyle = OR; x.lineWidth = 2; x.strokeRect(px - 9, py - 9, 18, 18); x.globalAlpha = 1; }
+  x.restore();
+  // leituras digitando
+  const L = ['> SISTEMA BRANCO ONLINE', '> MÓDULO: PROSPECÇÃO', '> FONTES: GOOGLE MAPS · SERPER', '> ALVOS: 1.284 EMPRESAS', '> PRONTO.'];
+  L.forEach((s, i) => { const k = span(t, .15 + i * .22, .4 + i * .22); if (!k) return;
+    txt(s.slice(0, Math.ceil(s.length * k)), 120, 300 + i * 46, { size: 26, w: 500, f: MONO, col: i === 4 ? OR : WH, a: .9 }); });
+  // gráfico subindo à direita
+  grafico(1430, 330, 380, 380, span(t, .2, 1.6), t);
+  // flash no fim do compasso (entra o corte)
+  const fl = span(t, 1.75, 2); if (fl) { x.fillStyle = hexA(WH, fl * fl); x.fillRect(0, 0, W, H); }
+  hud(t + 0);
+});
+
+// 2) tipografia em movimento: uma palavra por batida, cada uma com outra cor
+const PAL = [['ENCONTRE', BK, OR], ['CLIENTES', OR, BK], ['EM QUALQUER', BK, WH], PB ? ['CIDADE.', OR, BK] : ['CIDADE.', WH, OR]];
+CENAS.push(function (t) {
+  const b = Math.min(3, Math.floor(t / BEAT)), lt = t - b * BEAT, [p, fundo, tinta] = PAL[b];
+  x.fillStyle = fundo; x.fillRect(0, 0, W, H);
+  // palavra anterior saindo (resto da batida anterior) para dar continuidade
+  const ent = out(lt / .28), sz = b === 2 ? 250 : 300;
+  x.save(); x.beginPath(); x.rect(0, H / 2 - sz * .78, W, sz * 1.02); x.clip();
+  font(sz, 900); x.letterSpacing = '-8px'; const wTot = x.measureText(p).width; let px = W / 2 - wTot / 2;
+  // cada letra entra de baixo, em sequência, e troca de cor numa onda
+  [...p].forEach((ch, i) => {
+    const k = out((lt - i * .022) / .26), cw = x.measureText(ch).width;
+    const onda = clamp(Math.sin((lt * 6 - i * .5)) * .5 + .5);
+    x.fillStyle = (lt > .18 && onda > .82) ? (tinta === OR ? WH : OR) : tinta;
+    if (fundo === OR && x.fillStyle.toUpperCase() === OR) x.fillStyle = BK;
+    x.fillText(ch, px, H / 2 + sz * .2 + (1 - k) * sz); px += cw - 8;
+  });
+  x.restore(); x.letterSpacing = '0px';
+  // sublinhado que acompanha a batida
+  x.fillStyle = tinta; x.fillRect(W / 2 - 260, H / 2 + sz * .38, 520 * ent, 10);
+  // legendas do visor
+  txt(`0${b + 1} / 04`, 110, 140, { size: 24, w: 700, f: MONO, col: tinta, sp: 4 });
+  txt('PROSPECÇÃO AUTOMÁTICA', W - 110, 140, { size: 24, w: 700, f: MONO, col: tinta, al: 'right', sp: 4 });
+  hud(t + 2, fundo === WH ? BK : (fundo === OR ? BK : WH), .5);
+});
+
+// 3) grade de formas que se transformam
+CENAS.push(function (t) {
+  x.fillStyle = BK; x.fillRect(0, 0, W, H);
+  const cs = 120, cols = 17, rows = 10, ox = (W - (cols - 1) * cs) / 2, oy = (H - (rows - 1) * cs) / 2;
+  const onda = t * 2.2;
+  for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+    const cx = ox + i * cs, cy = oy + j * cs, d = Math.hypot(i - (cols - 1) / 2, j - (rows - 1) / 2);
+    const k = Math.max(0, onda * 2 - d * .35) , ap = out(span(t, d * .05, d * .05 + .35));
+    const s = 34 * ap * (1 + .25 * pulse(t) * Math.exp(-d * .2));
+    const quente = Math.abs(((onda * 3 - d) % 6 + 6) % 6 - 3) < .55;
+    desenhaForma(cx, cy, s, k, k * .6);
+    if (quente) { x.fillStyle = OR; x.fill(); } else { x.strokeStyle = hexA(WH, .55); x.lineWidth = 2; x.stroke(); }
+  }
+  // título
+  const k = outBack(span(t, .5, .85));
+  x.save(); x.fillStyle = hexA(BK, .82); const bw = 980, bh = 300; x.fillRect(W / 2 - bw / 2, H / 2 - bh / 2, bw, bh * k); x.restore();
+  if (k > .3) {
+    txt('99', W / 2 - 400, H / 2 + 70, { size: 220, w: 900, col: OR, sp: -8 });
+    txt('NICHOS', W / 2 - 110, H / 2 + 10, { size: 120, w: 900, col: WH, sp: -4 });
+    const lista = 'LIMPEZA · METALÚRGICA · DENTISTA · BARBEARIA · ELETRICISTA · ACADEMIA · ';
+    x.save(); x.beginPath(); x.rect(W / 2 - 110, H / 2 + 34, 600, 60); x.clip();
+    txt(lista + lista, W / 2 - 110 - (t * 260) % 1400, H / 2 + 74, { size: 26, w: 700, f: MONO, col: GR, sp: 2 }); x.restore();
+  }
+  hud(t + 4);
+});
+
+// 4) esfera de partículas
+CENAS.push(function (t) {
+  const g = x.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, H * .8); g.addColorStop(0, QUENTE); g.addColorStop(1, BK); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const junta = out(span(t, 0, .9)), R = 360 * (1 + .04 * pulse(t)), ry = t * .9 + .4, rx = .35;
+  const cy_ = Math.cos(ry), sy_ = Math.sin(ry), cx_ = Math.cos(rx), sx_ = Math.sin(rx), cx0 = W * .62, cy0 = H / 2;
+  const pts = [];
+  for (const p of ESF) {
+    let X = lerp(p.sx, p.x, junta), Y = lerp(p.sy, p.y, junta), Z = lerp(p.sz, p.z, junta);
+    let x1 = X * cy_ + Z * sy_, z1 = -X * sy_ + Z * cy_; let y1 = Y * cx_ - z1 * sx_, z2 = Y * sx_ + z1 * cx_;
+    const pz = 2.6 / (2.6 + z2); pts.push([cx0 + x1 * R * pz, cy0 + y1 * R * pz, z2, p.quente]);
+  }
+  pts.sort((a, b) => b[2] - a[2]);
+  x.save(); x.globalCompositeOperation = 'lighter';
+  for (const [px, py, z, q] of pts) {
+    const prof = clamp((1 - z) / 2), s = .8 + prof * 2.6;   // partículas ainda espalhadas podem sair de [-1,1]
+    if (q) { x.fillStyle = hexA(OR, .25 + prof * .6); x.beginPath(); x.arc(px, py, s * 3.2, 0, 7); x.fill(); x.fillStyle = hexA(PB ? '#ffffff' : '#ffd2c6', .8 * prof); x.beginPath(); x.arc(px, py, s, 0, 7); x.fill(); }
+    else { x.fillStyle = hexA(WH, .12 + prof * .55); x.fillRect(px - s / 2, py - s / 2, s, s); }
+  }
+  x.restore();
+  // anel orbital
+  x.save(); x.translate(cx0, cy0); x.rotate(-.25); x.scale(1, .28); x.strokeStyle = hexA(OR, .6); x.lineWidth = 3;
+  x.beginPath(); x.arc(0, 0, R * 1.35, t * 2, t * 2 + Math.PI * 1.3); x.stroke(); x.restore();
+  // texto à esquerda
+  const k1 = out(span(t, .25, .6)), k2 = out(span(t, .5, .85)), k3 = out(span(t, .75, 1.1));
+  txt('BRASIL', 140 - (1 - k1) * 80, 420, { size: 130, w: 900, col: WH, a: k1, sp: -4 });
+  txt('EUA', 140 - (1 - k2) * 80, 560, { size: 130, w: 900, col: OR, a: k2, sp: -4 });
+  txt('+ 8 PAÍSES', 140 - (1 - k3) * 80, 690, { size: 90, w: 900, col: WH, a: k3, sp: -2 });
+  txt('BUSCA EM QUALQUER CIDADE DO MUNDO', 144, 760, { size: 22, w: 700, f: MONO, col: GR, a: k3, sp: 3 });
+  hud(t + 6);
+});
+
+// 5) glóbulos 3D brilhantes com os dados de cada empresa
+const GLOB = [['TELEFONE', OR, 120], ['WHATSAPP', WH, 95], ['SITE', OR, 80], ['INSTAGRAM', WH, 70], ['NOTA ★ 4.8', OR, 105], ['ENDEREÇO', WH, 75]];
+function globulo(px, py, r, cor, brilho = 1) {
+  x.save(); x.globalCompositeOperation = 'lighter';
+  const halo = x.createRadialGradient(px, py, r * .4, px, py, r * 2.4); halo.addColorStop(0, hexA(cor, .35 * brilho)); halo.addColorStop(1, hexA(cor, 0));
+  x.fillStyle = halo; x.beginPath(); x.arc(px, py, r * 2.4, 0, 7); x.fill(); x.restore();
+  const g = x.createRadialGradient(px - r * .35, py - r * .4, r * .05, px, py, r);
+  if (cor === OR && PB) { g.addColorStop(0, '#ffffff'); g.addColorStop(.3, '#f2f2f2'); g.addColorStop(.8, '#bdbdc2'); g.addColorStop(1, '#3a3a3e'); }
+  else if (cor === OR) { g.addColorStop(0, '#ffd9cf'); g.addColorStop(.25, '#ff7a5c'); g.addColorStop(.75, OR); g.addColorStop(1, '#7a1a08'); }
+  else if (PB) { g.addColorStop(0, '#d9d9dc'); g.addColorStop(.35, '#7c7c82'); g.addColorStop(.85, '#2c2c30'); g.addColorStop(1, '#101012'); }
+  else { g.addColorStop(0, '#ffffff'); g.addColorStop(.3, '#e6e4e0'); g.addColorStop(.8, '#8a8a90'); g.addColorStop(1, '#2a2a2e'); }
+  x.fillStyle = g; x.beginPath(); x.arc(px, py, r, 0, 7); x.fill();
+  // luz de borda
+  x.strokeStyle = hexA('#ffffff', .35); x.lineWidth = 2; x.beginPath(); x.arc(px, py, r - 2, -2.4, -.6); x.stroke();
+}
+CENAS.push(function (t) {
+  x.fillStyle = BK; x.fillRect(0, 0, W, H);
+  grafico(180, 470, W - 360, 520, span(t, 0, 1.4), t, { barras: 14, alfa: .32, rotulo: false });   // gráfico subindo ao fundo
+  const lista = GLOB.map((gb, i) => {
+    const a = i / GLOB.length * Math.PI * 2 + t * .8, ap = outBack(span(t, i * .09, i * .09 + .5));
+    const z = Math.sin(a), px = W / 2 + Math.cos(a) * 600, py = H / 2 + 130 + z * 120 + Math.sin(t * 2.5 + i) * 22;
+    return { gb, px, py, z, r: gb[2] * ap * (1 + .35 * z) * (1 + .08 * pulse(t)), ap };
+  }).sort((a, b) => a.z - b.z);
+  lista.forEach(o => {
+    if (o.r < 2) return;
+    // linha até o rótulo
+    globulo(o.px, o.py, o.r, o.gb[1], .8 + .4 * pulse(t));
+    const lx = o.px + (o.px > W / 2 ? 1 : -1) * (o.r + 40), ly = o.py - o.r - 20;
+    x.strokeStyle = hexA(WH, .5 * o.ap); x.lineWidth = 2; x.beginPath(); x.moveTo(o.px, o.py - o.r * .7); x.lineTo(lx, ly); x.stroke();
+    txt(o.gb[0], lx, ly - 10, { size: 26, w: 700, f: MONO, col: WH, al: o.px > W / 2 ? 'left' : 'right', a: o.ap * (.55 + .45 * (o.z + 1) / 2), sp: 3 });
+  });
+  const k = out(span(t, .4, .8));
+  txt('TUDO DE CADA EMPRESA', W / 2, 250, { size: 96, w: 900, col: WH, al: 'center', a: k, sp: -2 });
+  txt('EM UMA LISTA PRONTA', W / 2, 350, { size: 96, w: 900, col: OR, al: 'center', a: out(span(t, .6, 1)), sp: -2 });
+  hud(t + 8);
+});
+
+// 6) painel da interface com cursor
+const LINHAS = [['Miami Smile Dental', '+1 (305) 555-0123', '★ 4.9', 'sem site'], ['Brickell Dentistry', '+1 (305) 555-0187', '★ 4.7', 'site ↗'],
+  ['Coral Gables Ortho', '+1 (786) 555-0144', '★ 4.8', 'sem site'], ['Bay Family Dental', '+1 (305) 555-0199', '★ 4.6', 'site ↗'], ['Ocean Drive Smiles', '+1 (305) 555-0110', '★ 5.0', 'sem site']];
+function rr(px, py, w, h, r) { x.beginPath(); x.roundRect(px, py, w, h, r); }
+CENAS.push(function (t) {
+  x.fillStyle = '#121212'; x.fillRect(0, 0, W, H);
+  halftone((px, py) => py / H * .35, hexA(WH, .05), 22);
+  const ent = outBack(span(t, 0, .45)), s = .9 + .1 * ent, PX = 260, PY = 110, PW = 1400, PH = 860;
+  x.save(); x.translate(W / 2, H / 2); x.scale(s, s); x.translate(-W / 2, -H / 2); x.globalAlpha = clamp(ent * 1.4);
+  // janela
+  x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 60; x.fillStyle = '#1b1b1d'; rr(PX, PY, PW, PH, 26); x.fill(); x.shadowBlur = 0;
+  x.strokeStyle = '#2c2c30'; x.lineWidth = 2; rr(PX, PY, PW, PH, 26); x.stroke();
+  [OR, '#3a3a3e', '#3a3a3e'].forEach((cc, i) => { x.fillStyle = cc; x.beginPath(); x.arc(PX + 34 + i * 26, PY + 32, 8, 0, 7); x.fill(); });
+  txt('Branco — Prospecção', PX + PW / 2, PY + 40, { size: 22, w: 500, f: MONO, col: GR, al: 'center' });
+  // campos
+  txt('Nova busca', PX + 50, PY + 120, { size: 40, w: 800, col: WH });
+  const campos = [['NICHO', 'Dentista'], ['PAÍS', 'Estados Unidos'], ['CIDADE', 'Miami, FL']];
+  campos.forEach(([l, v], i) => { const fx = PX + 50 + i * 330; txt(l, fx, PY + 178, { size: 16, w: 700, f: MONO, col: GR, sp: 2 });
+    x.fillStyle = '#0f0f10'; rr(fx, PY + 192, 310, 62, 12); x.fill(); x.strokeStyle = '#2c2c30'; x.stroke();
+    const tk = span(t, .08 + i * .1, .3 + i * .1); txt(v.slice(0, Math.ceil(v.length * tk)), fx + 20, PY + 233, { size: 26, w: 500, col: WH }); });
+  const bx = PX + 1050, by = PY + 192, bw = 300, bh = 62, clique1 = span(t, .5, .62);
+  x.fillStyle = OR; rr(bx, by + clique1 * (1 - clique1) * 10, bw, bh, 12); x.fill();
+  txt('Buscar  →', bx + bw / 2, by + 41, { size: 26, w: 800, col: BK, al: 'center' });
+  // resultados
+  const ky = PY + 300; txt('ESTABELECIMENTO', PX + 50, ky + 10, { size: 15, w: 700, f: MONO, col: GR, sp: 2 }); txt('TELEFONE', PX + 560, ky + 10, { size: 15, w: 700, f: MONO, col: GR, sp: 2 });
+  txt('NOTA', PX + 870, ky + 10, { size: 15, w: 700, f: MONO, col: GR, sp: 2 }); txt('SITE', PX + 1010, ky + 10, { size: 15, w: 700, f: MONO, col: GR, sp: 2 });
+  LINHAS.forEach((L, i) => { const k = out(span(t, .62 + i * .09, .82 + i * .09)); if (!k) return; const ly = ky + 40 + i * 88;
+    x.globalAlpha = clamp(ent * 1.4) * k; x.fillStyle = i === 0 && t > 1.4 ? hexA(OR, .12) : '#202023'; rr(PX + 30, ly + (1 - k) * 30, PW - 60, 72, 12); x.fill();
+    txt(L[0], PX + 50, ly + 46 + (1 - k) * 30, { size: 26, w: 800, col: WH }); txt(L[1], PX + 560, ly + 46 + (1 - k) * 30, { size: 24, w: 500, f: MONO, col: WH });
+    txt(L[2], PX + 870, ly + 46 + (1 - k) * 30, { size: 24, w: 700, col: ESTRELA });
+    txt(L[3], PX + 1010, ly + 46 + (1 - k) * 30, { size: 22, w: 700, f: MONO, col: L[3] === 'sem site' ? OR : GR });
+    x.fillStyle = VERDE; rr(PX + 1170, ly + 16 + (1 - k) * 30, 170, 42, 10); x.fill(); txt('WhatsApp', PX + 1255, ly + 45 + (1 - k) * 30, { size: 20, w: 800, col: VERDE_T, al: 'center' });
+    x.globalAlpha = clamp(ent * 1.4); });
+  // contador
+  const n = Math.round(60 * out(span(t, .62, 1.3))); if (t > .62) { txt(String(n), PX + PW - 60, PY + 120, { size: 56, w: 900, col: OR, al: 'right' }); txt('ENCONTRADOS', PX + PW - 60, PY + 150, { size: 16, w: 700, f: MONO, col: GR, al: 'right', sp: 2 }); }
+  x.restore();
+  // cursor: vai ao botão Buscar (clica na 2ª batida) e depois ao WhatsApp da 1ª linha (clica na 4ª batida)
+  const p0 = [1500, 900], p1 = [bx + bw / 2 + 20, by + bh / 2 + 10], p2 = [PX + 1255 + 10, ky + 40 + 37 + 10];
+  let k1 = ease(span(t, .1, .48)), k2 = ease(span(t, 1.05, 1.45)), cxp = lerp(lerp(p0[0], p1[0], k1), p2[0], k2), cyp = lerp(lerp(p0[1], p1[1], k1), p2[1], k2);
+  const cs = W / 2 + (cxp - W / 2) * s, cys = H / 2 + (cyp - H / 2) * s;
+  [[.5, p1], [1.5, p2]].forEach(([tc]) => { const r = span(t, tc, tc + .35); if (r > 0 && r < 1) { x.strokeStyle = hexA(OR, 1 - r); x.lineWidth = 4; x.beginPath(); x.arc(cs, cys, 20 + r * 70, 0, 7); x.stroke(); } });
+  x.save(); x.translate(cs, cys); const aperta = (t > .5 && t < .6) || (t > 1.5 && t < 1.6) ? .85 : 1; x.scale(aperta * 1.6, aperta * 1.6);
+  x.fillStyle = WH; x.strokeStyle = BK; x.lineWidth = 1.5; x.beginPath(); x.moveTo(0, 0); x.lineTo(0, 26); x.lineTo(7, 20); x.lineTo(12, 31); x.lineTo(17, 29); x.lineTo(12, 18); x.lineTo(21, 18); x.closePath(); x.fill(); x.stroke(); x.restore();
+  hud(t + 10);
+});
+
+// 7) editor de código com cartões flutuando: a prospecção rodando por dentro
+const CODIGO = [['c', '// Branco | prospecção automática'], ['t', 'const leads = await buscar({'], ['t', '  nicho: "dentistas", cidade: "Miami",'],
+  ['t', '  filtro: "sem site"'], ['t', '});'], ['t', 'whatsapp.enviar(leads, "en");']];
+const CARTOES = [['Leads', 'Encontrados hoje', '1.248', 'alvo', -1, -1], ['WhatsApp', 'No idioma do país', 'Enviado', 'celular', 1, 1],
+  ['Países', 'BR · EUA · +8', '10', 'globo', -1, 1], ['Relatórios', 'Contatos / semana', '+312%', 'grafico', 1, -1]];
+function icone(tipo, X, Y) {
+  x.save(); x.strokeStyle = WH; x.lineWidth = 2.5; x.lineJoin = 'round';
+  if (tipo === 'janela') { x.strokeRect(X - 13, Y - 11, 26, 22); x.beginPath(); x.moveTo(X - 13, Y - 4); x.lineTo(X + 13, Y - 4); x.stroke(); }
+  else if (tipo === 'celular') { rr(X - 9, Y - 15, 18, 30, 4); x.stroke(); x.beginPath(); x.moveTo(X - 3, Y + 10); x.lineTo(X + 3, Y + 10); x.stroke(); }
+  else if (tipo === 'globo') { x.beginPath(); x.arc(X, Y, 13, 0, 7); x.stroke(); x.beginPath(); x.ellipse(X, Y, 5, 13, 0, 0, 7); x.stroke(); x.beginPath(); x.moveTo(X - 13, Y); x.lineTo(X + 13, Y); x.stroke(); }
+  else if (tipo === 'alvo') { x.beginPath(); x.arc(X, Y, 13, 0, 7); x.stroke(); x.beginPath(); x.arc(X, Y, 5, 0, 7); x.stroke(); }
+  else { x.beginPath(); x.moveTo(X - 13, Y + 12); x.lineTo(X - 4, Y); x.lineTo(X + 3, Y + 6); x.lineTo(X + 13, Y - 10); x.stroke(); }
+  x.restore();
+}
+CENAS.push(function (t) {
+  x.fillStyle = BK; x.fillRect(0, 0, W, H);
+  const g = x.createRadialGradient(W / 2, H * .45, 0, W / 2, H * .45, 900); g.addColorStop(0, QUENTE); g.addColorStop(1, BK); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const ent = out(span(t, 0, .5)), deriva = t * 10;
+  // editor inclinado (como no site): rotação leve + inclinação
+  x.save(); x.translate(W / 2, H / 2 + 30 + (1 - ent) * 80); x.rotate(-.05); x.transform(1, -.03, -.12, 1, 0, 0); x.scale(.92 + .08 * ent, .92 + .08 * ent);
+  x.globalAlpha = ent; const EW = 1000, EH = 540, EX = -EW / 2, EY = -EH / 2;
+  x.shadowColor = 'rgba(0,0,0,.7)'; x.shadowBlur = 80; x.fillStyle = '#121416'; rr(EX, EY, EW, EH, 22); x.fill(); x.shadowBlur = 0;
+  x.strokeStyle = '#26292c'; x.lineWidth = 2; rr(EX, EY, EW, EH, 22); x.stroke();
+  txt('branco / prospeccao.js', EX + 40, EY + 48, { size: 22, w: 500, f: MONO, col: GR });
+  ['prospeccao.js', 'leads.json', 'whatsapp.js'].forEach((n, i) => { const tx = EX + 40 + i * 230;
+    if (!i) { x.strokeStyle = hexA(OR, .6); x.fillStyle = hexA(OR, .1); rr(tx - 14, EY + 78, 216, 46, 10); x.fill(); x.stroke(); }
+    txt(n, tx, EY + 109, { size: 22, w: 500, f: MONO, col: i ? GR : OR }); });
+  // código sendo digitado (uma linha por meia batida)
+  let ultimo = null;
+  CODIGO.forEach(([tipo, linha], i) => {
+    const ly = EY + 190 + i * 58; txt(String(i + 1).padStart(2, '0'), EX + 40, ly, { size: 24, w: 500, f: MONO, col: hexA(WH, .25) });
+    const k = span(t, .15 + i * .2, .33 + i * .2); if (!k) return;
+    const vis = linha.slice(0, Math.ceil(linha.length * k)); txt(vis, EX + 110, ly, { size: 28, w: 500, f: MONO, col: tipo === 'c' ? GR : OR });
+    font(28, 500, MONO); ultimo = [EX + 110 + x.measureText(vis).width + 4, ly];
+  });
+  if (ultimo && Math.floor(t * 4) % 2 === 0) { x.fillStyle = OR; x.fillRect(ultimo[0], ultimo[1] - 26, 14, 32); }
+  x.restore();
+  // cartões flutuando nos cantos, entrando um por batida
+  CARTOES.forEach(([tit, sub, num, ic, sx, sy], i) => {
+    const k = outBack(span(t, .2 + i * .3, .55 + i * .3)); if (k <= 0) return;
+    const cw = 400, ch = 190, cx = W / 2 + sx * 700 - cw / 2 + Math.sin(t * 1.6 + i) * 8, cy = H / 2 + sy * 320 - ch / 2 + Math.cos(t * 1.3 + i) * 10 - deriva * sy * .3;
+    x.save(); x.translate(cx + cw / 2, cy + ch / 2); x.rotate(sx * sy * -.04); x.scale(k, k); x.translate(-cw / 2, -ch / 2); x.globalAlpha = clamp(k);
+    x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 40; x.fillStyle = '#17191c'; rr(0, 0, cw, ch, 20); x.fill(); x.shadowBlur = 0;
+    x.strokeStyle = '#2a2d31'; x.lineWidth = 2; rr(0, 0, cw, ch, 20); x.stroke();
+    x.fillStyle = '#22252a'; rr(24, 24, 52, 52, 12); x.fill(); icone(ic, 50, 50);
+    txt(tit, 92, 50, { size: 28, w: 800, col: WH === '#A9A9AF' ? '#F4F2EE' : WH }); txt(sub, 92, 76, { size: 18, w: 500, f: MONO, col: GR });
+    txt(num, 24, 146, { size: 52, w: 800, f: MONO, col: OR });
+    x.fillStyle = OR; x.beginPath(); x.arc(30, 170, 4, 0, 7); x.fill();
+    x.restore();
+  });
+  // frase na última batida
+  const kt = out(span(t, 1.45, 1.7));
+  if (kt) { x.fillStyle = hexA(BK, .75 * kt); x.fillRect(0, H / 2 - 120, W, 240);
+    txt('A BRANCO ACHA.', W / 2, H / 2 - 10, { size: 110, w: 900, col: '#F4F2EE', al: 'center', a: kt, sp: -3 });
+    txt('VOCÊ SÓ FECHA.', W / 2, H / 2 + 90, { size: 110, w: 900, col: OR, al: 'center', a: kt, sp: -3 }); }
+  hud(t);
+});
+
+// 8) faixas + halftone: a mensagem no idioma de cada país
+const IDI = [['OLÁ!', 'PORTUGUÊS'], ['HELLO!', 'ENGLISH'], ['¡HOLA!', 'ESPAÑOL'], ['ENVIE.', 'NO WHATSAPP']];
+CENAS.push(function (t) {
+  const b = Math.min(3, Math.floor(t / BEAT)), lt = t - b * BEAT;
+  x.fillStyle = b % 2 ? OR : BK; x.fillRect(0, 0, W, H);
+  halftone((px, py) => { const d = Math.hypot(px - W * .5, py - H * .5) / 900; return clamp(1 - d + .25 * Math.sin(t * 4 - d * 8)); }, b % 2 ? hexA(BK, .9) : hexA(OR, .85), 30, .3 + t * .05);
+  const k = outBack(lt / .3), [pal, sub] = IDI[b];
+  // tarja central
+  x.fillStyle = b % 2 ? BK : WH; x.save(); x.translate(W / 2, H / 2); x.rotate(-.04); x.fillRect(-W * .5 * k, -170, W * k, 340); x.restore();
+  txt(pal, W / 2, H / 2 + 80, { size: 230, w: 900, col: b % 2 ? OR : BK, al: 'center', sp: -8, a: clamp(k) });
+  txt(sub, W / 2, H / 2 + 140, { size: 30, w: 700, f: MONO, col: b % 2 ? WH : OR, al: 'center', sp: 8, a: clamp(k) });
+  txt('MENSAGEM PRONTA NO IDIOMA DE CADA PAÍS', W / 2, 190, { size: 30, w: 700, f: MONO, col: WH, al: 'center', sp: 6 });
+  hud(t + 12, WH, .55);
+});
+
+// 9) revelação do logo: só o logo, centralizado, aparecendo no tempo forte
+CENAS.push(function (t) {
+  x.fillStyle = BK; x.fillRect(0, 0, W, H);
+  if (!(logoImg.complete && logoImg.naturalWidth)) return;
+  logoOr = logoOr || tinge(OR);
+  const cx = W / 2, cy = H / 2;
+  const k = outBack(span(t, .05, .75)), ap = out(span(t, 0, .45));
+  const lh = 430 * (.82 + .18 * k), lw = lh * logoImg.naturalWidth / logoImg.naturalHeight;
+  // brilho suave por trás, que respira na batida
+  x.save(); x.globalCompositeOperation = 'lighter';
+  const g = x.createRadialGradient(cx, cy, 0, cx, cy, 520); g.addColorStop(0, hexA(OR, .16 * ap * (.7 + .3 * pulse(t)))); g.addColorStop(1, hexA(OR, 0));
+  x.fillStyle = g; x.fillRect(0, 0, W, H); x.restore();
+  // logo surgindo: sobe de leve, cresce e ganha nitidez
+  x.save(); x.globalAlpha = ap; x.filter = `blur(${((1 - ap) * 14).toFixed(1)}px)`;
+  x.drawImage(logoOr, cx - lw / 2, cy - lh / 2 + (1 - ap) * 40, lw, lh); x.restore();
+});
+
+/* ---------- transições nos cortes ---------- */
+function transicao(t) {
+  const corte = Math.round(t / BAR) * BAR, d = t - corte; if (corte <= 0 || corte >= DUR) return;
+  const tipo = (corte / BAR) % 2;   // alterna: faixas e halftone
+  if (d < 0 && d > -.25) {          // cobre a tela nos últimos 1/2 de batida
+    const k = ease((d + .25) / .25);
+    if (tipo) faixas(k, [OR, BK, WH], true); else halftone(() => k * 1.45, OR, 40, .5);
+  } else if (d >= 0 && d < .3) {    // descobre a nova cena
+    const k = ease(d / .3);
+    if (tipo) faixas(k, [OR, BK, WH], false); else halftone(() => (1 - k) * 1.45, OR, 40, .5);
+  }
+}
+
+function render(t) {
+  t = clamp(t, 0, DUR - 1e-4); TG = t;
+  const i = Math.min(CENAS.length - 1, Math.floor(t / BAR)), lt = t - i * BAR;
+  x.save(); CENAS[i](lt, lt / BAR); x.restore();
+  // tremida de câmera no tempo forte de cada compasso
+  transicao(t);
+  scan(.045); grao(t, .05); vinheta(.5);   // (a cena do logo não desenha o visor)
+  // flash curto em cada corte
+  const d = t - Math.round(t / BAR) * BAR; if (Math.abs(d) < .035 && t > .1 && t < DUR - .1) { x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(0, 0, W, H); }
+}
+window.render = render;
+
+// prévia no navegador: toca em tempo real (o render.mjs chama render(t) direto)
+if (!location.search.includes('render')) {
+  let t0 = null; const loop = now => { t0 = t0 ?? now; render(((now - t0) / 1000) % DUR); requestAnimationFrame(loop); };
+  const go = () => requestAnimationFrame(loop); (logoImg.complete ? go() : logoImg.onload = go);
+}
+</script>
+</body></html>
