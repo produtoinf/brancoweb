@@ -376,7 +376,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="hf" aria-hidden="true"><div class="hf__aco"></div><div class="hf__feixe"><i></i><b></b></div><div class="hf__lamp"></div><div class="hf__luz"></div><div class="hf__veu"></div></div>
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d tb--globo" aria-hidden="true"><div class="tb__vidro tb__globo"><canvas id="gl-terra"></canvas></div></div>
-      <div class="cel" aria-hidden="true"><div class="cel__corpo"><div class="cel__tela">
+      <div class="cel" aria-hidden="true"><div class="cel__mesa"><i></i></div><div class="cel__corpo"><div class="cel__tela">
         <div class="cel__ilha"></div>
         <div class="cel__st"><span>9:41</span><span>●●● ▮</span></div>
         <div class="cel__topo"><img src="img/logo-3d.webp" alt=""><b>Branco</b><i>● ao vivo</i></div>
@@ -2464,4 +2464,42 @@ html[data-theme=light] .tb--e .tb__vidro{background:linear-gradient(150deg,rgba(
 (function(){ var n=document.getElementById('cel-n'); if(!n||matchMedia('(prefers-reduced-motion:reduce)').matches) return;
   var v=0, alvo=48; (function sobe(){ v+=Math.max(1,(alvo-v)*.12); n.textContent=Math.min(alvo,Math.round(v)); if(v<alvo) setTimeout(sobe,40); })(); })();
 </script>
+<style id="tb-card2-css">
+/* tablet: card escuro novo + efeitos (luz que segue o mouse, reflexo, borda acesa, cursor brilhando) */
+.tb--e .tb__vidro{box-shadow:0 0 0 1px rgba(255,255,255,.05),0 40px 70px -30px rgba(0,0,0,.9),0 0 50px -20px rgba(170,195,255,.25)!important;transition:box-shadow .4s}
+.tb--e .tb__vidro::before{content:"";position:absolute;inset:0;border-radius:22px;pointer-events:none;
+  background:radial-gradient(260px circle at var(--lx,30%) var(--ly,20%),rgba(200,215,255,.14),transparent 60%);transition:background .2s}
+.tb--e .tb__vidro::after{background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.09) 45%,transparent 58%)!important;background-size:260% 100%!important}
+.tb--e .tb__code{position:relative;color:#e4e8f2}
+.tb--e .tb__code .cur{box-shadow:0 0 10px rgba(255,255,255,.8)}
+.tb--e .tb__top span{color:#aab3c6}
+.tb--e:hover .tb__vidro{box-shadow:0 0 0 1px rgba(255,255,255,.12),0 40px 70px -30px rgba(0,0,0,.9),0 0 70px -16px rgba(170,195,255,.4)!important}
+.tb--e{pointer-events:auto}
+</style>
+<script id="tb-card2-js">
+(function(){ var t=document.querySelector('.tb--e'); if(!t||!matchMedia('(hover:hover)').matches) return; var v=t.querySelector('.tb__vidro');
+  t.addEventListener('pointermove',function(e){var r=v.getBoundingClientRect();v.style.setProperty('--lx',((e.clientX-r.left)/r.width*100).toFixed(1)+'%');v.style.setProperty('--ly',((e.clientY-r.top)/r.height*100).toFixed(1)+'%');});
+  t.addEventListener('pointerleave',function(){v.style.setProperty('--lx','30%');v.style.setProperty('--ly','20%');}); })();
+</script>
+<style id="cel-mesa-css">
+/* mesa no canto da capa: o celular fica apoiado nela */
+.cel{width:300px;right:-40px;bottom:-110px}
+.cel__mesa{position:absolute;left:-150px;top:-10px;width:820px;height:700px;border-radius:70px;
+  transform:rotateX(48deg) rotateZ(-28deg) rotateY(8deg);transform-origin:40% 50%;
+  background:radial-gradient(60% 50% at 35% 30%,#24262c,#141519 60%,#0d0e11);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.14),inset 0 0 0 1px rgba(255,255,255,.06),0 26px 0 -2px #0a0b0d,0 27px 0 -1px rgba(255,255,255,.05),0 60px 90px -20px rgba(0,0,0,.9)}
+/* cruzinhas na superfície + linha curva de luz, como na referência */
+.cel__mesa i{position:absolute;inset:0;border-radius:inherit;opacity:.6;
+  background:
+   radial-gradient(circle at 70% 18%,rgba(255,255,255,.9) 0 3px,transparent 4px),
+   radial-gradient(ellipse 55% 45% at 72% 20%,transparent 98%,rgba(255,255,255,.18) 99%,transparent 100%),
+   linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px) 0 0/48px 48px,
+   linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px) 0 0/48px 48px;
+  -webkit-mask-image:radial-gradient(70% 70% at 60% 40%,#000,transparent 80%);mask-image:radial-gradient(70% 70% at 60% 40%,#000,transparent 80%)}
+.cel__corpo{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.18),inset 0 0 0 4px #0b0b0d,18px 30px 30px -6px rgba(0,0,0,.75)}
+@keyframes celFlut{0%,100%{translate:0 0}50%{translate:0 -4px}}
+@media (max-width:1100px){.cel{width:230px;right:-60px;bottom:-130px}.cel__mesa{width:700px;height:600px;left:-200px;top:-90px}}
+html[data-theme=light] .cel__mesa{background:radial-gradient(60% 50% at 35% 30%,#ffffff,#eef0f3 60%,#e4e6ea);box-shadow:inset 0 2px 0 #fff,0 26px 0 -2px #cfd2d8,0 60px 90px -20px rgba(0,0,0,.25)}
+html[data-theme=light] .cel__mesa i{filter:invert(1)}
+</style>
 </body></html>
