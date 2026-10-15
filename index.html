@@ -1757,6 +1757,20 @@ html[data-theme=light] .fio circle.on,html[data-theme=light] .fio .fio__cab{fill
 html[data-theme=light] .tbl .b{stroke:rgba(0,0,0,.18)}
 html[data-theme=light] .tbl .p{stroke:#111;filter:none}html[data-theme=light] .tbl circle{fill:#111;filter:none}
 @media (max-width:1100px){.tbl{display:none}}
+/* ===== celular: tablets pequenos ao lado do logo, linhas ligando e linha descendo ===== */
+@media (max-width:900px){
+  .hero.hg .tb{display:block;width:clamp(78px,23vw,120px);top:calc(var(--logo-y,150px) - 40px)}
+  .hero.hg .tb--e{left:8px}.hero.hg .tb--d{right:8px}
+  .hero.hg .tb__vidro{padding:6px 7px;border-radius:10px}
+  .hero.hg .tb__top{padding-bottom:5px;gap:3px}.hero.hg .tb__top i{width:5px;height:5px}.hero.hg .tb__top span{display:none}
+  .hero.hg .tb__code{height:62px;margin-top:5px;font-size:5px;line-height:1.55}
+  .hero.hg .tb__pe{display:none}
+  .hero.hg .tbl{display:block}
+  .hero.hg .hl__logo{width:150px}
+  .hero.hg .hl__linha{display:block;top:auto;bottom:auto;height:34px;margin-top:-6px;position:relative;left:auto;justify-self:center;grid-column:1/-1}
+  .hero.hg .hl__lado--e{padding-top:8px}
+}
+
 @media (prefers-reduced-motion:reduce){.tbl .p{animation:none;opacity:0}}
 </style>
 <script id="hv-js">
@@ -1865,6 +1879,7 @@ html[data-theme=light] .tbl .p{stroke:#111;filter:none}html[data-theme=light] .t
   var NS='http://www.w3.org/2000/svg', svg=document.createElementNS(NS,'svg'); svg.setAttribute('class','tbl'); svg.setAttribute('aria-hidden','true');
   hero.insertBefore(svg,hero.querySelector('.hl'));
   function monta(){
+    var lr=logo.getBoundingClientRect(), hr=hero.getBoundingClientRect(); hero.style.setProperty('--logo-y',Math.round(lr.top-hr.top+lr.height*.45)+'px');
     if(getComputedStyle(tbs[0].parentNode).display==='none'){svg.innerHTML='';return;}
     var h=hero.getBoundingClientRect(), l=logo.getBoundingClientRect(), html='';
     svg.setAttribute('viewBox','0 0 '+h.width+' '+h.height);
