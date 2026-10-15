@@ -24,3 +24,6 @@ MOTION DO SAAS (video/branco-saas-16s.mp4) — 16 s, 1920x1080, 60 fps, trilha a
     python3 musica.py
     ffmpeg -y -i saas_mudo.mp4 -i saas.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 256k -shortest -movflags +faststart ../branco-saas-16s.mp4
   Prévia de quadros soltos: node previa.mjs <pasta> 1.0 5.2 9.1 ...
+  Versão preto e branco (video/branco-saas-16s-pb.mp4): use "saas.html?pb" no render e PB=1 na prévia
+    FPS=60 node render.mjs "saas.html?pb" 1920 1080 saas_pb
+    ffmpeg -y -i saas_pb_mudo.mp4 -i saas.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 256k -shortest -movflags +faststart ../branco-saas-16s-pb.mp4

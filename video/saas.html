@@ -13,7 +13,11 @@ canvas{display:block;width:1920px;height:1080px}
    120 BPM: 1 batida = 0,5 s, 1 compasso = 2 s. Cada cena dura 1 compasso e todo corte cai no tempo forte.
    render(t) desenha o quadro do instante t (em segundos): é o que o render.mjs grava a 60 fps. */
 const W = 1920, H = 1080, DUR = 16, BEAT = .5, BAR = 2;
-const OR = '#FF4924', BK = '#0A0A0A', WH = '#F4F2EE', GR = '#8A8A90';
+// ?pb = versão preto e branco: o destaque vira branco e o branco vira cinza claro
+const PB = location.search.includes('pb');
+const OR = PB ? '#FFFFFF' : '#FF4924', BK = '#0A0A0A', WH = PB ? '#A9A9AF' : '#F4F2EE', GR = PB ? '#6E6E74' : '#8A8A90';
+const QUENTE = PB ? '#161616' : '#1a0e0b';                         // fundo das cenas com brilho
+const VERDE = PB ? '#FFFFFF' : '#25D366', VERDE_T = PB ? BK : '#06210f', ESTRELA = PB ? '#FFFFFF' : '#e5b84e';
 const c = document.getElementById('c'), x = c.getContext('2d');
 const DISP = '"Archivo", "Helvetica Neue", Arial, sans-serif', MONO = '"JetBrains Mono", Menlo, monospace';
 window.DUR = DUR; window.SFX = [];
@@ -91,6 +95,31 @@ function faixas(k, cores, cobre = true, n = 7) {
   x.restore();
 }
 
+/* gráfico subindo: barras crescendo em sequência, linha de tendência e contador */
+function grafico(X, Y, w, h, k, t, { barras = 9, alfa = 1, rotulo = true, cont = 312 } = {}) {
+  x.save(); x.globalAlpha = alfa;
+  const bw = w / barras * .62, passo = w / barras;
+  x.strokeStyle = hexA(WH, .25); x.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) { x.beginPath(); x.moveTo(X, Y + h - h * i / 4); x.lineTo(X + w, Y + h - h * i / 4); x.stroke(); }
+  const pts = [];
+  for (let i = 0; i < barras; i++) {
+    const alvo = .16 + .8 * Math.pow((i + 1) / barras, 1.6) + .05 * Math.sin(i * 2.1);
+    const kb = outBack(clamp(k * 1.7 - i * .7 / barras)), bh = h * alvo * kb;
+    const bx = X + i * passo + (passo - bw) / 2;
+    x.fillStyle = i === barras - 1 ? OR : hexA(WH, .28 + .5 * i / barras); x.fillRect(bx, Y + h - bh, bw, bh);
+    pts.push([bx + bw / 2, Y + h - bh - 18]);
+  }
+  // linha subindo por cima das barras
+  const nl = Math.max(2, Math.ceil(pts.length * clamp(k * 1.25)));
+  x.strokeStyle = OR; x.lineWidth = 4; x.lineJoin = 'round'; x.beginPath(); pts.slice(0, nl).forEach((p, i) => i ? x.lineTo(p[0], p[1]) : x.moveTo(p[0], p[1])); x.stroke();
+  const ult = pts[nl - 1]; x.fillStyle = OR; x.beginPath(); x.arc(ult[0], ult[1], 8 + 5 * pulse(t), 0, 7); x.fill();
+  // seta para cima
+  x.save(); x.translate(ult[0], ult[1] - 34); x.fillStyle = OR; x.beginPath(); x.moveTo(0, -18); x.lineTo(14, 4); x.lineTo(-14, 4); x.closePath(); x.globalAlpha = alfa * clamp(k * 2 - 1); x.fill(); x.restore();
+  if (rotulo) { txt('+' + Math.round(cont * out(k)) + '%', X, Y - 24, { size: 64, w: 900, col: OR, a: alfa });
+    txt('CONTATOS POR SEMANA', X, Y + h + 40, { size: 18, w: 700, f: MONO, col: GR, sp: 3, a: alfa }); }
+  x.restore();
+}
+
 /* ---------- formas para a grade (64 pontos cada, para poder interpolar) ---------- */
 const NP = 64;
 function forma(tipo) {
@@ -157,17 +186,15 @@ CENAS.push(function (t, u) {
   const L = ['> SISTEMA BRANCO ONLINE', '> MÓDULO: PROSPECÇÃO', '> FONTES: GOOGLE MAPS · SERPER', '> ALVOS: 1.284 EMPRESAS', '> PRONTO.'];
   L.forEach((s, i) => { const k = span(t, .15 + i * .22, .4 + i * .22); if (!k) return;
     txt(s.slice(0, Math.ceil(s.length * k)), 120, 300 + i * 46, { size: 26, w: 500, f: MONO, col: i === 4 ? OR : WH, a: .9 }); });
-  // barras de dados à direita
-  for (let i = 0; i < 6; i++) { const v = .3 + .7 * Math.abs(Math.sin(t * 2.3 + i * 1.7)), k = out(span(t, .3 + i * .08, .8 + i * .08));
-    x.fillStyle = hexA(WH, .12); x.fillRect(1500, 300 + i * 46, 300, 14); x.fillStyle = i === 2 ? OR : WH; x.fillRect(1500, 300 + i * 46, 300 * v * k, 14); }
-  txt('SCAN', 1500, 280, { size: 20, w: 700, f: MONO, col: GR, sp: 4 });
+  // gráfico subindo à direita
+  grafico(1430, 330, 380, 380, span(t, .2, 1.6), t);
   // flash no fim do compasso (entra o corte)
   const fl = span(t, 1.75, 2); if (fl) { x.fillStyle = hexA(WH, fl * fl); x.fillRect(0, 0, W, H); }
   hud(t + 0);
 });
 
 // 2) tipografia em movimento: uma palavra por batida, cada uma com outra cor
-const PAL = [['ENCONTRE', BK, OR], ['CLIENTES', OR, BK], ['EM QUALQUER', BK, WH], ['CIDADE.', WH, OR]];
+const PAL = [['ENCONTRE', BK, OR], ['CLIENTES', OR, BK], ['EM QUALQUER', BK, WH], PB ? ['CIDADE.', OR, BK] : ['CIDADE.', WH, OR]];
 CENAS.push(function (t) {
   const b = Math.min(3, Math.floor(t / BEAT)), lt = t - b * BEAT, [p, fundo, tinta] = PAL[b];
   x.fillStyle = fundo; x.fillRect(0, 0, W, H);
@@ -220,7 +247,7 @@ CENAS.push(function (t) {
 
 // 4) esfera de partículas
 CENAS.push(function (t) {
-  const g = x.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, H * .8); g.addColorStop(0, '#1a0e0b'); g.addColorStop(1, BK); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const g = x.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, H * .8); g.addColorStop(0, QUENTE); g.addColorStop(1, BK); x.fillStyle = g; x.fillRect(0, 0, W, H);
   const junta = out(span(t, 0, .9)), R = 360 * (1 + .04 * pulse(t)), ry = t * .9 + .4, rx = .35;
   const cy_ = Math.cos(ry), sy_ = Math.sin(ry), cx_ = Math.cos(rx), sx_ = Math.sin(rx), cx0 = W * .62, cy0 = H / 2;
   const pts = [];
@@ -233,7 +260,7 @@ CENAS.push(function (t) {
   x.save(); x.globalCompositeOperation = 'lighter';
   for (const [px, py, z, q] of pts) {
     const prof = clamp((1 - z) / 2), s = .8 + prof * 2.6;   // partículas ainda espalhadas podem sair de [-1,1]
-    if (q) { x.fillStyle = hexA(OR, .25 + prof * .6); x.beginPath(); x.arc(px, py, s * 3.2, 0, 7); x.fill(); x.fillStyle = hexA('#ffd2c6', .8 * prof); x.beginPath(); x.arc(px, py, s, 0, 7); x.fill(); }
+    if (q) { x.fillStyle = hexA(OR, .25 + prof * .6); x.beginPath(); x.arc(px, py, s * 3.2, 0, 7); x.fill(); x.fillStyle = hexA(PB ? '#ffffff' : '#ffd2c6', .8 * prof); x.beginPath(); x.arc(px, py, s, 0, 7); x.fill(); }
     else { x.fillStyle = hexA(WH, .12 + prof * .55); x.fillRect(px - s / 2, py - s / 2, s, s); }
   }
   x.restore();
@@ -256,7 +283,9 @@ function globulo(px, py, r, cor, brilho = 1) {
   const halo = x.createRadialGradient(px, py, r * .4, px, py, r * 2.4); halo.addColorStop(0, hexA(cor, .35 * brilho)); halo.addColorStop(1, hexA(cor, 0));
   x.fillStyle = halo; x.beginPath(); x.arc(px, py, r * 2.4, 0, 7); x.fill(); x.restore();
   const g = x.createRadialGradient(px - r * .35, py - r * .4, r * .05, px, py, r);
-  if (cor === OR) { g.addColorStop(0, '#ffd9cf'); g.addColorStop(.25, '#ff7a5c'); g.addColorStop(.75, OR); g.addColorStop(1, '#7a1a08'); }
+  if (cor === OR && PB) { g.addColorStop(0, '#ffffff'); g.addColorStop(.3, '#f2f2f2'); g.addColorStop(.8, '#bdbdc2'); g.addColorStop(1, '#3a3a3e'); }
+  else if (cor === OR) { g.addColorStop(0, '#ffd9cf'); g.addColorStop(.25, '#ff7a5c'); g.addColorStop(.75, OR); g.addColorStop(1, '#7a1a08'); }
+  else if (PB) { g.addColorStop(0, '#d9d9dc'); g.addColorStop(.35, '#7c7c82'); g.addColorStop(.85, '#2c2c30'); g.addColorStop(1, '#101012'); }
   else { g.addColorStop(0, '#ffffff'); g.addColorStop(.3, '#e6e4e0'); g.addColorStop(.8, '#8a8a90'); g.addColorStop(1, '#2a2a2e'); }
   x.fillStyle = g; x.beginPath(); x.arc(px, py, r, 0, 7); x.fill();
   // luz de borda
@@ -264,7 +293,7 @@ function globulo(px, py, r, cor, brilho = 1) {
 }
 CENAS.push(function (t) {
   x.fillStyle = BK; x.fillRect(0, 0, W, H);
-  halftone((px, py) => .5 * Math.exp(-Math.pow(Math.hypot(px - W / 2, py - H / 2) / 700, 2)) * (.6 + .4 * Math.sin(t * 2 + px * .004)), hexA(OR, .14), 26);
+  grafico(180, 470, W - 360, 520, span(t, 0, 1.4), t, { barras: 14, alfa: .32, rotulo: false });   // gráfico subindo ao fundo
   const lista = GLOB.map((gb, i) => {
     const a = i / GLOB.length * Math.PI * 2 + t * .8, ap = outBack(span(t, i * .09, i * .09 + .5));
     const z = Math.sin(a), px = W / 2 + Math.cos(a) * 600, py = H / 2 + 130 + z * 120 + Math.sin(t * 2.5 + i) * 22;
@@ -313,9 +342,9 @@ CENAS.push(function (t) {
   LINHAS.forEach((L, i) => { const k = out(span(t, .62 + i * .09, .82 + i * .09)); if (!k) return; const ly = ky + 40 + i * 88;
     x.globalAlpha = clamp(ent * 1.4) * k; x.fillStyle = i === 0 && t > 1.4 ? hexA(OR, .12) : '#202023'; rr(PX + 30, ly + (1 - k) * 30, PW - 60, 72, 12); x.fill();
     txt(L[0], PX + 50, ly + 46 + (1 - k) * 30, { size: 26, w: 800, col: WH }); txt(L[1], PX + 560, ly + 46 + (1 - k) * 30, { size: 24, w: 500, f: MONO, col: WH });
-    txt(L[2], PX + 870, ly + 46 + (1 - k) * 30, { size: 24, w: 700, col: '#e5b84e' });
+    txt(L[2], PX + 870, ly + 46 + (1 - k) * 30, { size: 24, w: 700, col: ESTRELA });
     txt(L[3], PX + 1010, ly + 46 + (1 - k) * 30, { size: 22, w: 700, f: MONO, col: L[3] === 'sem site' ? OR : GR });
-    x.fillStyle = '#25D366'; rr(PX + 1170, ly + 16 + (1 - k) * 30, 170, 42, 10); x.fill(); txt('WhatsApp', PX + 1255, ly + 45 + (1 - k) * 30, { size: 20, w: 800, col: '#06210f', al: 'center' });
+    x.fillStyle = VERDE; rr(PX + 1170, ly + 16 + (1 - k) * 30, 170, 42, 10); x.fill(); txt('WhatsApp', PX + 1255, ly + 45 + (1 - k) * 30, { size: 20, w: 800, col: VERDE_T, al: 'center' });
     x.globalAlpha = clamp(ent * 1.4); });
   // contador
   const n = Math.round(60 * out(span(t, .62, 1.3))); if (t > .62) { txt(String(n), PX + PW - 60, PY + 120, { size: 56, w: 900, col: OR, al: 'right' }); txt('ENCONTRADOS', PX + PW - 60, PY + 150, { size: 16, w: 700, f: MONO, col: GR, al: 'right', sp: 2 }); }
@@ -345,29 +374,21 @@ CENAS.push(function (t) {
   hud(t + 12, WH, .55);
 });
 
-// 8) revelação do logo
+// 8) revelação do logo: só o logo, centralizado, aparecendo no tempo forte
 CENAS.push(function (t) {
   x.fillStyle = BK; x.fillRect(0, 0, W, H);
-  const cx = W / 2, cy = H / 2 - 70;
-  // halftone fechando num círculo e abrindo o logo
-  const ab = out(span(t, 0, .6));
-  halftone((px, py) => { const d = Math.hypot(px - cx, py - cy); const r = lerp(1300, 260, ab); return clamp((d - r) / -140) * (1 - span(t, .5, .9)) + clamp(1 - Math.abs(d - r) / 60) * .9; }, OR, 24);
-  // anel
-  const ring = out(span(t, .35, .9)); x.strokeStyle = OR; x.lineWidth = 4; x.beginPath(); x.arc(cx, cy, 250, -Math.PI / 2, -Math.PI / 2 + ring * Math.PI * 2); x.stroke();
-  // logo (o PNG) entrando com rebote, colorido
-  if (logoImg.complete && logoImg.naturalWidth) {
-    logoOr = logoOr || tinge(OR); logoWh = logoWh || tinge(WH);
-    const k = outBack(span(t, .45, .95)), lh = 300 * k, lw = lh * logoImg.naturalWidth / logoImg.naturalHeight;
-    if (lh > 1) { x.save(); x.globalCompositeOperation = 'lighter'; x.globalAlpha = .55 * pulse(t); x.drawImage(logoOr, cx - lw * .55, cy - lh * .55, lw * 1.1, lh * 1.1); x.restore();
-      x.drawImage(t > 1.5 && t < 1.53 ? logoWh : logoOr, cx - lw / 2, cy - lh / 2, lw, lh); }
-  }
-  // nome letra por letra na batida
-  const nome = 'BRANCO'; font(150, 900); x.letterSpacing = '30px'; const wn = x.measureText(nome).width; let px = cx - wn / 2 + 15;
-  [...nome].forEach((ch, i) => { const k = out(span(t, 1 + i * .06, 1.25 + i * .06)); const cw = x.measureText(ch).width;
-    x.globalAlpha = k; x.fillStyle = WH; x.textAlign = 'left'; x.fillText(ch, px, cy + 380 + (1 - k) * 40); px += cw + 30; });
-  x.globalAlpha = 1; x.letterSpacing = '0px';
-  txt('PROSPECÇÃO INTELIGENTE · TESTE GRÁTIS POR 7 DIAS', cx, cy + 450, { size: 26, w: 700, f: MONO, col: OR, al: 'center', sp: 6, a: out(span(t, 1.45, 1.75)) });
-  hud(t + 14, WH, .4 * (1 - span(t, 1.6, 2)));
+  if (!(logoImg.complete && logoImg.naturalWidth)) return;
+  logoOr = logoOr || tinge(OR);
+  const cx = W / 2, cy = H / 2;
+  const k = outBack(span(t, .05, .75)), ap = out(span(t, 0, .45));
+  const lh = 430 * (.82 + .18 * k), lw = lh * logoImg.naturalWidth / logoImg.naturalHeight;
+  // brilho suave por trás, que respira na batida
+  x.save(); x.globalCompositeOperation = 'lighter';
+  const g = x.createRadialGradient(cx, cy, 0, cx, cy, 520); g.addColorStop(0, hexA(OR, .16 * ap * (.7 + .3 * pulse(t)))); g.addColorStop(1, hexA(OR, 0));
+  x.fillStyle = g; x.fillRect(0, 0, W, H); x.restore();
+  // logo surgindo: sobe de leve, cresce e ganha nitidez
+  x.save(); x.globalAlpha = ap; x.filter = `blur(${((1 - ap) * 14).toFixed(1)}px)`;
+  x.drawImage(logoOr, cx - lw / 2, cy - lh / 2 + (1 - ap) * 40, lw, lh); x.restore();
 });
 
 /* ---------- transições nos cortes ---------- */
@@ -389,7 +410,7 @@ function render(t) {
   x.save(); CENAS[i](lt, lt / BAR); x.restore();
   // tremida de câmera no tempo forte de cada compasso
   transicao(t);
-  scan(.045); grao(t, .05); vinheta(.5);
+  scan(.045); grao(t, .05); vinheta(.5);   // (a cena do logo não desenha o visor)
   // flash curto em cada corte
   const d = t - Math.round(t / BAR) * BAR; if (Math.abs(d) < .035 && t > .1 && t < DUR - .1) { x.fillStyle = 'rgba(255,255,255,.35)'; x.fillRect(0, 0, W, H); }
 }
