@@ -1649,7 +1649,7 @@ html[data-theme=light] .hg__btn--claro{background:#0e0e10;color:#fff;border-colo
 .hero.hg{background:radial-gradient(50% 40% at 50% 18%,rgba(255,255,255,.06),transparent 70%),var(--bg);padding-top:clamp(96px,12vh,130px)}
 .hl{position:relative;display:grid;grid-template-columns:1fr 1fr;column-gap:clamp(56px,9vw,140px);max-width:1180px;margin:0 auto}
 .hl__logo{grid-column:1/-1;justify-self:center;width:clamp(220px,26vw,340px);position:relative;z-index:2;animation:hlFlut 6s ease-in-out infinite}
-.hl__logo img{display:block;width:100%;height:auto;filter:drop-shadow(0 30px 40px rgba(0,0,0,.6))}
+.hl__logo img{display:block;width:100%;height:auto;filter:contrast(.82) brightness(.9) drop-shadow(0 30px 40px rgba(0,0,0,.6))}
 @keyframes hlFlut{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 /* a linha: trilho apagado + fio aceso que cresce com o scroll + pulso de luz descendo */
 .hl__linha{position:absolute;left:50%;top:clamp(200px,24vw,310px);bottom:-1px;width:2px;margin-left:-1px;background:linear-gradient(var(--line),var(--line));z-index:1;pointer-events:none}
@@ -1720,7 +1720,7 @@ html[data-theme=light] .ln__linha i{background:linear-gradient(#111,#444 85%,tra
       var rx,ry,esc='';
       if(sobre){
         var r=logo.getBoundingClientRect(), px=(e.clientX-r.left)/r.width-.5, py=(e.clientY-r.top)/r.height-.5;
-        rx=px*26; ry=-py*20; esc=' translateY(-8px) scale(1.06)';
+        rx=px*10; ry=-py*8; esc=' translateY(-3px) scale(1.02)';
         logo.style.setProperty('--gx',Math.round((px+.5)*100)+'%');
         logo.style.setProperty('--gy',Math.round((py+.5)*100)+'%');
       } else { var x=e.clientX/innerWidth-.5, y=e.clientY/innerHeight-.5; rx=x*14; ry=-y*10; }
@@ -1941,56 +1941,40 @@ html[data-theme=light] .tbl .p{stroke:#111;filter:none}html[data-theme=light] .t
 html[data-theme=light] .hf__veu{background:radial-gradient(46% 40% at 50% 34%,rgba(245,245,245,.6),transparent 75%),linear-gradient(transparent 78%,var(--bg))}
 </style>
 <script id="hf-mar-js">
-/* mar 3D: malha de linhas com ondas lentas, uma onda de luz saindo do centro e leve inclinação com o mouse */
+/* fundo da capa: pedaços de código voando em 3D (vêm do fundo em direção à tela), leve parallax com o mouse */
 (function(){
   var cv=document.getElementById('hf-mar'), hero=document.getElementById('inicio'); if(!cv||!hero) return;
-  var cx=cv.getContext('2d'), W=0,H=0,dpr=1, COLS=0, ROWS=34, vis=true, t0=performance.now();
-  var red=matchMedia('(prefers-reduced-motion:reduce)').matches, mx=0,my=0, tx=0,ty=0;
-  var brilho=0, brilhoAlvo=0; window.__marBrilho=function(v){ brilhoAlvo=v?1:0; };
+  var cx=cv.getContext('2d'), W=0,H=0,dpr=1, vis=true, red=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  var TOK=['<div>','</>','{ }','=>','const','let','return','flex','grid','#fff','async','await','import','export','<a href>','.css','.js','<h1>','</section>','npm run','git push','()','[ ]','::','0101','if','else','map()','fetch()','px','rem','100vh','@media','z-index','opacity','transform','<p>','</div>','function','true','null','===','&&','||','/* */','//','${}','`html`','0x1F','deploy','api','json'];
+  var P=[], N=0, mx=0,my=0, tx=0,ty=0, vel=1, velAlvo=1;
+  window.__marBrilho=function(v){ velAlvo=v?1.8:1; };
+  function claro(){return document.documentElement.getAttribute('data-theme')==='light';}
+  function novo(p,longe){ p.x=(Math.random()-.5)*2.4; p.y=(Math.random()-.5)*1.6; p.z=longe?Math.random()*1+.15:1; p.t=TOK[(Math.random()*TOK.length)|0]; p.v=.0009+Math.random()*.0012; p.mono=Math.random()<.75; return p; }
   function tam(){
     dpr=Math.min(devicePixelRatio||1,1.5); W=hero.clientWidth; H=hero.clientHeight;
     cv.width=W*dpr; cv.height=H*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
-    COLS=W<700?34:60;
+    N=W<700?32:90; while(P.length<N) P.push(novo({},true)); P.length=N;
   }
-  function claro(){return document.documentElement.getAttribute('data-theme')==='light';}
-  function altura(x,z,t){
-    // ondas lentas cruzadas + onda de luz (anel) saindo do centro a cada 7s
-    var y=Math.sin(x*1.6+t*.55)*Math.cos(z*1.1+t*.4)*.16+Math.sin(x*.7-z*.9+t*.3)*.12;
-    var d=Math.sqrt(x*x+(z-1.2)*(z-1.2)), r=(t%7)/7*5.5, anel=Math.exp(-Math.pow((d-r)*3,2))*(1-r/5.5);
-    var perto=Math.exp(-d*.9)*brilho; // em volta do logo o mar sobe e acende quando o cursor está nele
-    return {y:y+anel*.22+perto*.18*Math.sin(t*2.2-d*3), luz:Math.min(1,anel+perto*.8)};
-  }
-  function quadro(agora){
-    var t=(agora-t0)/1000; if(red) t=8;
-    tx+=(mx-tx)*.04; ty+=(my-ty)*.04; brilho+=(brilhoAlvo-brilho)*.06;
+  function quadro(){
+    tx+=(mx-tx)*.05; ty+=(my-ty)*.05; vel+=(velAlvo-vel)*.05;
     cx.clearRect(0,0,W,H);
-    var hz=H*(W<700?.50:.46)+ty*18, f=W*.62, camY=.95, cor=claro()?'0,0,0':'255,255,255';
-    var x0=-3.2, x1=3.2, z0=.55, z1=7.5;
-    function proj(x,z,y){ var xr=x+tx*.35; return [W/2+xr*f/z, hz+(camY-y)*f/z*.55]; }
-    // linhas ao longo de x (fileiras), das de trás para as da frente
-    for(var r=ROWS-1;r>=0;r--){
-      var z=z0+(z1-z0)*Math.pow(r/(ROWS-1),1.35), fade=1-r/(ROWS-1);
-      cx.beginPath(); var luzMax=0;
-      for(var c=0;c<=COLS;c++){
-        var x=x0+(x1-x0)*c/COLS, h=altura(x,z,t), p=proj(x,z,h.y);
-        if(h.luz>luzMax) luzMax=h.luz;
-        c?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);
-      }
-      cx.strokeStyle='rgba('+cor+','+(.06+fade*.13+luzMax*.45).toFixed(3)+')';
-      cx.lineWidth=.6+fade*.4; cx.stroke();
-    }
-    // linhas ao longo de z (colunas), bem discretas
-    for(var c2=0;c2<=COLS;c2+=2){
-      var xx=x0+(x1-x0)*c2/COLS; cx.beginPath();
-      for(var r2=0;r2<ROWS;r2++){
-        var zz=z0+(z1-z0)*Math.pow(r2/(ROWS-1),1.35), h2=altura(xx,zz,t), p2=proj(xx,zz,h2.y);
-        r2?cx.lineTo(p2[0],p2[1]):cx.moveTo(p2[0],p2[1]);
-      }
-      cx.strokeStyle='rgba('+cor+',.045)'; cx.lineWidth=.6; cx.stroke();
+    var cor=claro()?'0,0,0':'255,255,255', f=Math.min(W,H)*.55, ox=W/2-tx*40, oy=H*.42-ty*24;
+    cx.textAlign='center'; cx.textBaseline='middle';
+    for(var i=0;i<P.length;i++){
+      var p=P[i];
+      if(!red){ p.z-=p.v*vel; if(p.z<.06) novo(p,false); }
+      var sx=ox+p.x/p.z*f*.5, sy=oy+p.y/p.z*f*.5;
+      if(sx<-80||sx>W+80||sy<-40||sy>H+40){ if(!red) novo(p,false); continue; }
+      var perto=1-p.z, tamF=Math.max(8,Math.min(24,10/p.z*.8));
+      var a=Math.min(.3,perto*perto*.42)*(p.z<.18?p.z/.18:1); // some suavemente ao chegar muito perto
+      if(a<.01) continue;
+      cx.font=(p.mono?'500 ':'600 ')+tamF.toFixed(1)+'px "JetBrains Mono",monospace';
+      cx.fillStyle='rgba('+cor+','+a.toFixed(3)+')';
+      cx.fillText(p.t,sx,sy);
     }
     if(!red&&vis) requestAnimationFrame(quadro);
   }
-  tam(); addEventListener('resize',function(){tam(); if(red) quadro(performance.now());});
+  tam(); addEventListener('resize',function(){tam(); if(red) quadro();});
   if(matchMedia('(hover:hover)').matches) hero.addEventListener('mousemove',function(e){mx=e.clientX/innerWidth-.5; my=e.clientY/innerHeight-.5;});
   if('IntersectionObserver' in window) new IntersectionObserver(function(es){var v=es[0].isIntersecting; if(v&&!vis){vis=true;requestAnimationFrame(quadro);} vis=v;}).observe(hero);
   requestAnimationFrame(quadro);
@@ -2178,18 +2162,17 @@ html[data-theme=light] .px__campo input::placeholder{color:#9a9aa2}
 /* reflexo que corre pelo logo seguindo o cursor (recortado no formato do logo) */
 .hl__brilho{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;
   -webkit-mask:url(img/logo-card.webp) center/100% 100% no-repeat;mask:url(img/logo-card.webp) center/100% 100% no-repeat;
-  background:radial-gradient(40% 30% at var(--gx,50%) var(--gy,40%),rgba(255,255,255,.55),transparent 70%),linear-gradient(115deg,transparent 35%,rgba(255,255,255,.28) 48%,transparent 60%);
+  background:radial-gradient(40% 30% at var(--gx,50%) var(--gy,40%),rgba(255,255,255,.12),transparent 70%);
   background-size:100% 100%,260% 100%;background-position:0 0,var(--gx,50%) 0;mix-blend-mode:screen}
-.hl__logo.ativo .hl__brilho{opacity:1}
-.hl__logo.ativo .hl__cartao img{filter:drop-shadow(0 40px 50px rgba(0,0,0,.7)) drop-shadow(0 0 30px rgba(255,255,255,.18))}
+.hl__logo.ativo .hl__brilho{opacity:.8}
+.hl__logo.ativo .hl__cartao img{filter:contrast(.85) brightness(.95) drop-shadow(0 34px 44px rgba(0,0,0,.65))}
 /* aura de luz na base + anéis que se espalham */
 .hl__aura{position:absolute;left:50%;bottom:4%;width:90%;height:22%;transform:translateX(-50%);pointer-events:none;z-index:-1}
 .hl__aura::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.22),transparent);opacity:.35;transition:opacity .4s,transform .4s}
-.hl__logo.ativo .hl__aura::before{opacity:1;transform:scale(1.15)}
+.hl__logo.ativo .hl__aura::before{opacity:.6;transform:scale(1.05)}
 .hl__aura i{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,.5);opacity:0}
-.hl__logo.ativo .hl__aura i{animation:hlAnel 2.2s cubic-bezier(.2,.7,.3,1) infinite}
-.hl__logo.ativo .hl__aura i+i{animation-delay:1.1s}
-@keyframes hlAnel{0%{transform:scale(.6);opacity:.7}100%{transform:scale(1.8);opacity:0}}
+.hl__logo.ativo .hl__aura i:first-child{animation:hlAnel 3.2s cubic-bezier(.2,.7,.3,1) infinite}
+@keyframes hlAnel{0%{transform:scale(.7);opacity:.3}100%{transform:scale(1.5);opacity:0}}
 .hl__logo.ativo{animation-play-state:paused}
 html[data-theme=light] .hl__aura::before{background:radial-gradient(closest-side,rgba(0,0,0,.18),transparent)}
 html[data-theme=light] .hl__aura i{border-color:rgba(0,0,0,.35)}
