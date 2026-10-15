@@ -376,7 +376,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="hf" aria-hidden="true"><div class="hf__aco"></div><div class="hf__feixe"><i></i><b></b></div><div class="hf__lamp"></div><div class="hf__luz"></div><div class="hf__veu"></div></div>
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d tb--globo" aria-hidden="true"><div class="tb__vidro tb__globo"><canvas id="gl-terra"></canvas></div></div>
-      <div class="cel cel--img" aria-hidden="true"><img src="img/mesa-celular.webp" alt="" width="948" height="345" decoding="async">
+      <div class="cel cel--img" aria-hidden="true"><div class="cel__in"><img src="img/mesa-celular.webp" alt="" width="948" height="345" decoding="async">
         <svg class="cel__fx" viewBox="0 0 948 345" preserveAspectRatio="none">
           <defs>
             <clipPath id="celTela"><polygon points="316,105 620,0 948,0 948,345 455,345"/></clipPath>
@@ -387,10 +387,9 @@ document.addEventListener('DOMContentLoaded',function(){
           <path class="cel__linha cel__linha--g" d="M560 232 L568 226 L576 219 L584 214 L592 207 L604 205 L616 203 L624 193 L632 189 L640 179 L648 173 L664 169 L672 163 L680 150 L688 142 L696 137 L704 131" pathLength="100" filter="url(#celGlow)"/>
           <path class="cel__linha" d="M560 232 L568 226 L576 219 L584 214 L592 207 L604 205 L616 203 L624 193 L632 189 L640 179 L648 173 L664 169 L672 163 L680 150 L688 142 L696 137 L704 131" pathLength="100"/>
           <circle class="cel__bola" r="4"><animateMotion dur="3.6s" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.7;1" calcMode="linear" path="M560 232 L568 226 L576 219 L584 214 L592 207 L604 205 L616 203 L624 193 L632 189 L640 179 L648 173 L664 169 L672 163 L680 150 L688 142 L696 137 L704 131"/></circle>
-          <text class="cel__num" id="cel-num" transform="translate(462,218) rotate(-11)">48</text>
           <circle class="cel__ping" cx="598" cy="58" r="3.5"/>
           <ellipse class="cel__novo" cx="812" cy="241" rx="30" ry="13" transform="rotate(-16 812 241)"/>
-        </svg></div>
+        </svg><div class="cel__card" id="cel-card"><span class="cel__num2" id="cel-num">48</span></div></div></div>
       <div class="hl">
         <div class="hl__logo" id="hl-logo"><span class="hl__aura" aria-hidden="true"><i></i><i></i></span><span class="hl__cartao" id="hl-cartao"><img src="img/logo-3d.webp" alt="Logo da Branco: tubarão em 3D" width="609" height="720" decoding="async"><span class="hl__brilho" aria-hidden="true"></span><span class="hl__luztopo" aria-hidden="true"></span></span></div>
         <div class="hl__linha" aria-hidden="true"><i class="hl__fio"></i></div>
@@ -2492,5 +2491,27 @@ html[data-theme=light] .tb--e .tb__vidro{background:linear-gradient(150deg,rgba(
   function passo(){ atual+=(alvo-atual)*.1; c.style.setProperty('--cy',(-atual*140).toFixed(1)+'px'); c.style.setProperty('--cr',(-atual*4).toFixed(2)+'deg'); c.style.setProperty('--cs',(1+atual*.12).toFixed(3));
     if(Math.abs(alvo-atual)>.001) requestAnimationFrame(passo); else rod=false; }
   addEventListener('scroll',calc,{passive:true}); calc(); })();
+</script>
+<style id="cel-pro-css">
+/* celular: entrada única para imagem + animações; número em perspectiva real (matrix3d) */
+.cel--img img{animation:none!important}
+.cel__in{position:relative;animation:celSobe 1.2s .3s cubic-bezier(.2,.8,.2,1) both}
+.cel__card{position:absolute;left:0;top:0;width:400px;height:150px;transform-origin:0 0;pointer-events:none}
+.cel__num2{position:absolute;left:44px;top:58px;font:700 56px/1 "Inter","Helvetica Neue",Arial,sans-serif;letter-spacing:-1px;color:#f4f4f6;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){.cel__in{animation:none}}
+</style>
+<script id="cel-pro-js">
+(function(){
+  var card=document.getElementById('cel-card'), cel=document.querySelector('.cel--img'); if(!card||!cel) return;
+  var Q=[405,162,692,66,774,169,452,262], W=948;
+  function adj(m){return[m[4]*m[8]-m[5]*m[7],m[2]*m[7]-m[1]*m[8],m[1]*m[5]-m[2]*m[4],m[5]*m[6]-m[3]*m[8],m[0]*m[8]-m[2]*m[6],m[2]*m[3]-m[0]*m[5],m[3]*m[7]-m[4]*m[6],m[1]*m[6]-m[0]*m[7],m[0]*m[4]-m[1]*m[3]]}
+  function mul(a,b){var c=[];for(var i=0;i<3;i++)for(var j=0;j<3;j++){var t=0;for(var k=0;k<3;k++)t+=a[3*i+k]*b[3*k+j];c[3*i+j]=t}return c}
+  function mv(m,v){return[m[0]*v[0]+m[1]*v[1]+m[2]*v[2],m[3]*v[0]+m[4]*v[1]+m[5]*v[2],m[6]*v[0]+m[7]*v[1]+m[8]*v[2]]}
+  function base(p){var m=[p[0],p[2],p[4],p[1],p[3],p[5],1,1,1],v=mv(adj(m),[p[6],p[7],1]);return mul(m,[v[0],0,0,0,v[1],0,0,0,v[2]])}
+  function ajusta(){ var k=cel.getBoundingClientRect().width/W||1, q=Q.map(function(v){return v*k});
+    var t=mul(base(q),adj(base([0,0,400,0,400,150,0,150]))); for(var i=0;i<9;i++) t[i]/=t[8];
+    card.style.transform='matrix3d('+[t[0],t[3],0,t[6],t[1],t[4],0,t[7],0,0,1,0,t[2],t[5],0,1].join(',')+')'; }
+  ajusta(); addEventListener('resize',ajusta); addEventListener('load',ajusta);
+})();
 </script>
 </body></html>
