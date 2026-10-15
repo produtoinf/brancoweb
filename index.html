@@ -453,7 +453,7 @@ document.addEventListener('DOMContentLoaded',function(){
         <div class="ly__p" style="--i:2"><span class="ly__tag">03 · Vídeos</span><svg viewBox="0 0 200 140" aria-hidden="true"><path class="g" d="M0 35H200M0 70H200M0 105H200M50 0V140M100 0V140M150 0V140"/><g class="b"><rect x="12" y="100" width="14" height="40" rx="2"/><rect x="36" y="78" width="14" height="62" rx="2"/><rect x="60" y="92" width="14" height="48" rx="2"/><rect x="84" y="60" width="14" height="80" rx="2"/><rect x="108" y="70" width="14" height="70" rx="2"/><rect x="132" y="44" width="14" height="96" rx="2"/><rect x="156" y="52" width="14" height="88" rx="2"/><rect x="180" y="30" width="14" height="110" rx="2"/></g><text x="12" y="24">alcance</text></svg></div>
         <div class="ly__p" style="--i:3"><span class="ly__tag">04 · Resultados</span><svg viewBox="0 0 200 140" aria-hidden="true"><path class="g" d="M0 35H200M0 70H200M0 105H200M50 0V140M100 0V140M150 0V140"/><path class="f" d="M0 120 C30 112 50 104 75 92 S120 70 140 52 S180 24 200 14 V140 H0Z"/><path class="l" d="M0 120 C30 112 50 104 75 92 S120 70 140 52 S180 24 200 14"/><circle class="d" cx="200" cy="14" r="5"/><text x="12" y="24">+ clientes</text></svg></div>
       </div>
-      <div class="ly__shadow"></div>
+      <img class="ly__img" id="ly-img" src="img/camadas.webp" alt="" width="800" height="1000" loading="lazy" decoding="async"><div class="ly__shadow"></div>
     </div>
   </section>
   <section class="st" aria-label="Manifesto">
@@ -466,7 +466,7 @@ document.addEventListener('DOMContentLoaded',function(){
     <div class="gx__txt">
       <p class="label rv">( outra galáxia )</p>
       <h2 class="h2" id="gx-title">Seu negócio nasceu<br><span>para ir além.</span></h2>
-      <p class="gx__p rv">Transforme cliques em clientes, sites em experiências e leve sua marca para outra galáxia.</p>
+      <p class="gx__p rv">Sua imaginação inspira. Nossa criatividade transforma.</p>
       <button class="btn btn--solid rv" type="button" data-open>Levar minha marca ↗</button>
     </div>
     <div class="cx" id="cx-stage" aria-hidden="true">
@@ -2240,58 +2240,88 @@ html[data-theme=light] .hf__feixe b,html[data-theme=light] .hf__lamp,html[data-t
 .tb--globo{width:clamp(300px,27vw,420px);top:clamp(70px,10vh,110px);right:clamp(0px,2vw,40px)}
 .tb--globo .tb__vidro.tb__globo{padding:0;background:none;border:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;transform:none;border-radius:0}
 .tb--globo .tb__vidro.tb__globo::after{display:none}
-.tb__globo canvas{display:block;width:100%;aspect-ratio:1}
+.tb__globo canvas{display:block;width:100%;aspect-ratio:1;pointer-events:auto}
+.tb--globo{pointer-events:auto}
 @media (max-width:900px){.hero.hg .tb--globo{width:clamp(110px,30vw,150px);top:calc(var(--logo-y,150px) - 62px);right:0}.hero.hg .tb--globo .tb__vidro{padding:0}}
 </style>
 <script id="gl-js">
-/* Terra preta de pontos girando devagar, com pontos pulsando em cidades e uma linha em órbita contornando */
+/* Planeta 3D de pontos: profundidade, luz e sombra, grade de latitude/longitude, atmosfera,
+   cidades pulsando, órbita contornando. Interações: arrastar para girar (com embalo), inclinar com o mouse, hover nas cidades. */
 (function(){
   var cv=document.getElementById('gl-terra'); if(!cv) return;
   var B64="Q+FkRdFkQvF2QhGIQ+GIQUGaQwGaRLGaQjGsQ9GsRYGsRyGsQeG+Q4G+RSG+2PG+2pG+REHQRdHQR2HQ2tHQ3GHQQnHiQ/HiRXHiRwHiy+Hi3IHiQ6H0RSH0RpH0SBH0SYH03hH0Q2IGRNIGRkIGR6IGSRIGSoIGS/IGyhIGy4IG3iIG35IGQxIYRIIYReIYR0IYSLIYShIYS3IYTOIYx+IYyUIYyqIYzBIYzXIYRDIqRZIqRvIqSEIqSaIqSwIqTcIquXIqxxIqyHIqydIqyzIqzJIqzfIqRFI8RaI8RwI8SFI8SbI8SwI8TFI8TbI8TwI8fJI8feI8f0I8gJI8gfI8uNI8ujI8u4I8vNI8vjI8xOI8xjI8x5I8yOI8ykI8y5I8zPI8zkI8RHJORcJORxJOSGJOSbJOSwJOTFJOTaJOTvJOUEJOe7JOfQJOflJOf6JOgPJOgkJOuYJOutJOvDJOvYJOvtJOwCJOwXJOwsJOxBJOxWJOxrJOyAJOyVJOyqJOy/JOzUJOzpJOz+JORCJgRXJgRrJgSAJgSVJgSpJgS+JgTSJgTnJgT7JgUQJge3JgfLJgfgJgf1JggJJggeJggyJguSJgunJgu7JgvQJgvlJgv5JgwOJgwiJgw3JgxLJgxgJgx1JgyJJgyeJgyyJgzHJgzbJgzwJg0FJgREJyRYJyRtJySBJySVJySpJyS9JyTSJyTmJyT6JyUOJyUjJyeqJye+JyfSJyfmJyf7JygPJygjJyg3JyhMJyuJJyudJyuxJyvFJyvaJyvuJywCJywWJywrJyw/JyxTJyxnJyx8JyyQJyykJyy4JyzMJyzhJyz1JyRMKERgKER0KESIKEScKESwKETEKETYKETsKEUAKEUUKEeoKEe8KEfQKEfkKEf4KEgMKEggKEg0KEhIKEuQKEukKEu4KEvMKEvgKEv0KEwIKEwcKEwwKExEKExYKExsKEyAKEyUKEyoKEy8KEzQKEzkKEz4KEROKWRhKWR1KWSJKWScKWSwKWTEKWTXKWTrKWT/KWUSKWUmKWU6KWecKWevKWfDKWfXKWfqKWf+KWgSKWglKWg5KWhNKWhgKWjDKWjWKWuHKWuaKWuuKWvCKWvWKWvpKWv9KWwRKWwkKWw4KWxMKWxfKWxzKWyHKWyaKWyuKWzCKWzVKWzpKWRVKoRpKoR8KoSQKoSjKoS2KoTKKoTdKoTxKoUEKoUYKoUrKoU/KoVSKoVmKoeaKoetKofBKofUKofoKof7KogPKogiKog2KohJKohdKoi+KojRKojlKouOKouhKou1KovIKovcKovvKowDKowWKowqKow9KoxQKoxkKox3KoyLKoyeKoyyKozFKozZKo2IKoRXK6RqK6R9K6SQK6SjK6S2K6TKK6TdK6TwK6UDK6UWK6UpK6U8K6VQK6VjK6eOK6ehK6e0K6fHK6fbK6fuK6gBK6gUK6gnK6g6K6hOK6hhK6jUK6jnK6u+K6vSK6vlK6v4K6wLK6weK6wxK6xEK6xYK6xrK6x+K6yRK6ykK6y3K6zKK6RLLMReLMRxLMSELMSXLMSqLMS9LMTQLMTjLMT1LMUILMUbLMUuLMVBLMVULMVnLMV6LMeNLMegLMezLMfFLMfYLMfrLMf+LMgRLMgkLMg3LMhKLMhdLMhwLMjPLMjiLMj1LMvYLMvrLMv9LMwQLMwjLMw2LMxJLMxcLMxvLMyCLMyVLMyoLMy7LMKQLeKjLeK2LeLJLeLbLeLuLeMBLeMULeMmLeM5LeNMLeNfLeNxLeOELeOXLeOqLeO8LePPLePiLeP1LeQHLeQaLeQtLeRALeRSLeRlLeR4LeSLLeSdLeSwLeTDLeTWLeToLeT7LeUOLeUhLeUzLeVGLeVZLeVsLeV+LeWRLeWkLeW3LeXJLeXcLeXvLeYCLeYULeYnLeY6LeZNLeZfLeZyLeaFLeaYLeaqLea9LebQLebjLeb1LecILecbLecuLedALedTLedmLed5LeeLLeeeLeexLefELefWLefpLef8LegPLeghLeg0LehHLehaLehsLeh/LeiSLeilLei3LejKLejdLejwLekCLekVLekoLek7LelNLelgLelzLemGLemYLemrLem+LenRLenjLen2LeoJLeocLeouLepBLepULepnLep5LeqMLeqfLeqyLerELerXLerqLer9LesPLesiLes1LetILetaLettLeuALeuTLeulLeu4LevLLeveLevwLewDLewWLewpLew7LexOLexhLex0LeyGLeyZLeysLey/LezRLezkLez3Le0KLe0cLe0vLe1CLe1VLe1nLe16Le2NLe2gLe2yLe3FLe3YLe3rLe39LeQVLwQnLwQ6LwRNLwRfLwRyLwSELwSXLwSqLwS8LwTPLw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bLSgbfSgb0SgcISgccSgcxSgdFSgdaSgduSgeDSgeXSgesSgfASgfVSgfpSgf9SggSSggmSgg7SghPSghkSgh4SgiNSgihSgi2SgjKSgjeSgkcSgkwSglFSglZSgluSgmCSgmXSgmrSgm/SgnUSgnoSgn9SgoRSgomSgo6SgpPSgpjSgp4SgqMSgqgSgq1SgrJSgreSgrySgsHSgsbSgswSgtESgtZSgttSguBSguWSguqSgu/SgKFSyKvSyLESyLYSyLtSyMCSyMXSyMsSyNASyNVSyNqSyN/SyO9SyPSSyaqSya/SybUSybpSyb+SycSSycnSyc8SydRSydmSyd6SyePSyekSye5SyfOSyfiSyf3SygMSyghSyg2SyhLSyhfSyh0SyiJSyieSyizSyjHSyjcSykGSykbSykvSylESylZSyluSymDSymXSymsSynBSynWSynrSyoASyoUSyopSyo+SypTSypoSyp8SyqRSyqmSyq7SyrQSyrkSyr5SysOSysjSys4SytMSythSyt2SyuLSyugSyu1SyJ7TEKQTEKmTEK7TELQTELlTEL6TEMQTEMlTEM6TENPTENkTEN5TEOPTEOkTEO5TEPOTEazTEbITEbeTEbzTEcITEcdTEcyTEdITEddTEdyTEeHTEecTEfcTEfxTEhwTEiFTEiaTEiwTEjFTEjaTEjvTEkETEkZTEkvTElETElZTEluTEmDTEmYTEmuTEnDTEnYTEntTEoCTEoYTEotTEpCTEpXTEpsTEqBTEqXTEqsTErBTErWTErrTEsATEsWTEsrTEtATEtVTEtqTEuATEuVTEuqTEu/TEwpTEJ1TWKLTWKgTWK2TWLMTWLhTWL3TWMNTWMiTWM4TWNOTWNjTWN5TWOPTWOlTWO6TWPQTWPmTWbHTWbdTWbyTWcITWceTWczTWdJTWdfTWh5TWiOTWikTWi6TWjPTWjlTWj7TWkQTWkmTWk8TWlSTWlnTWl9TWmTTWmoTWm+TWnUTWnpTWn/TWoVTWoqTWpATWpWTWprTWqBTWqXTWqtTWrCTWrYTWruTWsDTWsZTWsvTWtETWtaTWtwTWuFTWubTWuxTWxJTWJUToJqToKAToKXToKtToLDToLZToLvToMFToMbToMxToNHToNdToNzToOKToOgToO2ToPMToPiToP4ToQOTobRTob9TocTTocpToc/TodVTodrToh0ToiLToihToi3TojNTojjToj5TokPToklTok7TolRTolnTol9TomUTomqTonATonWTonsTooCTooYToouTopETopaTopwToqGToqdToqzTorJTorfTor1TosLToshTos3TotNTotjTot5TouQToumTov+TowUToxWToxsToyCToJNT6JjT6J6T6KRT6KnT6K+T6LVT6LrT6MCT6MYT6MvT6NGT6NcT6NzT6OKT6OgT6O3T6POT6PkT6P7T6QST6a5T6bPT6bmT6ebT6ffT6gjT6g6T6hQT6hnT6h+T6iUT6irT6jCT6jYT6jvT6kzT6lJT6lgT6l3T6mNT6mkT6m7T6nRT6noT6n+T6oVT6osT6pCT6pZT6pwT6qGT6qdT6q0T6rKT6rhT6r4T6sOT6slT6s7T6tST6tpT6t/T6uWT6utT6vDT6wHT6x4T6JFUMJcUMJzUMKKUMKiUMK5UMLQUMLnUML+UMMWUMMtUMNEUMNbUMNzUMOKUMOhUMO4UMPPUMPnUMP+UMQVUMa3UMbOUMblUMb8UMflUMgTUMgqUMhCUMhZUMhwUMiHUMieUMi2UMjNUMjkUMkqUMlBUMlYUMlvUMmHUMmeUMm1UMnMUMnkUMn7UMoSUMopUMpBUMpYUMpvUMqGUMqdUMq1UMrMUMrjUMr6UMsSUMspUMtAUMtXUMtuUMuGUMudUMvLUMv6UMyFUMI8UeJUUeJsUeKEUeKcUeKzUeLLUeLjUeL7UeMTUeMrUeNCUeNaUeNyUeOKUeOiUeO6UePRUePpUeQBUeQZUeQxUea1UebMUebkUeb8UeejUefTUefqUegCUegaUegyUehKUehiUeh6UeiRUeipUejBUejZUejxUek4UelQUeloUemAUemYUemvUenHUenfUen3UeoPUeonUeo/UepWUepuUeqGUeqeUeq2UerOUerlUer9UesVUestUetFUetdUet0UeuMUeukUeu8UevUUevsUewDUeIzUwJMUwJkUwJ9UwKVUwKuUwLGUwLfUwL3UwMQUwMoUwNBUwNZUwNyUwOKUwOjUwO7UwPUUwPsUwQFUwQdUwQ2UwayUwbLUwbjUwb8UwcUUwd2UwePUwfAUwfYUwfxUwgJUwi1UwjNUwkXUwkvUwlIUwlgUwl4UwmRUwmpUwnCUwnaUwnzUwoLUwokUw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";
   var bin=atob(B64), P=[];
-  for(var i=0;i+2<bin.length;i+=3){var a=bin.charCodeAt(i),b=bin.charCodeAt(i+1),c=bin.charCodeAt(i+2);var lon=((a<<4)|(b>>4))/10-180, lat=(((b&15)<<8)|c)/10-90;P.push([lon*Math.PI/180,lat*Math.PI/180]);}
+  for(var i=0;i+2<bin.length;i+=3){var a=bin.charCodeAt(i),b=bin.charCodeAt(i+1),c=bin.charCodeAt(i+2);P.push([(((a<<4)|(b>>4))/10-180)*Math.PI/180,((((b&15)<<8)|c)/10-90)*Math.PI/180,Math.random()*6.28]);}
   var CID=[['Curitiba',-25.43,-49.27],['São Paulo',-23.55,-46.63],['Rio de Janeiro',-22.9,-43.2],['Miami',25.76,-80.19],['Nova York',40.71,-74.0],['Lisboa',38.72,-9.14]];
-  var cx=cv.getContext('2d'), S=0, dpr=1, lon0=-62*Math.PI/180, lat0=-12*Math.PI/180, vis=true, red=matchMedia('(prefers-reduced-motion:reduce)').matches, t0=performance.now();
+  var RAD=Math.PI/180, cx=cv.getContext('2d'), S=0, dpr=1, vis=true, red=matchMedia('(prefers-reduced-motion:reduce)').matches, t0=performance.now();
+  var lon0=-55*RAD, lat0=-14*RAD, vLon=.0016, tiltX=0, tiltY=0, alvoTX=0, alvoTY=0, arrasta=false, ux=0, uy=0, ultimoArr=0, hover=-1, mouse=null;
+  var LUZ=[-.55,.55,.62]; // direção da luz (vem de cima, à esquerda)
   function tam(){ dpr=Math.min(devicePixelRatio||1,2); S=cv.clientWidth||300; cv.width=S*dpr; cv.height=S*dpr; cx.setTransform(dpr,0,0,dpr,0,0); }
-  function proj(lam,phi){ var l=lam-lon0, cp=Math.cos(phi); return [cp*Math.sin(l), Math.cos(lat0)*Math.sin(phi)-Math.sin(lat0)*cp*Math.cos(l), Math.sin(lat0)*Math.sin(phi)+Math.cos(lat0)*cp*Math.cos(l)]; }
+  function proj(lam,phi,la0){ var l=lam-lon0, cp=Math.cos(phi), L0=la0; return [cp*Math.sin(l), Math.cos(L0)*Math.sin(phi)-Math.sin(L0)*cp*Math.cos(l), Math.sin(L0)*Math.sin(phi)+Math.cos(L0)*cp*Math.cos(l)]; }
+  var cid2d=[];
   function quadro(agora){
-    var t=(agora-t0)/1000; if(!red) lon0=(-62+Math.sin(t*.05)*28)*Math.PI/180; // balança entre Américas e Europa
+    var t=(agora-t0)/1000;
+    if(!red && !arrasta) { lon0+=vLon; vLon+=(.0016-vLon)*.02; }   // gira sozinho; depois de arrastar volta à velocidade normal aos poucos
+    tiltX+=(alvoTX-tiltX)*.06; tiltY+=(alvoTY-tiltY)*.06;
     if(!S) tam(); cx.clearRect(0,0,S,S);
-    var R=S*.34, X=S/2, Y=S*.52, peq=S<220;
-    // órbita (parte de trás)
-    var oa=R*1.32, ob=R*.36, rot=-.32;
+    var R=S*.34*(1+(hover>=0?.02:0)), X=S/2+tiltX*S*.03, Y=S*.52+tiltY*S*.03, peq=S<220, la=lat0+tiltY*.35;
+    var oa=R*1.32, ob=R*.36, rot=-.32+tiltX*.12;
     function orbita(a0,a1,alpha,w){ cx.save(); cx.translate(X,Y); cx.rotate(rot); cx.beginPath(); cx.ellipse(0,0,oa,ob,0,a0,a1); cx.strokeStyle='rgba(255,255,255,'+alpha+')'; cx.lineWidth=w; cx.stroke(); cx.restore(); }
-    orbita(Math.PI,2*Math.PI,.12,1);
-    // disco da Terra
-
-    // pontos dos continentes
-    var ds=Math.max(.7,S/420*1.15);
-    for(var k=0;k<P.length;k++){ var q=proj(P[k][0],P[k][1]);
-      if(q[2]<=0){ cx.fillStyle='rgba(255,255,255,'+(.035+q[2]*.03).toFixed(3)+')'; cx.fillRect(X+q[0]*R-ds/3,Y-q[1]*R-ds/3,ds*.66,ds*.66); continue; }
-      var bob=Math.sin(t*1.1+k*.37)*.6*q[2]; // cada ponto "respira" um pouco: terras flutuando
-      cx.fillStyle='rgba(255,255,255,'+(.14+q[2]*.6).toFixed(3)+')'; cx.fillRect(X+q[0]*R-ds/2,Y-q[1]*R-ds/2+bob,ds,ds); }
-    // cidades com pulso
+    orbita(Math.PI,2*Math.PI,.1,1);
+    // atmosfera: halo fino que dá volume à esfera
+    var at=cx.createRadialGradient(X,Y,R*.96,X,Y,R*1.16); at.addColorStop(0,'rgba(170,195,255,.0)'); at.addColorStop(.35,'rgba(170,195,255,.09)'); at.addColorStop(1,'rgba(170,195,255,0)');
+    cx.beginPath(); cx.arc(X,Y,R*1.16,0,7); cx.fillStyle=at; cx.fill();
+    // grade de latitude/longitude (bem fraca)
+    cx.lineWidth=.6;
+    for(var gl=-60;gl<=60;gl+=30){ cx.beginPath(); var on=false; for(var gL=-180;gL<=180;gL+=6){ var q=proj(gL*RAD,gl*RAD,la); if(q[2]>0){ var x=X+q[0]*R,y=Y-q[1]*R; on?cx.lineTo(x,y):cx.moveTo(x,y); on=true;} else on=false; } cx.strokeStyle='rgba(255,255,255,.05)'; cx.stroke(); }
+    for(var gm=-180;gm<180;gm+=30){ cx.beginPath(); var on2=false; for(var gp=-84;gp<=84;gp+=6){ var q3=proj(gm*RAD,gp*RAD,la); if(q3[2]>0){ var x3=X+q3[0]*R,y3=Y-q3[1]*R; on2?cx.lineTo(x3,y3):cx.moveTo(x3,y3); on2=true;} else on2=false; } cx.strokeStyle='rgba(255,255,255,.04)'; cx.stroke(); }
+    // pontos: tamanho e brilho pela profundidade + luz; terras "saltam" um pouco para fora (relevo)
+    var base=Math.max(.7,S/420*1.1);
+    for(var k=0;k<P.length;k++){
+      var pk=P[k], q=proj(pk[0],pk[1],la);
+      if(q[2]<=0){ cx.fillStyle='rgba(255,255,255,.035)'; cx.fillRect(X+q[0]*R*.985,Y-q[1]*R*.985,base*.6,base*.6); continue; }
+      var luz=Math.max(0,q[0]*LUZ[0]+q[1]*LUZ[1]+q[2]*LUZ[2]);
+      var ext=1+.025+Math.sin(t*1.2+pk[2])*.006;  // relevo + leve respiração
+      var sz=base*(.55+q[2]*.75);
+      var al=.08+q[2]*.35+luz*.5;
+      cx.fillStyle='rgba(255,255,255,'+Math.min(.95,al).toFixed(3)+')';
+      cx.fillRect(X+q[0]*R*ext-sz/2,Y-q[1]*R*ext-sz/2,sz,sz);
+    }
+    // cidades
+    cid2d=[];
     for(var c=0;c<CID.length;c++){
-      var d=CID[c], q2=proj(d[2]*Math.PI/180,d[1]*Math.PI/180); if(q2[2]<=.08) continue;
-      var px=X+q2[0]*R, py=Y-q2[1]*R, al=Math.min(1,q2[2]*1.6);
-      for(var r=0;r<3;r++){ var f=((t*.55+r/3+c*.17)%1); cx.beginPath(); cx.arc(px,py,2+f*(peq?8:16),0,7); cx.strokeStyle='rgba(255,255,255,'+((1-f)*.55*al).toFixed(3)+')'; cx.lineWidth=1; cx.stroke(); }
-      cx.beginPath(); cx.arc(px,py,peq?1.6:2.4,0,7); cx.fillStyle='rgba(255,255,255,'+al.toFixed(3)+')'; cx.fill();
-      if(!peq && q2[2]>.3){ // linha guia + nome
+      var d=CID[c], q2=proj(d[2]*RAD,d[1]*RAD,la); if(q2[2]<=.08) continue;
+      var px=X+q2[0]*R*1.03, py=Y-q2[1]*R*1.03, al2=Math.min(1,q2[2]*1.6), hv=hover===c;
+      cid2d.push([c,px,py]);
+      for(var r=0;r<3;r++){ var f=((t*.55+r/3+c*.17)%1); cx.beginPath(); cx.arc(px,py,2+f*(peq?8:(hv?26:16)),0,7); cx.strokeStyle='rgba(255,255,255,'+((1-f)*(hv?.9:.5)*al2).toFixed(3)+')'; cx.lineWidth=hv?1.4:1; cx.stroke(); }
+      cx.beginPath(); cx.arc(px,py,peq?1.6:(hv?3.6:2.4),0,7); cx.fillStyle='rgba(255,255,255,'+al2.toFixed(3)+')'; cx.fill();
+      if(!peq && q2[2]>.3){
         var lx=px+(c%2?18:-18), ly=py-34-(c%3)*10;
-        cx.beginPath(); cx.moveTo(px,py); cx.lineTo(px,ly); cx.lineTo(lx,ly); cx.strokeStyle='rgba(255,255,255,'+(.35*al).toFixed(3)+')'; cx.stroke();
-        cx.font='600 10px "JetBrains Mono",monospace'; cx.textBaseline='middle'; cx.textAlign=c%2?'left':'right';
-        cx.fillStyle='rgba(255,255,255,'+(.8*al).toFixed(3)+')'; cx.fillText(d[0].toUpperCase(),lx+(c%2?5:-5),ly);
+        cx.beginPath(); cx.moveTo(px,py); cx.lineTo(px,ly); cx.lineTo(lx,ly); cx.strokeStyle='rgba(255,255,255,'+((hv?.8:.32)*al2).toFixed(3)+')'; cx.lineWidth=1; cx.stroke();
+        cx.font=(hv?'700 11px':'600 10px')+' "JetBrains Mono",monospace'; cx.textBaseline='middle'; cx.textAlign=c%2?'left':'right';
+        cx.fillStyle='rgba(255,255,255,'+((hv?1:.75)*al2).toFixed(3)+')'; cx.fillText(d[0].toUpperCase(),lx+(c%2?5:-5),ly);
       }
     }
-    // brilho na borda
-
-    // órbita (parte da frente) + luz correndo nela
-    orbita(0,Math.PI,.35,1.2);
+    // órbita na frente + luz correndo
+    orbita(0,Math.PI,.32,1.2);
     var ang=(t*.35)%(2*Math.PI), ex=Math.cos(ang)*oa, ey=Math.sin(ang)*ob, cr=Math.cos(rot), sr=Math.sin(rot);
-    var fx=X+ex*cr-ey*sr, fy=Y+ex*sr+ey*cr, frente=Math.sin(ang)>0;
-    if(true){ var lg=cx.createRadialGradient(fx,fy,0,fx,fy,10); lg.addColorStop(0,'rgba(255,255,255,.95)'); lg.addColorStop(1,'rgba(255,255,255,0)'); cx.fillStyle=lg; cx.beginPath(); cx.arc(fx,fy,10,0,7); cx.fill(); }
+    var fx=X+ex*cr-ey*sr, fy=Y+ex*sr+ey*cr;
+    if(Math.sin(ang)>0 || Math.hypot(fx-X,fy-Y)>R){ var lg=cx.createRadialGradient(fx,fy,0,fx,fy,10); lg.addColorStop(0,'rgba(255,255,255,.95)'); lg.addColorStop(1,'rgba(255,255,255,0)'); cx.fillStyle=lg; cx.beginPath(); cx.arc(fx,fy,10,0,7); cx.fill(); }
     if(!red&&vis) requestAnimationFrame(quadro);
   }
+  // ---- interações ----
+  cv.style.pointerEvents='auto'; cv.style.cursor='grab'; cv.style.touchAction='pan-y';
+  cv.addEventListener('pointerdown',function(e){ arrasta=true; ux=e.clientX; uy=e.clientY; ultimoArr=performance.now(); cv.style.cursor='grabbing'; try{cv.setPointerCapture(e.pointerId);}catch(_){} });
+  cv.addEventListener('pointermove',function(e){
+    var r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+    if(arrasta){ var dx=e.clientX-ux, dy=e.clientY-uy; lon0-=dx*.008; lat0=Math.max(-.9,Math.min(.6,lat0+dy*.005)); vLon=-dx*.0035; ux=e.clientX; uy=e.clientY; return; }
+    alvoTX=(mx/r.width-.5)*2; alvoTY=(my/r.height-.5)*2;
+    var h=-1; for(var n=0;n<cid2d.length;n++){ if(Math.hypot(cid2d[n][1]-mx,cid2d[n][2]-my)<16){ h=cid2d[n][0]; break; } }
+    hover=h; cv.style.cursor=h>=0?'pointer':'grab';
+  });
+  function solta(){ if(!arrasta) return; arrasta=false; cv.style.cursor='grab'; }
+  cv.addEventListener('pointerup',solta); cv.addEventListener('pointercancel',solta);
+  cv.addEventListener('pointerleave',function(){ alvoTX=0; alvoTY=0; hover=-1; });
   addEventListener('resize',function(){tam(); if(red) quadro(performance.now());}); tam();
   if('IntersectionObserver' in window) new IntersectionObserver(function(es){var v=es[0].isIntersecting; if(v&&!vis){vis=true;requestAnimationFrame(quadro);} vis=v;}).observe(cv);
   requestAnimationFrame(quadro);
@@ -2308,4 +2338,28 @@ html[data-theme=light] .hf__feixe b,html[data-theme=light] .hf__lamp,html[data-t
 .tb--e .tb__code .k{color:#fff}.tb--e .tb__code .c{color:#6c7080}
 html[data-theme=light] .tb--e .tb__code{color:#222;text-shadow:none}html[data-theme=light] .tb--e .tb__code .k{color:#000}
 </style>
+<style id="ly-img-css">
+/* camadas: imagem nova em branco no lugar dos painéis; os painéis antigos ficam escondidos (o script da lista continua) */
+.ly{--c:#ececee}
+.ly__stack{display:none}
+.ly__stage{z-index:7}
+.ly__img{position:absolute;left:50%;top:50%;width:min(88%,460px);height:auto;transform:translate(-50%,-50%) perspective(1200px) rotateY(var(--ry,0deg)) rotateX(var(--rx2,0deg)) translateY(var(--sy,0px)) scale(var(--sc,.94));
+  transition:transform .5s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 40px 60px rgba(0,0,0,.6));animation:lyFlut 7s ease-in-out infinite}
+@keyframes lyFlut{0%,100%{translate:0 0}50%{translate:0 -12px}}
+.ly .tw__cur{background:#f2f2f2!important}
+@media(max-width:860px){.ly__img{width:min(78vw,360px)}}
+@media(prefers-reduced-motion:reduce){.ly__img{animation:none}}
+</style>
+<script id="ly-img-js">
+/* camadas: inclina com o mouse e cresce um pouco conforme a seção entra na tela */
+(function(){
+  var img=document.getElementById('ly-img'), st=document.getElementById('ly-stage'); if(!img||!st) return;
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+  st.addEventListener('pointermove',function(e){var b=st.getBoundingClientRect();img.style.setProperty('--ry',(((e.clientX-b.left)/b.width-.5)*14).toFixed(2)+'deg');img.style.setProperty('--rx2',(-((e.clientY-b.top)/b.height-.5)*10).toFixed(2)+'deg');});
+  st.addEventListener('pointerleave',function(){img.style.setProperty('--ry','0deg');img.style.setProperty('--rx2','0deg');});
+  var pend=false;
+  function rola(){pend=false;var b=st.getBoundingClientRect(),H=innerHeight,p=Math.min(1,Math.max(0,(H-b.top)/(H+b.height)));img.style.setProperty('--sc',(.86+Math.min(1,p*1.6)*.14).toFixed(3));img.style.setProperty('--sy',((.5-p)*40).toFixed(1)+'px');}
+  addEventListener('scroll',function(){if(!pend){pend=true;requestAnimationFrame(rola);}},{passive:true}); rola();
+})();
+</script>
 </body></html>
