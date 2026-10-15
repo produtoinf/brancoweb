@@ -47,10 +47,12 @@ measure(); update();
 
 /* projetos: arrastar com o mouse (no toque a rolagem já é nativa) */
 const track = $('#track'); let down = false, sx = 0, sl = 0, moved = 0;
+if (track) {
 track.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') return; down = true; moved = 0; sx = e.clientX; sl = track.scrollLeft; });
 addEventListener('pointermove', e => { if (!down) return; const d = e.clientX - sx; moved = Math.max(moved, Math.abs(d)); if (moved > 5) track.classList.add('drag'); track.scrollLeft = sl - d; });
 addEventListener('pointerup', () => { down = false; track.classList.remove('drag'); });
 track.addEventListener('click', e => { if (moved > 5) { e.preventDefault(); e.stopPropagation(); moved = 0; } }, true);
+}
 
 /* serviços */
 const tabs = $$('[role=tab]'), panels = $$('[role=tabpanel]');
