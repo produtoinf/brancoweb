@@ -373,7 +373,7 @@ document.addEventListener('DOMContentLoaded',function(){
 <main id="conteudo">
   <div class="pin">
     <section class="hero hg" id="inicio" aria-labelledby="hero-title">
-      <div class="hf" aria-hidden="true"><div class="hf__metal" id="hf-metal"><i class="hf__base"></i><i class="hf__brilho"></i></div><div class="hf__veu"></div><div class="hf__luz"></div></div>
+      <div class="hf" aria-hidden="true"><canvas class="hf__mar" id="hf-mar"></canvas><div class="hf__luz"></div><div class="hf__veu"></div></div>
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>style.css</span></div><pre class="tb__code" data-tb="1"></pre><div class="tb__pe"><span class="tb__st">● build ok</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="hl">
@@ -1896,34 +1896,64 @@ html[data-theme=light] .tbl .p{stroke:#111;filter:none}html[data-theme=light] .t
   addEventListener('resize',re); addEventListener('load',re); setTimeout(monta,300);
 })();
 </script>
-<style id="hf-metal-css">
-/* ===== fundo metal escovado com curvas: respira devagar, um brilho percorre as curvas e acompanha o mouse ===== */
-.hf__metal{position:absolute;inset:-4%;transform:translate3d(var(--mx,0px),var(--my,0px),0);transition:transform .8s cubic-bezier(.2,.7,.2,1)}
-.hf__metal i{position:absolute;inset:0;background:url(img/fundo-metal.webp) center/cover no-repeat}
-.hf__base{opacity:.85;animation:hfRespira 22s ease-in-out infinite}
-/* brilho: a mesma imagem mais contrastada, só aparece numa faixa que passa — acende só as partes metálicas */
-.hf__brilho{filter:contrast(1.8) brightness(1.5);mix-blend-mode:screen;opacity:.55;animation:hfRespira 22s ease-in-out infinite;
-  -webkit-mask-image:linear-gradient(105deg,transparent 35%,#000 48%,#000 52%,transparent 65%);mask-image:linear-gradient(105deg,transparent 35%,#000 48%,#000 52%,transparent 65%);
-  -webkit-mask-size:300% 100%;mask-size:300% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
-.hf__brilho{animation:hfRespira 22s ease-in-out infinite,hfVarre 11s ease-in-out infinite}
-@keyframes hfRespira{0%,100%{transform:scale(1)}50%{transform:scale(1.06) rotate(.6deg)}}
-@keyframes hfVarre{0%{-webkit-mask-position:100% 0;mask-position:100% 0}60%,100%{-webkit-mask-position:0 0;mask-position:0 0}}
-/* véu escuro no meio para o texto e o logo ficarem legíveis */
-.hf__veu{position:absolute;inset:0;background:radial-gradient(70% 60% at 50% 48%,rgba(10,10,11,.72),rgba(10,10,11,.25) 70%,rgba(10,10,11,.1)),linear-gradient(transparent 70%,var(--bg))}
-@media (max-width:700px){.hf__metal i{background-image:url(img/fundo-metal-m.webp)}}
-html[data-theme=light] .hf__metal{filter:invert(1) grayscale(1);opacity:.5}
-html[data-theme=light] .hf__veu{background:radial-gradient(70% 60% at 50% 48%,rgba(245,245,245,.75),rgba(245,245,245,.3) 70%,transparent),linear-gradient(transparent 70%,var(--bg))}
-@media (prefers-reduced-motion:reduce){.hf__base,.hf__brilho{animation:none}.hf__brilho{display:none}}
+<style id="hf-mar-css">
+/* ===== fundo 3D: mar de linhas em perspectiva (o tubarão flutua sobre ele) ===== */
+.hf__mar{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hf__veu{position:absolute;inset:0;background:radial-gradient(46% 40% at 50% 34%,rgba(10,10,11,.55),transparent 75%),linear-gradient(transparent 78%,var(--bg))}
+html[data-theme=light] .hf__veu{background:radial-gradient(46% 40% at 50% 34%,rgba(245,245,245,.6),transparent 75%),linear-gradient(transparent 78%,var(--bg))}
 </style>
-<script id="hf-js">
-/* fundo metálico se move de leve com o mouse (profundidade) */
+<script id="hf-mar-js">
+/* mar 3D: malha de linhas com ondas lentas, uma onda de luz saindo do centro e leve inclinação com o mouse */
 (function(){
-  var m=document.getElementById('hf-metal'), hero=document.getElementById('inicio');
-  if(!m||!hero||!matchMedia('(hover:hover)').matches||matchMedia('(prefers-reduced-motion:reduce)').matches) return;
-  hero.addEventListener('mousemove',function(e){
-    m.style.setProperty('--mx',((e.clientX/innerWidth-.5)*-22).toFixed(1)+'px');
-    m.style.setProperty('--my',((e.clientY/innerHeight-.5)*-14).toFixed(1)+'px');
-  });
+  var cv=document.getElementById('hf-mar'), hero=document.getElementById('inicio'); if(!cv||!hero) return;
+  var cx=cv.getContext('2d'), W=0,H=0,dpr=1, COLS=0, ROWS=34, vis=true, t0=performance.now();
+  var red=matchMedia('(prefers-reduced-motion:reduce)').matches, mx=0,my=0, tx=0,ty=0;
+  function tam(){
+    dpr=Math.min(devicePixelRatio||1,1.5); W=hero.clientWidth; H=hero.clientHeight;
+    cv.width=W*dpr; cv.height=H*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
+    COLS=W<700?34:60;
+  }
+  function claro(){return document.documentElement.getAttribute('data-theme')==='light';}
+  function altura(x,z,t){
+    // ondas lentas cruzadas + onda de luz (anel) saindo do centro a cada 7s
+    var y=Math.sin(x*1.6+t*.55)*Math.cos(z*1.1+t*.4)*.16+Math.sin(x*.7-z*.9+t*.3)*.12;
+    var d=Math.sqrt(x*x+(z-1.2)*(z-1.2)), r=(t%7)/7*5.5, anel=Math.exp(-Math.pow((d-r)*3,2))*(1-r/5.5);
+    return {y:y+anel*.22, luz:anel};
+  }
+  function quadro(agora){
+    var t=(agora-t0)/1000; if(red) t=8;
+    tx+=(mx-tx)*.04; ty+=(my-ty)*.04;
+    cx.clearRect(0,0,W,H);
+    var hz=H*(W<700?.50:.46)+ty*18, f=W*.62, camY=.95, cor=claro()?'0,0,0':'255,255,255';
+    var x0=-3.2, x1=3.2, z0=.55, z1=7.5;
+    function proj(x,z,y){ var xr=x+tx*.35; return [W/2+xr*f/z, hz+(camY-y)*f/z*.55]; }
+    // linhas ao longo de x (fileiras), das de trás para as da frente
+    for(var r=ROWS-1;r>=0;r--){
+      var z=z0+(z1-z0)*Math.pow(r/(ROWS-1),1.35), fade=1-r/(ROWS-1);
+      cx.beginPath(); var luzMax=0;
+      for(var c=0;c<=COLS;c++){
+        var x=x0+(x1-x0)*c/COLS, h=altura(x,z,t), p=proj(x,z,h.y);
+        if(h.luz>luzMax) luzMax=h.luz;
+        c?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]);
+      }
+      cx.strokeStyle='rgba('+cor+','+(.06+fade*.13+luzMax*.45).toFixed(3)+')';
+      cx.lineWidth=.6+fade*.4; cx.stroke();
+    }
+    // linhas ao longo de z (colunas), bem discretas
+    for(var c2=0;c2<=COLS;c2+=2){
+      var xx=x0+(x1-x0)*c2/COLS; cx.beginPath();
+      for(var r2=0;r2<ROWS;r2++){
+        var zz=z0+(z1-z0)*Math.pow(r2/(ROWS-1),1.35), h2=altura(xx,zz,t), p2=proj(xx,zz,h2.y);
+        r2?cx.lineTo(p2[0],p2[1]):cx.moveTo(p2[0],p2[1]);
+      }
+      cx.strokeStyle='rgba('+cor+',.045)'; cx.lineWidth=.6; cx.stroke();
+    }
+    if(!red&&vis) requestAnimationFrame(quadro);
+  }
+  tam(); addEventListener('resize',function(){tam(); if(red) quadro(performance.now());});
+  if(matchMedia('(hover:hover)').matches) hero.addEventListener('mousemove',function(e){mx=e.clientX/innerWidth-.5; my=e.clientY/innerHeight-.5;});
+  if('IntersectionObserver' in window) new IntersectionObserver(function(es){var v=es[0].isIntersecting; if(v&&!vis){vis=true;requestAnimationFrame(quadro);} vis=v;}).observe(hero);
+  requestAnimationFrame(quadro);
 })();
 </script>
 </body></html>
