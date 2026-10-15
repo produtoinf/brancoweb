@@ -2341,7 +2341,7 @@ html[data-theme=light] .tb--e .tb__code{color:#222;text-shadow:none}html[data-th
 <style id="ly-img-css">
 /* camadas: imagem nova em branco no lugar dos painéis; os painéis antigos ficam escondidos (o script da lista continua) */
 .ly{--c:#ececee}
-.ly__stack{display:none}
+.ly__img{display:none!important}
 .ly__stage{z-index:7}
 .ly__img{position:absolute;left:50%;top:50%;width:min(88%,460px);height:auto;transform:translate(-50%,-50%) perspective(1200px) rotateY(var(--ry,0deg)) rotateX(var(--rx2,0deg)) translateY(var(--sy,0px)) scale(var(--sc,.94));
   transition:transform .5s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 40px 60px rgba(0,0,0,.6));animation:lyFlut 7s ease-in-out infinite}
@@ -2362,4 +2362,28 @@ html[data-theme=light] .tb--e .tb__code{color:#222;text-shadow:none}html[data-th
   addEventListener('scroll',function(){if(!pend){pend=true;requestAnimationFrame(rola);}},{passive:true}); rola();
 })();
 </script>
+<style id="ly-vidro-css">
+/* camadas interativas com visual de vidro branco (como a imagem de referência) */
+.ly{--c:#f2f2f4;--pbd:rgba(255,255,255,.26);--grid:rgba(255,255,255,.07)}
+.ly__p{border-radius:16px;
+  background:linear-gradient(135deg,rgba(255,255,255,.10),rgba(255,255,255,.025) 38%,rgba(12,12,14,.92) 70%);
+  border:1px solid rgba(255,255,255,.26);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.04),inset 0 1px 0 rgba(255,255,255,.35),
+    0 1px 0 rgba(255,255,255,.30),0 2px 0 rgba(220,225,235,.22),0 3px 0 rgba(200,205,215,.16),0 4px 0 rgba(180,185,195,.11),0 5px 0 rgba(160,165,175,.07),
+    0 30px 60px -24px rgba(0,0,0,.85)}
+.ly__p .l{stroke:#fff;stroke-width:2.6;filter:drop-shadow(0 0 4px rgba(255,255,255,.55))}
+.ly__p .f{fill:rgba(255,255,255,.16);stroke:rgba(255,255,255,.85)}
+.ly__p .f2{fill:rgba(255,255,255,.30);stroke:#fff}.ly__p .f3{fill:#e9e9ee}
+.ly__p .d{fill:#fff;filter:drop-shadow(0 0 4px rgba(255,255,255,.8))}
+.ly__p .b rect{fill:rgba(235,236,242,.82);stroke:rgba(255,255,255,.9);stroke-width:.6}
+.ly__p text{fill:rgba(255,255,255,.55)}
+.ly__p.on{border-color:rgba(255,255,255,.75);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),inset 0 1px 0 rgba(255,255,255,.5),
+    0 1px 0 rgba(255,255,255,.55),0 2px 0 rgba(255,255,255,.4),0 3px 0 rgba(255,255,255,.28),0 4px 0 rgba(255,255,255,.18),0 5px 0 rgba(255,255,255,.1),
+    0 0 46px -4px rgba(255,255,255,.35),0 30px 60px -24px rgba(0,0,0,.85)}
+.ly__p.off svg{opacity:.45}
+html[data-theme=light] .ly__p{background:linear-gradient(135deg,#fff,#f1f1f4);border-color:rgba(0,0,0,.12)}
+html[data-theme=light] .ly__p .l,html[data-theme=light] .ly__p .d{stroke:#111;fill:#111;filter:none}
+html[data-theme=light] .ly__p .b rect,html[data-theme=light] .ly__p .f3{fill:#222}
+</style>
 </body></html>
