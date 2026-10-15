@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d tb--globo" aria-hidden="true"><div class="tb__vidro tb__globo"><canvas id="gl-terra"></canvas></div></div>
       <div class="hl">
-        <div class="hl__logo" id="hl-logo"><span class="hl__aura" aria-hidden="true"><i></i><i></i></span><span class="hl__cartao" id="hl-cartao"><img src="img/logo-card.webp" alt="Logo da Branco: tubarão em 3D" width="760" height="763" decoding="async"><span class="hl__brilho" aria-hidden="true"></span><span class="hl__luztopo" aria-hidden="true"></span></span></div>
+        <div class="hl__logo" id="hl-logo"><span class="hl__aura" aria-hidden="true"><i></i><i></i></span><span class="hl__cartao" id="hl-cartao"><img src="img/logo-3d.webp" alt="Logo da Branco: tubarão em 3D" width="609" height="720" decoding="async"><span class="hl__brilho" aria-hidden="true"></span><span class="hl__luztopo" aria-hidden="true"></span></span></div>
         <div class="hl__linha" aria-hidden="true"><i class="hl__fio"></i></div>
         <div class="hl__lado hl__lado--e">
           <h1 id="hero-title" class="hg__h">Imagine sem limites.<br><span>Nós tornamos possível.</span></h1>
@@ -2122,7 +2122,7 @@ html[data-theme=light] .px__campo input::placeholder{color:#9a9aa2}
 .hl__cartao img{position:relative;transition:filter .4s}
 /* reflexo que corre pelo logo seguindo o cursor (recortado no formato do logo) */
 .hl__brilho{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s;
-  -webkit-mask:url(img/logo-card.webp) center/100% 100% no-repeat;mask:url(img/logo-card.webp) center/100% 100% no-repeat;
+  -webkit-mask:url(img/logo-3d.webp) center/100% 100% no-repeat;mask:url(img/logo-3d.webp) center/100% 100% no-repeat;
   background:radial-gradient(40% 30% at var(--gx,50%) var(--gy,40%),rgba(255,255,255,.12),transparent 70%);
   background-size:100% 100%,260% 100%;background-position:0 0,var(--gx,50%) 0;mix-blend-mode:screen}
 .hl__logo.ativo .hl__brilho{opacity:.8}
@@ -2224,7 +2224,7 @@ html[data-theme=light] .hf__aco{background:linear-gradient(118deg,transparent 18
 .hf__lamp{position:absolute;left:50%;top:-14px;width:220px;height:34px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(240,246,255,.95),rgba(190,210,245,.35) 55%,transparent);filter:blur(4px);opacity:0;animation:hfLiga 1.8s .35s ease-out forwards}
 /* luz batendo no topo do logo (recortada no formato do logo) */
 .hl__luztopo{position:absolute;inset:0;pointer-events:none;opacity:0;
-  -webkit-mask:url(img/logo-card.webp) center/100% 100% no-repeat;mask:url(img/logo-card.webp) center/100% 100% no-repeat;
+  -webkit-mask:url(img/logo-3d.webp) center/100% 100% no-repeat;mask:url(img/logo-3d.webp) center/100% 100% no-repeat;
   background:linear-gradient(180deg,rgba(225,236,255,.38),rgba(225,236,255,.08) 38%,transparent 60%);mix-blend-mode:screen;
   animation:hfLiga 1.8s .45s ease-out forwards,hfNucleo 5.5s 2.3s ease-in-out infinite}
 /* poça de luz embaixo do logo */
@@ -2399,5 +2399,11 @@ html[data-theme=light] .ly__p .b rect,html[data-theme=light] .ly__p .f3{fill:#22
 .tb--e .tb__code{-webkit-mask-image:none!important;mask-image:none!important;min-height:clamp(140px,13vw,190px)}
 html[data-theme=light] .tb--e .tb__vidro{background:linear-gradient(150deg,rgba(255,255,255,.75),rgba(255,255,255,.45))!important;border-color:rgba(0,0,0,.08)!important}
 @media (max-width:900px){.hero.hg .tb--e .tb__vidro{padding:7px 8px!important;border-radius:10px!important}}
+</style>
+<style id="hl-emblema-css">
+/* logo da capa: só o tubarão branco recortado */
+.hl__logo{width:clamp(170px,19vw,250px)!important}
+.hl__logo img{filter:drop-shadow(0 24px 30px rgba(0,0,0,.65)) drop-shadow(0 0 22px rgba(200,215,255,.12))!important}
+@media (max-width:900px){.hero.hg .hl__logo{width:120px!important}}
 </style>
 </body></html>
