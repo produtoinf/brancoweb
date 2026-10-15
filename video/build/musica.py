@@ -1,11 +1,12 @@
-# Trilha do motion "saas" (16 s, 120 BPM): cada corte de cena cai no tempo forte de um compasso.
+# Trilha do motion "saas" (18 s = 9 compassos, 120 BPM): cada corte de cena cai no tempo forte de um compasso.
 # uso: python3 musica.py  ->  saas.wav  (44,1 kHz, estéreo)
 # 120 BPM = 1 batida a cada 0,5 s; 1 compasso (4 batidas) = 2 s = 1 cena.
 import wave, pathlib
 import numpy as np
 
 here = pathlib.Path(__file__).parent
-SR, BPM, DUR = 44100, 120, 16.0
+SR, BPM, DUR = 44100, 120, 18.0
+NC = int(DUR / 2)               # compassos (= cenas); o último é o do logo
 B = 60 / BPM                     # duração de uma batida
 N = int((DUR + .05) * SR)
 L = np.zeros(N); R = np.zeros(N)
@@ -95,17 +96,17 @@ def blip(freq):   # bipes do visor
 
 # ---------- arranjo ----------
 # progressão em Lá menor, um acorde por compasso (= por cena)
-ACORDES = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]] * 2      # Am F C G
-RAIZ = [33, 29, 36, 31] * 2                                                  # A1 F1 C2 G1
+ACORDES = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]] * 3      # Am F C G
+RAIZ = [33, 29, 36, 31] * 3                                                  # A1 F1 C2 G1
 ARP = [0, 1, 2, 1, 0, 2, 1, 2]
 
-for c in range(8):
+for c in range(NC):
     t0 = c * 2 * B * 2   # compasso c começa em c*2 s
     t0 = c * 2.0
     # corte de cena: impacto + crash no tempo forte (menos no primeiro e no logo, que tem o seu)
-    if 1 <= c <= 6: add(impacto(), t0, .55); add(crash(), t0, .9, pan=.3)
+    if 1 <= c <= NC - 2: add(impacto(), t0, .55); add(crash(), t0, .9, pan=.3)
     # whoosh nos últimos 1/2 tempo antes de cada corte (casa com as faixas/halftone)
-    if c < 7: add(whoosh(.5), t0 + 2 - .5, .9, pan=-.2 if c % 2 else .2)
+    if c < NC - 1: add(whoosh(.5), t0 + 2 - .5, .9, pan=-.2 if c % 2 else .2)
 
     if c == 0:   # visor ligando: só bipes, pulso grave e chimbal subindo
         for k in range(16): add(blip(1760 if k % 4 == 0 else 1320), t0 + k * B / 4, .7 if k % 4 == 0 else .35, pan=(k % 2 - .5) * .6)
@@ -113,7 +114,7 @@ for c in range(8):
         for k in range(8): add(hat(), t0 + 1 + k * B / 4, .4 + k * .08)
         continue
 
-    if c == 7:   # logo: impacto grande, acorde aberto e silêncio do ritmo
+    if c == NC - 1:   # logo: impacto grande, acorde aberto e silêncio do ritmo
         add(impacto(), t0, 1.1); add(crash(), t0, 1.2, pan=-.2); add(kick(1.3), t0, 1.0)
         add(pad([nota(57), nota(64), nota(69), nota(71), nota(76)], 2.05), t0, 1.0)
         add(baixo(nota(33), 2.0), t0, .8)
@@ -139,13 +140,13 @@ for c in range(8):
     # cama harmônica
     add(pad([nota(n) for n in ACORDES[c]], 2.0), t0, .7)
     # cena 7 (idiomas): "picotado" no último tempo antes do logo
-    if c == 6:
+    if c == NC - 2:
         for k in range(4): add(clap(), t0 + 1.5 + k * B / 4, .5 + k * .12)
 
 # ---------- mixagem final ----------
 mix = np.stack([L, R], 1)
 mix = np.tanh(mix * 1.3) / np.tanh(1.3)                  # saturação suave
-fim = int(15.6 * SR); mix[fim:] *= np.linspace(1, 0, len(mix) - fim)[:, None] ** 2   # some no fim
+fim = int((DUR - .4) * SR); mix[fim:] *= np.linspace(1, 0, len(mix) - fim)[:, None] ** 2   # some no fim
 mix = mix[: int(DUR * SR)]
 mix = mix / np.max(np.abs(mix)) * .89
 with wave.open(str(here / 'saas.wav'), 'wb') as w:

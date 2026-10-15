@@ -9,10 +9,11 @@ canvas{display:block;width:1920px;height:1080px}
 <body><canvas id="c" width="1920" height="1080"></canvas>
 <img id="logo" src="logo.png" alt="" hidden>
 <script>
-/* Motion de 16 s para divulgar a prospecção do SaaS da Branco.
+/* Motion de 18 s para divulgar a prospecção do SaaS da Branco.
    120 BPM: 1 batida = 0,5 s, 1 compasso = 2 s. Cada cena dura 1 compasso e todo corte cai no tempo forte.
    render(t) desenha o quadro do instante t (em segundos): é o que o render.mjs grava a 60 fps. */
-const W = 1920, H = 1080, DUR = 16, BEAT = .5, BAR = 2;
+const W = 1920, H = 1080, DUR = 18, BEAT = .5, BAR = 2;   // 9 compassos de 2 s
+let TG = 0;   // tempo global (o visor mostra o timecode do vídeo inteiro)
 // ?pb = versão preto e branco: o destaque vira branco e o branco vira cinza claro
 const PB = location.search.includes('pb');
 const OR = PB ? '#FFFFFF' : '#FF4924', BK = '#0A0A0A', WH = PB ? '#A9A9AF' : '#F4F2EE', GR = PB ? '#6E6E74' : '#8A8A90';
@@ -46,6 +47,7 @@ function tinge(cor) { const k = document.createElement('canvas'); k.width = logo
 
 /* ---------- camadas comuns ---------- */
 function hud(t, cor = WH, a = .55) {   // sobreposição de visor: cantos, timecode, batida, REC
+  t = TG;
   x.save(); x.globalAlpha = a; x.strokeStyle = cor; x.lineWidth = 3;
   const m = 56, L = 70;
   [[m, m, 1, 1], [W - m, m, -1, 1], [m, H - m, 1, -1], [W - m, H - m, -1, -1]].forEach(([px, py, sx, sy]) => {
@@ -359,7 +361,65 @@ CENAS.push(function (t) {
   hud(t + 10);
 });
 
-// 7) faixas + halftone: a mensagem no idioma de cada país
+// 7) editor de código com cartões flutuando: a prospecção rodando por dentro
+const CODIGO = [['c', '// Branco | prospecção automática'], ['t', 'const leads = await buscar({'], ['t', '  nicho: "dentistas", cidade: "Miami",'],
+  ['t', '  filtro: "sem site"'], ['t', '});'], ['t', 'whatsapp.enviar(leads, "en");']];
+const CARTOES = [['Leads', 'Encontrados hoje', '1.248', 'alvo', -1, -1], ['WhatsApp', 'No idioma do país', 'Enviado', 'celular', 1, 1],
+  ['Países', 'BR · EUA · +8', '10', 'globo', -1, 1], ['Relatórios', 'Contatos / semana', '+312%', 'grafico', 1, -1]];
+function icone(tipo, X, Y) {
+  x.save(); x.strokeStyle = WH; x.lineWidth = 2.5; x.lineJoin = 'round';
+  if (tipo === 'janela') { x.strokeRect(X - 13, Y - 11, 26, 22); x.beginPath(); x.moveTo(X - 13, Y - 4); x.lineTo(X + 13, Y - 4); x.stroke(); }
+  else if (tipo === 'celular') { rr(X - 9, Y - 15, 18, 30, 4); x.stroke(); x.beginPath(); x.moveTo(X - 3, Y + 10); x.lineTo(X + 3, Y + 10); x.stroke(); }
+  else if (tipo === 'globo') { x.beginPath(); x.arc(X, Y, 13, 0, 7); x.stroke(); x.beginPath(); x.ellipse(X, Y, 5, 13, 0, 0, 7); x.stroke(); x.beginPath(); x.moveTo(X - 13, Y); x.lineTo(X + 13, Y); x.stroke(); }
+  else if (tipo === 'alvo') { x.beginPath(); x.arc(X, Y, 13, 0, 7); x.stroke(); x.beginPath(); x.arc(X, Y, 5, 0, 7); x.stroke(); }
+  else { x.beginPath(); x.moveTo(X - 13, Y + 12); x.lineTo(X - 4, Y); x.lineTo(X + 3, Y + 6); x.lineTo(X + 13, Y - 10); x.stroke(); }
+  x.restore();
+}
+CENAS.push(function (t) {
+  x.fillStyle = BK; x.fillRect(0, 0, W, H);
+  const g = x.createRadialGradient(W / 2, H * .45, 0, W / 2, H * .45, 900); g.addColorStop(0, QUENTE); g.addColorStop(1, BK); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const ent = out(span(t, 0, .5)), deriva = t * 10;
+  // editor inclinado (como no site): rotação leve + inclinação
+  x.save(); x.translate(W / 2, H / 2 + 30 + (1 - ent) * 80); x.rotate(-.05); x.transform(1, -.03, -.12, 1, 0, 0); x.scale(.92 + .08 * ent, .92 + .08 * ent);
+  x.globalAlpha = ent; const EW = 1000, EH = 540, EX = -EW / 2, EY = -EH / 2;
+  x.shadowColor = 'rgba(0,0,0,.7)'; x.shadowBlur = 80; x.fillStyle = '#121416'; rr(EX, EY, EW, EH, 22); x.fill(); x.shadowBlur = 0;
+  x.strokeStyle = '#26292c'; x.lineWidth = 2; rr(EX, EY, EW, EH, 22); x.stroke();
+  txt('branco / prospeccao.js', EX + 40, EY + 48, { size: 22, w: 500, f: MONO, col: GR });
+  ['prospeccao.js', 'leads.json', 'whatsapp.js'].forEach((n, i) => { const tx = EX + 40 + i * 230;
+    if (!i) { x.strokeStyle = hexA(OR, .6); x.fillStyle = hexA(OR, .1); rr(tx - 14, EY + 78, 216, 46, 10); x.fill(); x.stroke(); }
+    txt(n, tx, EY + 109, { size: 22, w: 500, f: MONO, col: i ? GR : OR }); });
+  // código sendo digitado (uma linha por meia batida)
+  let ultimo = null;
+  CODIGO.forEach(([tipo, linha], i) => {
+    const ly = EY + 190 + i * 58; txt(String(i + 1).padStart(2, '0'), EX + 40, ly, { size: 24, w: 500, f: MONO, col: hexA(WH, .25) });
+    const k = span(t, .15 + i * .2, .33 + i * .2); if (!k) return;
+    const vis = linha.slice(0, Math.ceil(linha.length * k)); txt(vis, EX + 110, ly, { size: 28, w: 500, f: MONO, col: tipo === 'c' ? GR : OR });
+    font(28, 500, MONO); ultimo = [EX + 110 + x.measureText(vis).width + 4, ly];
+  });
+  if (ultimo && Math.floor(t * 4) % 2 === 0) { x.fillStyle = OR; x.fillRect(ultimo[0], ultimo[1] - 26, 14, 32); }
+  x.restore();
+  // cartões flutuando nos cantos, entrando um por batida
+  CARTOES.forEach(([tit, sub, num, ic, sx, sy], i) => {
+    const k = outBack(span(t, .2 + i * .3, .55 + i * .3)); if (k <= 0) return;
+    const cw = 400, ch = 190, cx = W / 2 + sx * 700 - cw / 2 + Math.sin(t * 1.6 + i) * 8, cy = H / 2 + sy * 320 - ch / 2 + Math.cos(t * 1.3 + i) * 10 - deriva * sy * .3;
+    x.save(); x.translate(cx + cw / 2, cy + ch / 2); x.rotate(sx * sy * -.04); x.scale(k, k); x.translate(-cw / 2, -ch / 2); x.globalAlpha = clamp(k);
+    x.shadowColor = 'rgba(0,0,0,.6)'; x.shadowBlur = 40; x.fillStyle = '#17191c'; rr(0, 0, cw, ch, 20); x.fill(); x.shadowBlur = 0;
+    x.strokeStyle = '#2a2d31'; x.lineWidth = 2; rr(0, 0, cw, ch, 20); x.stroke();
+    x.fillStyle = '#22252a'; rr(24, 24, 52, 52, 12); x.fill(); icone(ic, 50, 50);
+    txt(tit, 92, 50, { size: 28, w: 800, col: WH === '#A9A9AF' ? '#F4F2EE' : WH }); txt(sub, 92, 76, { size: 18, w: 500, f: MONO, col: GR });
+    txt(num, 24, 146, { size: 52, w: 800, f: MONO, col: OR });
+    x.fillStyle = OR; x.beginPath(); x.arc(30, 170, 4, 0, 7); x.fill();
+    x.restore();
+  });
+  // frase na última batida
+  const kt = out(span(t, 1.45, 1.7));
+  if (kt) { x.fillStyle = hexA(BK, .75 * kt); x.fillRect(0, H / 2 - 120, W, 240);
+    txt('A BRANCO ACHA.', W / 2, H / 2 - 10, { size: 110, w: 900, col: '#F4F2EE', al: 'center', a: kt, sp: -3 });
+    txt('VOCÊ SÓ FECHA.', W / 2, H / 2 + 90, { size: 110, w: 900, col: OR, al: 'center', a: kt, sp: -3 }); }
+  hud(t);
+});
+
+// 8) faixas + halftone: a mensagem no idioma de cada país
 const IDI = [['OLÁ!', 'PORTUGUÊS'], ['HELLO!', 'ENGLISH'], ['¡HOLA!', 'ESPAÑOL'], ['ENVIE.', 'NO WHATSAPP']];
 CENAS.push(function (t) {
   const b = Math.min(3, Math.floor(t / BEAT)), lt = t - b * BEAT;
@@ -374,7 +434,7 @@ CENAS.push(function (t) {
   hud(t + 12, WH, .55);
 });
 
-// 8) revelação do logo: só o logo, centralizado, aparecendo no tempo forte
+// 9) revelação do logo: só o logo, centralizado, aparecendo no tempo forte
 CENAS.push(function (t) {
   x.fillStyle = BK; x.fillRect(0, 0, W, H);
   if (!(logoImg.complete && logoImg.naturalWidth)) return;
@@ -405,7 +465,7 @@ function transicao(t) {
 }
 
 function render(t) {
-  t = clamp(t, 0, DUR - 1e-4);
+  t = clamp(t, 0, DUR - 1e-4); TG = t;
   const i = Math.min(CENAS.length - 1, Math.floor(t / BAR)), lt = t - i * BAR;
   x.save(); CENAS[i](lt, lt / BAR); x.restore();
   // tremida de câmera no tempo forte de cada compasso
