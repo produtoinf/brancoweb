@@ -377,7 +377,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>style.css</span></div><pre class="tb__code" data-tb="1"></pre><div class="tb__pe"><span class="tb__st">● build ok</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="hl">
-        <div class="hl__logo" id="hl-logo"><img src="img/logo-card.webp" alt="Logo da Branco: tubarão em 3D" width="760" height="779" decoding="async"></div>
+        <div class="hl__logo" id="hl-logo"><img src="img/logo-card.webp" alt="Logo da Branco: tubarão em 3D" width="760" height="803" decoding="async"></div>
         <div class="hl__linha" aria-hidden="true"><i class="hl__fio"></i></div>
         <div class="hl__lado hl__lado--e">
           <h1 id="hero-title" class="hg__h">Imagine sem limites.<br><span>Nós tornamos possível.</span></h1>
@@ -1618,7 +1618,7 @@ html[data-theme=light] .hg__btn--claro{background:#0e0e10;color:#fff;border-colo
 .hero.hg{background:radial-gradient(50% 40% at 50% 18%,rgba(255,255,255,.06),transparent 70%),var(--bg);padding-top:clamp(96px,12vh,130px)}
 .hl{position:relative;display:grid;grid-template-columns:1fr 1fr;column-gap:clamp(56px,9vw,140px);max-width:1180px;margin:0 auto}
 .hl__logo{grid-column:1/-1;justify-self:center;width:clamp(220px,26vw,340px);position:relative;z-index:2;animation:hlFlut 6s ease-in-out infinite}
-.hl__logo img{display:block;width:100%;height:auto;-webkit-mask-image:radial-gradient(closest-side,#000 72%,transparent);mask-image:radial-gradient(closest-side,#000 72%,transparent)}
+.hl__logo img{display:block;width:100%;height:auto;filter:drop-shadow(0 30px 40px rgba(0,0,0,.6))}
 @keyframes hlFlut{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 /* a linha: trilho apagado + fio aceso que cresce com o scroll + pulso de luz descendo */
 .hl__linha{position:absolute;left:50%;top:clamp(200px,24vw,310px);bottom:-1px;width:2px;margin-left:-1px;background:linear-gradient(var(--line),var(--line));z-index:1;pointer-events:none}
@@ -1757,8 +1757,6 @@ html[data-theme=light] .fio circle.on,html[data-theme=light] .fio .fio__cab{fill
 html[data-theme=light] .tbl .b{stroke:rgba(0,0,0,.18)}
 html[data-theme=light] .tbl .p{stroke:#111;filter:none}html[data-theme=light] .tbl circle{fill:#111;filter:none}
 @media (max-width:1100px){.tbl{display:none}}
-/* logo: o fundo escuro da imagem some e fica a cor/luz da capa (sem "quadrado" de cor diferente) */
-html:not([data-theme=light]) .hl__logo img{mix-blend-mode:lighten}
 @media (prefers-reduced-motion:reduce){.tbl .p{animation:none;opacity:0}}
 </style>
 <script id="hv-js">
