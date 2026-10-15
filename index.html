@@ -1757,6 +1757,8 @@ html[data-theme=light] .fio circle.on,html[data-theme=light] .fio .fio__cab{fill
 html[data-theme=light] .tbl .b{stroke:rgba(0,0,0,.18)}
 html[data-theme=light] .tbl .p{stroke:#111;filter:none}html[data-theme=light] .tbl circle{fill:#111;filter:none}
 @media (max-width:1100px){.tbl{display:none}}
+/* logo: o fundo escuro da imagem some e fica a cor/luz da capa (sem "quadrado" de cor diferente) */
+html:not([data-theme=light]) .hl__logo img{mix-blend-mode:lighten}
 @media (prefers-reduced-motion:reduce){.tbl .p{animation:none;opacity:0}}
 </style>
 <script id="hv-js">
