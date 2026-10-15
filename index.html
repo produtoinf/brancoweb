@@ -373,11 +373,11 @@ document.addEventListener('DOMContentLoaded',function(){
 <main id="conteudo">
   <div class="pin">
     <section class="hero hg" id="inicio" aria-labelledby="hero-title">
-      <div class="hf" aria-hidden="true"><div class="hf__aco"></div><canvas class="hf__mar" id="hf-mar"></canvas><div class="hf__luz"></div><div class="hf__veu"></div></div>
+      <div class="hf" aria-hidden="true"><div class="hf__aco"></div><div class="hf__feixe"><i></i><b></b></div><div class="hf__lamp"></div><canvas class="hf__mar" id="hf-mar"></canvas><div class="hf__luz"></div><div class="hf__veu"></div></div>
       <div class="tb tb--e" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>index.html</span></div><pre class="tb__code" data-tb="0"></pre><div class="tb__pe"><span class="tb__st">● ao vivo</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="tb tb--d" aria-hidden="true"><div class="tb__vidro"><div class="tb__top"><i></i><i></i><i></i><span>style.css</span></div><pre class="tb__code" data-tb="1"></pre><div class="tb__pe"><span class="tb__st">● build ok</span><span class="tb__bar"><b></b></span></div></div></div>
       <div class="hl">
-        <div class="hl__logo" id="hl-logo"><span class="hl__aura" aria-hidden="true"><i></i><i></i></span><span class="hl__cartao" id="hl-cartao"><img src="img/logo-card.webp" alt="Logo da Branco: tubarão em 3D" width="760" height="763" decoding="async"><span class="hl__brilho" aria-hidden="true"></span></span></div>
+        <div class="hl__logo" id="hl-logo"><span class="hl__aura" aria-hidden="true"><i></i><i></i></span><span class="hl__cartao" id="hl-cartao"><img src="img/logo-card.webp" alt="Logo da Branco: tubarão em 3D" width="760" height="763" decoding="async"><span class="hl__brilho" aria-hidden="true"></span><span class="hl__luztopo" aria-hidden="true"></span></span></div>
         <div class="hl__linha" aria-hidden="true"><i class="hl__fio"></i></div>
         <div class="hl__lado hl__lado--e">
           <h1 id="hero-title" class="hg__h">Imagine sem limites.<br><span>Nós tornamos possível.</span></h1>
@@ -2242,5 +2242,36 @@ html[data-theme=light] .px__cta{background:#fff}
 html[data-theme=light] .hero.hg{background:#f2f2f3}
 html[data-theme=light] .hf__aco{background:linear-gradient(118deg,transparent 18%,rgba(0,0,0,.04) 27%,transparent 38%),linear-gradient(242deg,transparent 52%,rgba(0,0,0,.03) 62%,transparent 74%),radial-gradient(70% 55% at 50% 30%,#fafafa,#ececee 60%,#e4e4e6);background-size:220% 100%,220% 100%,100% 100%}
 @media (prefers-reduced-motion:reduce){.hf__aco{animation:none}}
+</style>
+<style id="hf-luz-css">
+/* ===== fundo da capa (imagem) + feixe de luz de cima clareando o logo ===== */
+.hero.hg{background:#05070a}
+.hf__aco{inset:0;background:url(img/fundo-capa.webp) center top/cover no-repeat!important;animation:hfRespira2 24s ease-in-out infinite alternate!important}
+@keyframes hfRespira2{from{transform:scale(1)}to{transform:scale(1.05)}}
+@media (max-width:700px){.hf__aco{background-image:url(img/fundo-capa-m.webp)!important}}
+.hf__luz{display:none}
+/* feixe: cone de luz saindo do topo, acende piscando e depois "respira" e balança de leve */
+.hf__feixe{position:absolute;left:50%;top:-2%;width:min(980px,78vw);height:min(70vh,640px);transform:translateX(-50%);transform-origin:50% 0;pointer-events:none;opacity:0;filter:blur(18px);mix-blend-mode:screen;
+  animation:hfLiga 1.8s .35s ease-out forwards,hfBalanca 9s 2.2s ease-in-out infinite}
+.hf__feixe i,.hf__feixe b{position:absolute;inset:0;clip-path:polygon(43% 0,57% 0,82% 100%,18% 100%)}
+.hf__feixe i{background:linear-gradient(180deg,rgba(200,220,255,.46),rgba(170,195,235,.14) 55%,transparent 92%)}
+.hf__feixe b{clip-path:polygon(47% 0,53% 0,66% 100%,34% 100%);background:linear-gradient(180deg,rgba(235,242,255,.45),rgba(220,232,255,.09) 60%,transparent 90%);animation:hfNucleo 5.5s 2.2s ease-in-out infinite}
+@keyframes hfLiga{0%{opacity:0}12%{opacity:.55}18%{opacity:.08}30%{opacity:.8}36%{opacity:.3}55%,100%{opacity:1}}
+@keyframes hfBalanca{0%,100%{transform:translateX(-50%) rotate(-1.2deg)}50%{transform:translateX(-50%) rotate(1.2deg)}}
+@keyframes hfNucleo{0%,100%{opacity:1}50%{opacity:.6}}
+/* lâmpada no topo */
+.hf__lamp{position:absolute;left:50%;top:-14px;width:220px;height:34px;transform:translateX(-50%);border-radius:50%;background:radial-gradient(closest-side,rgba(240,246,255,.95),rgba(190,210,245,.35) 55%,transparent);filter:blur(4px);opacity:0;animation:hfLiga 1.8s .35s ease-out forwards}
+/* luz batendo no topo do logo (recortada no formato do logo) */
+.hl__luztopo{position:absolute;inset:0;pointer-events:none;opacity:0;
+  -webkit-mask:url(img/logo-card.webp) center/100% 100% no-repeat;mask:url(img/logo-card.webp) center/100% 100% no-repeat;
+  background:linear-gradient(180deg,rgba(225,236,255,.38),rgba(225,236,255,.08) 38%,transparent 60%);mix-blend-mode:screen;
+  animation:hfLiga 1.8s .45s ease-out forwards,hfNucleo 5.5s 2.3s ease-in-out infinite}
+/* poça de luz embaixo do logo */
+.hl__aura::before{background:radial-gradient(closest-side,rgba(205,222,255,.28),transparent)!important;opacity:.55}
+html[data-theme=light] .hf__aco{background:radial-gradient(70% 55% at 50% 20%,#ffffff,#eceef2 60%,#e3e6ec)!important}
+html[data-theme=light] .hf__feixe i{background:linear-gradient(180deg,rgba(255,255,255,.9),transparent 90%);mix-blend-mode:normal}
+html[data-theme=light] .hf__feixe b,html[data-theme=light] .hf__lamp,html[data-theme=light] .hl__luztopo{display:none}
+@media (max-width:900px){.hf__feixe{width:120vw;height:46vh}}
+@media (prefers-reduced-motion:reduce){.hf__feixe,.hf__lamp,.hl__luztopo{animation:none;opacity:1}.hf__feixe b,.hf__aco{animation:none!important}}
 </style>
 </body></html>
