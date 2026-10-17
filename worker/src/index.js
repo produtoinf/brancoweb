@@ -1015,13 +1015,20 @@ async function buscaYelp(env, f) {
 async function buscaSerper(env, f) {
   const { q, n } = oQue(f), us = ehEUA(f.pais), local = [f.cidade, f.estado, us ? 'USA' : f.pais].filter(Boolean).join(', ');
   const [cc] = codPais(f.pais), corpo = { q: us ? `${q} in ${local}` : `${q} em ${local}`, gl: (cc || 'BR').toLowerCase(), hl: us ? 'en' : 'pt-br' }, itens = [];
-  for (const page of [1, 2, 3]) { // até 60 resultados
+  let ll = null; // as páginas 2+ do Serper Maps só funcionam com a posição no mapa (ll), tirada da 1ª página
+  for (const page of [1, 2, 3, 4]) { // até 80 resultados
+    if (page > 1 && !ll) break;
     const r = await fetch('https://google.serper.dev/maps', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-KEY': env.SERPER_KEY },
-      body: JSON.stringify({ ...corpo, page }), signal: AbortSignal.timeout(15000) });
+      body: JSON.stringify({ ...corpo, page, ...(page > 1 ? { ll } : {}) }), signal: AbortSignal.timeout(15000) });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) {
       if (page > 1) break;
       throw new Error(r.status === 401 || r.status === 403 ? 'Serper: chave inválida ou sem créditos.' : r.status === 429 ? 'Serper: muitas buscas seguidas. Tente em 1 minuto.' : 'Serper: ' + (d.message || 'erro na busca'));
+    }
+    const antes = itens.length;
+    if (page === 1) {
+      const pos = (d.places || []).filter(pl => pl.latitude != null && pl.longitude != null);
+      if (pos.length) ll = `@${(pos.reduce((a, pl) => a + pl.latitude, 0) / pos.length).toFixed(6)},${(pos.reduce((a, pl) => a + pl.longitude, 0) / pos.length).toFixed(6)},${f.cidade ? 13 : 9}z`;
     }
     for (const pl of d.places || []) {
       const tel = telefone(pl.phoneNumber, f.pais);
@@ -1029,7 +1036,7 @@ async function buscaSerper(env, f) {
         site: pl.website || null, instagram: /instagram\.com/.test(pl.website || '') ? pl.website : null, email: null, endereco: pl.address || null,
         maps: pl.cid ? 'https://maps.google.com/?cid=' + pl.cid : mapaLink(pl.title, pl.latitude, pl.longitude), avaliacao: pl.rating || null, avaliacoes: pl.ratingCount || 0 });
     }
-    if ((d.places || []).length < 20) break;
+    if ((d.places || []).length < 20 || new Set(itens.map(x => x.id)).size === new Set(itens.slice(0, antes).map(x => x.id)).size) break; // acabou ou repetiu a página
   }
   return { fonte: 'serper', lugar: local, itens };
 }
