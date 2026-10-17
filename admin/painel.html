@@ -457,6 +457,8 @@ tr.ign td{opacity:.45}
             <span class="pm__vars" data-alvo="msgSem"><button type="button">{nome}</button><button type="button">{nicho}</button><button type="button">{cidade}</button></span></label>
           <label class="pm__msg"><span class="pm__tit">Para quem <b>já tem site</b></span><textarea id="msgCom" rows="7" maxlength="1500"></textarea>
             <span class="pm__vars" data-alvo="msgCom"><button type="button">{nome}</button><button type="button">{nicho}</button><button type="button">{cidade}</button><button type="button">{site}</button></span></label>
+          <label class="pm__msg" style="grid-column:1/-1"><span class="pm__tit">Para <b>agências de marketing</b> <small style="font-weight:400;color:var(--mute)">· usada quando a busca é de agências (deixe vazio para usar as de cima)</small></span><textarea id="msgAge" rows="5" maxlength="1500"></textarea>
+            <span class="pm__vars" data-alvo="msgAge"><button type="button">{nome}</button><button type="button">{cidade}</button></span></label>
         </div>
         <div class="pm__pe"><p class="pm__aviso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/></svg><span>Os envios são feitos por você, um a um: o WhatsApp bloqueia números que disparam mensagens em massa para quem não te conhece. A sequência leva poucos segundos por contato e já agenda os lembretes no follow-up.</span></p><button class="solid" id="sMsgs">Salvar mensagens</button></div>
       </section>
@@ -865,6 +867,12 @@ const IDIOMA_PAIS={'estados unidos':'en',eua:'en',usa:'en','united states':'en',
 const idiomaDoPais=p=>IDIOMA_PAIS[semAcento(String(p||'').trim()).toLowerCase()]||'pt';
 const MSGS={pt:{},en:{},es:{}};let msgIdi='pt';
 const MSG_SEM='Oi! Tudo bem? Encontrei a {nome} aqui em {cidade} e vi que vocês ainda não têm um site próprio. Sou da Branco, a gente cria sites profissionais e faz tráfego pago para {nicho}, para aparecer no Google e receber clientes direto no WhatsApp. Posso te mostrar alguns exemplos rapidinho?';
+// agências de marketing: oferta do sistema de prospecção (só vem preenchida na conta da Branco)
+const LINK_TESTE='https://branco-admin.brancowebs.workers.dev/admin';
+const MSG_AGE={pt:'Oi! Tudo bem? Vi a {nome} aqui em {cidade}. Sou da Branco e criei um sistema de prospecção para agências: você escolhe o nicho e a cidade, ele encontra as empresas, completa WhatsApp, Instagram e site e já deixa a mensagem pronta, com follow-up que lembra você de voltar a falar. Dá para testar grátis por 7 dias, sem cartão: '+LINK_TESTE+' Quer que eu te mostre rapidinho como funciona?',
+  en:'Hi! I came across {nome} in {cidade}. I\'m with Branco and I built a prospecting system for agencies: pick a niche and a city, it finds the businesses, fills in WhatsApp, Instagram and website, and drafts the message for you, with follow-up reminders. You can try it free for 7 days, no card needed: '+LINK_TESTE+' Want me to show you how it works?',
+  es:'¡Hola! ¿Qué tal? Vi {nome} en {cidade}. Soy de Branco y creé un sistema de prospección para agencias: eliges el nicho y la ciudad, encuentra las empresas, completa WhatsApp, Instagram y sitio web y deja el mensaje listo, con seguimiento que te recuerda volver a hablar. Puedes probarlo gratis 7 días, sin tarjeta: '+LINK_TESTE+' ¿Te muestro rápido cómo funciona?'};
+const ehAgencia=()=>/ag[eê]ncia|marketing|advertis|publicidad/i.test(pros.nicho||'');
 const MSG_COM='Oi! Tudo bem? Vi o site da {nome} ({site}). Sou da Branco, a gente ajuda {nicho} em {cidade} a atrair mais clientes com tráfego pago e páginas que convertem. Posso te mandar 2 ideias rápidas do que daria para melhorar?';
 let pros={itens:[],sel:new Set()},pCfg=null,pJaSalvos=new Map();
 function mostraUso(u){const el=$('#pUso');if(!u||u.limite==null){el.hidden=true;return}el.hidden=false;
@@ -876,7 +884,7 @@ async function carregaProspec(){
     $('#pNicho').innerHTML='<option value="">Escolha um nicho</option>'+Object.entries(g).map(([k,v])=>'<optgroup label="'+esc(k)+'">'+v.map(n=>'<option value="'+n.id+'">'+esc(n.nome)+'</option>').join('')+'</optgroup>').join('')}
   pCfg=await api('/api/config').catch(()=>({}));
   MSG_PADRAO.pt={sem:MSG_SEM,com:MSG_COM};
-  msgsNaTela=false;for(const i of ['pt','en','es']){const suf=i==='pt'?'':'_'+i;MSGS[i]={sem:pCfg['msg_semsite'+suf]||MSG_PADRAO[i].sem,com:pCfg['msg_comsite'+suf]||MSG_PADRAO[i].com}}
+  msgsNaTela=false;for(const i of ['pt','en','es']){const suf=i==='pt'?'':'_'+i;MSGS[i]={sem:pCfg['msg_semsite'+suf]||MSG_PADRAO[i].sem,com:pCfg['msg_comsite'+suf]||MSG_PADRAO[i].com,age:pCfg['msg_agencia'+suf]||(window.SESSAO?.site?MSG_AGE[i]:'')}}
   mostraMsgs(idiomaDoPais($('#fBusca').pais.value));
   const FONTES=[['serperMaps','Serper (Google Maps, com telefone)','SERPER_KEY'],['google','Google Maps','GOOGLE_PLACES_KEY'],['tomtom','TomTom (grátis, 2.500/dia)','TOMTOM_KEY'],['here','HERE (grátis, 1.000/dia)','HERE_KEY'],['yelp','Yelp (EUA e Canadá, com telefone)','YELP_KEY']];
   FONTES.forEach(([id,nome,chave])=>{const o=$('#pFonte').querySelector('[value='+id+']');o.disabled=!pCfg[id];o.textContent=pCfg[id]?nome:nome+' · falta a chave '+chave});
@@ -885,17 +893,17 @@ async function carregaProspec(){
   desenhaPros();
 }
 let msgsNaTela=false; // só guarda o que está na tela depois que as mensagens foram carregadas
-function mostraMsgs(i){guardaMsgs();msgIdi=i;$('#msgIdioma').value=i;$$('#msgSeg [data-idi]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.idi===i));$('#msgSem').value=MSGS[i].sem||'';$('#msgCom').value=MSGS[i].com||'';msgsNaTela=true}
-function guardaMsgs(){if(msgsNaTela&&MSGS[msgIdi]){MSGS[msgIdi].sem=$('#msgSem').value;MSGS[msgIdi].com=$('#msgCom').value}}
+function mostraMsgs(i){guardaMsgs();msgIdi=i;$('#msgIdioma').value=i;$$('#msgSeg [data-idi]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.idi===i));$('#msgSem').value=MSGS[i].sem||'';$('#msgCom').value=MSGS[i].com||'';$('#msgAge').value=MSGS[i].age||'';msgsNaTela=true}
+function guardaMsgs(){if(msgsNaTela&&MSGS[msgIdi]){MSGS[msgIdi].sem=$('#msgSem').value;MSGS[msgIdi].com=$('#msgCom').value;MSGS[msgIdi].age=$('#msgAge').value}}
 $('#msgIdioma').onchange=()=>mostraMsgs($('#msgIdioma').value);
 $$('#msgSeg [data-idi]').forEach(b=>b.onclick=()=>mostraMsgs(b.dataset.idi));
 // botões de variável: inserem {nome}, {cidade}… onde está o cursor
 $$('.pm__vars').forEach(g=>g.querySelectorAll('button').forEach(b=>b.onclick=e=>{e.preventDefault();const t=$('#'+g.dataset.alvo),a=t.selectionStart??t.value.length,z=t.selectionEnd??a;t.value=t.value.slice(0,a)+b.textContent+t.value.slice(z);t.focus();t.selectionStart=t.selectionEnd=a+b.textContent.length}));
-$('#sMsgs').onclick=async()=>{guardaMsgs();const b={};for(const i of ['pt','en','es']){const suf=i==='pt'?'':'_'+i;b['msg_semsite'+suf]=MSGS[i].sem||'';b['msg_comsite'+suf]=MSGS[i].com||''}
+$('#sMsgs').onclick=async()=>{guardaMsgs();const b={};for(const i of ['pt','en','es']){const suf=i==='pt'?'':'_'+i;b['msg_semsite'+suf]=MSGS[i].sem||'';b['msg_comsite'+suf]=MSGS[i].com||'';b['msg_agencia'+suf]=MSGS[i].age||''}
   await api('/api/config',{method:'PUT',body:b});toast('Mensagens salvas ✓ (português, inglês e espanhol)')};
 const jaSalvo=x=>pJaSalvos.get('t'+x.telefone)||pJaSalvos.get('n'+semAcento(x.nome)+'|'+semAcento(x.cidade||''));
 const msgPara=x=>{guardaMsgs();const i=pros.idioma||'pt',m=MSGS[i]||MSGS.pt,pad={pt:['negócios','sua cidade'],en:['businesses','your area'],es:['negocios','tu ciudad']}[i];
-  return ((x.site?m.com:m.sem)||'').replace(/\{nome\}/g,x.nome).replace(/\{nicho\}/g,((i==='en'&&pros.nichoEn)||pros.nicho||pad[0]).toLowerCase()).replace(/\{cidade\}/g,x.cidade||pad[1]).replace(/\{site\}/g,x.site||'')};
+  return ((ehAgencia()&&m.age?m.age:x.site?m.com:m.sem)||'').replace(/\{nome\}/g,x.nome).replace(/\{nicho\}/g,((i==='en'&&pros.nichoEn)||pros.nicho||pad[0]).toLowerCase()).replace(/\{cidade\}/g,x.cidade||pad[1]).replace(/\{site\}/g,x.site||'')};
 const NOME_FONTE=f=>({google:'Google Maps',serper:'Serper (Google Maps)',tomtom:'TomTom',here:'HERE',yelp:'Yelp',osm:'OpenStreetMap'})[f]||f;
 const proFiltrados=()=>pros.itens.filter(x=>(!$('#pCel').checked||x.celular||x.whatsapp||(ehEUA()&&x.telefone))&&(!$('#pSem').checked||!x.site));
 function desenhaPros(){
