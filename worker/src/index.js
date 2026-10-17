@@ -63,7 +63,7 @@ const MODELOS_INICIAIS = [
   ['Último contato · 15 dias', 'Oi, {nome}! Vou encerrar seu atendimento por aqui, tudo bem? Quando quiser retomar {projeto}, é só me chamar.'],
 ];
 // mensagens da prospecção, uma por idioma (pt = sem sufixo)
-const MSG_CHAVES = ['msg_semsite', 'msg_comsite', 'msg_semsite_en', 'msg_comsite_en', 'msg_semsite_es', 'msg_comsite_es'];
+const MSG_CHAVES = ['msg_semsite', 'msg_comsite', 'msg_semsite_en', 'msg_comsite_en', 'msg_semsite_es', 'msg_comsite_es', 'msg_agencia', 'msg_agencia_en', 'msg_agencia_es'];
 const idiomaOk = v => ['pt', 'en', 'es'].includes(v) ? v : null;
 const ETAPAS_VENDA = ['novo', 'enviada', 'conversando', 'proposta', 'fechou', 'perdido']; // conversando = respondeu
 const LEMBRETES = [2, 7, 15]; // dias até o próximo lembrete depois de cada mensagem
