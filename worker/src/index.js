@@ -5,6 +5,7 @@
  *   - variável secreta            ADMIN_SENHA   (senha do dono: entra na conta 1 sem e-mail)
  *   - opcionais: BREVO_KEY (ou RESEND_KEY) + EMAIL_DE para enviar e-mails; CADASTRO_ABERTO=0 fecha o cadastro
  *   - cobrança: MP_ACCESS_TOKEN (Mercado Pago) e MP_WEBHOOK_SECRET (assinatura dos webhooks, opcional mas recomendado)
+ *   - site demo: ANTHROPIC_API_KEY (textos pela IA; sem ela usa textos padrão), DEMO_MODELO (opcional), DEMO_DOMINIO (opcional, ex.: demo.seudominio.com)
  * As tabelas são criadas sozinhas no primeiro acesso.
  *
  * Multi-conta: cada registro tem conta_id e toda consulta do painel filtra pela conta da sessão.
@@ -13,6 +14,7 @@
  * Rotas públicas (usadas pelo site):  POST /t  POST /lead  GET /status  GET /chat.js  GET /c.js  POST /c
  * Painel:                              GET /admin  +  /api/*
  * Área do cliente:                     GET /cliente/<código>
+ * Site demo publicado:                 GET /d/<slug>  (ou https://DEMO_DOMINIO/<slug>)
  */
 
 const PAINEL_HTML = __PAINEL__;
@@ -55,6 +57,14 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS cobrancas (id INTEGER PRIMARY KEY, conta_id INTEGER NOT NULL, assinatura_id INTEGER, gateway_id TEXT UNIQUE NOT NULL, status TEXT NOT NULL, valor INTEGER NOT NULL DEFAULT 0, data TEXT, criado_em TEXT NOT NULL DEFAULT (datetime('now')))`,
   `CREATE TABLE IF NOT EXISTS webhooks (chave TEXT PRIMARY KEY, recebido_em TEXT NOT NULL DEFAULT (datetime('now')))`,
   `CREATE INDEX IF NOT EXISTS ex_data ON extrato (data)`,
+  // site demo: uma demonstração por prospect (contatos.id), com o conteúdo e o tema em JSON; demo_eventos = histórico para o follow-up
+  `CREATE TABLE IF NOT EXISTS site_demos (id INTEGER PRIMARY KEY, conta_id INTEGER NOT NULL, usuario_id INTEGER, contato_id INTEGER, template TEXT NOT NULL DEFAULT 'moderno', dados TEXT,
+     conteudo TEXT, tema TEXT, status TEXT NOT NULL DEFAULT 'draft', slug TEXT UNIQUE NOT NULL, ia INTEGER NOT NULL DEFAULT 0, erro TEXT, publicado_em TEXT,
+     criado_em TEXT NOT NULL DEFAULT (datetime('now')), atualizado_em TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE INDEX IF NOT EXISTS sd_conta ON site_demos (conta_id, contato_id)`,
+  `CREATE TABLE IF NOT EXISTS demo_eventos (id INTEGER PRIMARY KEY, conta_id INTEGER NOT NULL, demo_id INTEGER NOT NULL, contato_id INTEGER, tipo TEXT NOT NULL, texto TEXT, usuario_id INTEGER, criado_em TEXT NOT NULL DEFAULT (datetime('now')))`,
+  `CREATE INDEX IF NOT EXISTS de_demo ON demo_eventos (demo_id, criado_em)`,
+  `CREATE INDEX IF NOT EXISTS de_conta ON demo_eventos (conta_id, tipo, criado_em)`,
 ];
 const MODELOS_INICIAIS = [
   ['Primeiro contato', 'Oi, {nome}! Aqui é da Branco 👋 Vi que você se interessou por {projeto}. Posso te fazer umas perguntas rápidas para montar sua proposta?'],
@@ -69,7 +79,8 @@ const ETAPAS_VENDA = ['novo', 'enviada', 'conversando', 'proposta', 'fechou', 'p
 const LEMBRETES = [2, 7, 15]; // dias até o próximo lembrete depois de cada mensagem
 const CONTA_SITE = 1; // conta da Branco: dona do site, dos eventos (/t) e dos leads (/lead)
 // planos: empresas encontradas por mês (a etapa dos planos deixa isso editável no painel admin)
-const PLANOS = { teste: { nome: 'Teste grátis', empresas: 30, preco: 0 }, start: { nome: 'Branco Start', empresas: 200, preco: 2990 }, pro: { nome: 'Branco Pro', empresas: 1500, preco: 5990 }, agency: { nome: 'Branco Agency', empresas: 4000, preco: 11990 } };
+// demos = sites demo gerados pela IA por mês (gerar com os textos padrão não conta)
+const PLANOS = { teste: { nome: 'Teste grátis', empresas: 30, preco: 0, demos: 3 }, start: { nome: 'Branco Start', empresas: 200, preco: 2990, demos: 30 }, pro: { nome: 'Branco Pro', empresas: 1500, preco: 5990, demos: 150 }, agency: { nome: 'Branco Agency', empresas: 4000, preco: 11990, demos: 400 } };
 const TESTE_DIAS = 7;
 
 // colunas que cada tabela precisa ter: se o banco veio de uma versão antiga, as que faltam são criadas (nada é apagado)
@@ -89,6 +100,8 @@ const COLUNAS = {
   cobrancas: ['conta_id INTEGER', 'assinatura_id INTEGER', 'gateway_id', 'status', 'valor INTEGER', 'data', 'criado_em'],
   usuarios: ['email', 'senha', 'nome', 'verificado INTEGER', 'admin_saas INTEGER', 'criado_em'],
   membros: ['conta_id INTEGER', 'usuario_id INTEGER', 'papel', 'criado_em'],
+  site_demos: ['conta_id INTEGER', 'usuario_id INTEGER', 'contato_id INTEGER', 'template', 'dados', 'conteudo', 'tema', 'status', 'slug', 'ia INTEGER', 'erro', 'publicado_em', 'criado_em', 'atualizado_em'],
+  demo_eventos: ['conta_id INTEGER', 'demo_id INTEGER', 'contato_id INTEGER', 'tipo', 'texto', 'usuario_id INTEGER', 'criado_em'],
 };
 async function migra(db) {
   const tabelas = Object.keys(COLUNAS);
@@ -315,7 +328,7 @@ async function listaClientes(db, conta) {
 }
 
 /* ---------- roteador da API do painel ---------- */
-async function api(req, db, env, caminho) {
+async function api(req, db, env, caminho, ctx) {
   const m = req.method, seg = caminho.split('/').filter(Boolean).slice(1); // ['clientes','3','links']
   const [rec, id, sub] = [seg[0], seg[1] ? Number(seg[1]) : null, seg[2]];
 
@@ -409,7 +422,7 @@ async function api(req, db, env, caminho) {
     }
     const cc = Object.fromEntries((await db.prepare('SELECT chave, valor FROM config_conta WHERE conta_id = ?').bind(conta).all()).results.map(x => [x.chave, x.valor]));
     const c = conta === CONTA_SITE ? Object.fromEntries((await db.prepare("SELECT chave, valor FROM config WHERE chave IN ('manutencao','mensagem')").all()).results.map(x => [x.chave, x.valor])) : {};
-    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', ...Object.fromEntries(MSG_CHAVES.map(k => [k, cc[k] || ''])), google: !!env.GOOGLE_PLACES_KEY, serper: !!env.SERPER_KEY, tomtom: !!env.TOMTOM_KEY, here: !!env.HERE_KEY, yelp: !!env.YELP_KEY, serperMaps: !!env.SERPER_KEY });
+    return json({ manutencao: c.manutencao === '1', mensagem: c.mensagem || '', ...Object.fromEntries(MSG_CHAVES.map(k => [k, cc[k] || ''])), google: !!env.GOOGLE_PLACES_KEY, ia: !!env.ANTHROPIC_API_KEY, serper: !!env.SERPER_KEY, tomtom: !!env.TOMTOM_KEY, here: !!env.HERE_KEY, yelp: !!env.YELP_KEY, serperMaps: !!env.SERPER_KEY });
   }
 
   // cidades de um estado (IBGE), guardadas em cache por 30 dias
@@ -447,6 +460,9 @@ async function api(req, db, env, caminho) {
       } catch (e) { await registra(db, e.status === 402 ? 'aviso' : 'erro', conta, 'busca: ' + e.message); return erro(e.message || 'Não foi possível buscar agora.', e.status || 502); } // mostra o motivo real no painel
     }
   }
+
+  // site demo (a partir de um prospect da prospecção)
+  if (rec === 'demos') return await rotaDemos(req, db, env, m, id, sub, b, S, ctx);
 
   // clientes
   if (rec === 'clientes') {
@@ -486,7 +502,9 @@ async function api(req, db, env, caminho) {
   if (rec === 'followup' && m === 'GET') {
     const [c, mo] = await db.batch([
       db.prepare(`SELECT id, nome, empresa, telefone, idioma, projeto, mensagem, COALESCE(status,'enviado') status, origem, site, instagram, endereco, cidade, nicho, maps, COALESCE(venda,'novo') venda, COALESCE(contatos,0) contatos,
-        ultimo_contato, proximo_contato, notas, proposta, usuario_id, criado_em FROM contatos WHERE conta_id = ? ORDER BY (COALESCE(venda,'novo') IN ('fechou','perdido')), COALESCE(proximo_contato, '0000'), criado_em DESC`).bind(conta),
+        ultimo_contato, proximo_contato, notas, proposta, usuario_id, criado_em,
+        (SELECT d.id FROM site_demos d WHERE d.contato_id = contatos.id AND d.conta_id = contatos.conta_id ORDER BY d.id DESC LIMIT 1) demo_id,
+        (SELECT d.status FROM site_demos d WHERE d.contato_id = contatos.id AND d.conta_id = contatos.conta_id ORDER BY d.id DESC LIMIT 1) demo_status FROM contatos WHERE conta_id = ? ORDER BY (COALESCE(venda,'novo') IN ('fechou','perdido')), COALESCE(proximo_contato, '0000'), criado_em DESC`).bind(conta),
       db.prepare('SELECT id, titulo, texto, idioma FROM modelos WHERE conta_id = ? ORDER BY id').bind(conta)]);
     return json({ contatos: c.results, modelos: mo.results });
   }
@@ -498,13 +516,7 @@ async function api(req, db, env, caminho) {
       return json({ ok: true });
     }
     if (id && !await db.prepare('SELECT 1 FROM contatos WHERE id = ? AND conta_id = ?').bind(id, conta).first()) return erro('Contato não encontrado.', 404);
-    if (id && sub === 'enviei' && m === 'POST') {
-      const c = await db.prepare('SELECT contatos FROM contatos WHERE id = ?').bind(id).first();
-      const n = (c.contatos || 0) + 1, hoje = dataOk(b.hoje) || new Date().toISOString().slice(0, 10), dias = LEMBRETES[n - 1];
-      await db.prepare(`UPDATE contatos SET contatos = ?, ultimo_contato = datetime('now'), proximo_contato = ${dias ? "date(?, '+' || ? || ' days')" : 'NULL'},
-        venda = CASE WHEN COALESCE(venda,'novo') = 'novo' THEN 'enviada' ELSE venda END, usuario_id = COALESCE(usuario_id, ?) WHERE id = ?`).bind(...(dias ? [n, hoje, dias, S.usuario, id] : [n, S.usuario, id])).run();
-      return json({ ok: true });
-    }
+    if (id && sub === 'enviei' && m === 'POST') { await registraEnvio(db, id, b.hoje, S.usuario); return json({ ok: true }); }
     if (id && m === 'PATCH') {
       const campos = [], val = [];
       if ('venda' in b && ETAPAS_VENDA.includes(b.venda)) { campos.push('venda = ?'); val.push(b.venda); }
@@ -571,6 +583,14 @@ async function api(req, db, env, caminho) {
     }
   }
   return erro('Rota não encontrada.', 404);
+}
+
+// mensagem enviada a um contato: conta o envio e agenda o próximo lembrete (2, 7 e 15 dias)
+async function registraEnvio(db, id, hojeTxt, usuario) {
+  const c = await db.prepare('SELECT contatos FROM contatos WHERE id = ?').bind(id).first();
+  const n = (c.contatos || 0) + 1, hoje = dataOk(hojeTxt) || new Date().toISOString().slice(0, 10), dias = LEMBRETES[n - 1];
+  await db.prepare(`UPDATE contatos SET contatos = ?, ultimo_contato = datetime('now'), proximo_contato = ${dias ? "date(?, '+' || ? || ' days')" : 'NULL'},
+    venda = CASE WHEN COALESCE(venda,'novo') = 'novo' THEN 'enviada' ELSE venda END, usuario_id = COALESCE(usuario_id, ?) WHERE id = ?`).bind(...(dias ? [n, hoje, dias, usuario, id] : [n, usuario, id])).run();
 }
 
 /* ---------- conta: cadastro, verificação de e-mail e recuperação de senha ---------- */
@@ -778,7 +798,7 @@ async function rotaSaas(req, db, env, m, seg, b) {
   }
   if (id && m === 'DELETE') { // apaga a conta e tudo dela
     const us = (await db.prepare('SELECT usuario_id FROM membros WHERE conta_id = ?').bind(id).all()).results.map(x => x.usuario_id);
-    await db.batch([...['contatos', 'modelos', 'vendas', 'clientes', 'links', 'extrato', 'eventos', 'visitas_cliente', 'sessoes', 'config_conta', 'uso', 'empresas_vistas', 'membros', 'assinaturas', 'cobrancas'].map(t => db.prepare(`DELETE FROM ${t} WHERE conta_id = ?`).bind(id)),
+    await db.batch([...['contatos', 'modelos', 'vendas', 'clientes', 'links', 'extrato', 'eventos', 'visitas_cliente', 'sessoes', 'config_conta', 'uso', 'empresas_vistas', 'membros', 'assinaturas', 'cobrancas', 'site_demos', 'demo_eventos'].map(t => db.prepare(`DELETE FROM ${t} WHERE conta_id = ?`).bind(id)),
       ...us.map(u => db.prepare('DELETE FROM usuarios WHERE id = ? AND NOT EXISTS (SELECT 1 FROM membros WHERE usuario_id = ? AND conta_id <> ?)').bind(u, u, id)),
       ...us.map(u => db.prepare('DELETE FROM tokens_email WHERE usuario_id = ?').bind(u)), db.prepare('DELETE FROM contas WHERE id = ?').bind(id)]);
     await registra(db, 'aviso', id, 'conta excluída pelo admin');
@@ -1145,6 +1165,132 @@ async function salvaProspects(db, conta, itens, usuario) {
   return { ok: true, novos, repetidos: itens.length - novos, ids };
 }
 
+// @@DEMO@@
+
+/* ---------- site demo: rotas do painel ---------- */
+const demoLimite = S => S.conta === CONTA_SITE ? null : (PLANOS[S.plano] || PLANOS.teste).demos;
+const demoUsadas = async (db, conta) => (await db.prepare("SELECT COUNT(*) n FROM demo_eventos WHERE conta_id = ? AND tipo = 'gerada_ia' AND criado_em >= ?").bind(conta, cicloAtual() + '-01').first()).n;
+const demoEvento = (db, D, tipo, texto, usuario) => db.prepare("INSERT INTO demo_eventos (conta_id, demo_id, contato_id, tipo, texto, usuario_id, criado_em) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))")
+  .bind(D.conta_id, D.id, D.contato_id, tipo, texto ? String(texto).slice(0, 300) : null, usuario ?? null);
+// o que o painel recebe de uma demo (o link só existe depois de publicada)
+function demoSaida(D, env, origem) {
+  return { id: D.id, contato_id: D.contato_id, template: D.template, status: D.status, slug: D.slug, ia: !!D.ia, erro: D.erro, publicado_em: D.publicado_em, criado_em: D.criado_em, atualizado_em: D.atualizado_em,
+    dados: demoJSON(D.dados), conteudo: D.conteudo ? limpaConteudo(demoJSON(D.conteudo)) : null, tema: limpaTema(demoJSON(D.tema), D.template),
+    link: D.status === 'published' ? linkDemo(env, origem, D.slug) : null, previa: `/api/demos/${D.id}/previa` };
+}
+async function rotaDemos(req, db, env, m, id, sub, b, S, ctx) {
+  const conta = S.conta, origem = new URL(req.url).origin;
+  if (!id && m === 'GET') {
+    const L = (await db.prepare('SELECT id, contato_id, template, status, slug, publicado_em, atualizado_em FROM site_demos WHERE conta_id = ? ORDER BY id DESC LIMIT 2000').bind(conta).all()).results;
+    const q = new URL(req.url).searchParams, ni = q.has('nicho') ? demoNicho(q.get('nicho'), q.get('categoria')) : null; // modal: template recomendado para o nicho
+    return json({ demos: L.map(D => ({ ...D, link: D.status === 'published' ? linkDemo(env, origem, D.slug) : null })), uso: { usadas: await demoUsadas(db, conta), limite: demoLimite(S) }, ia: !!env.ANTHROPIC_API_KEY,
+      sugestao: ni ? { template: demoTemplateSugerido(ni.id), nicho: ni.nome } : null,
+      templates: Object.fromEntries(Object.entries(DEMO_TEMPLATES).map(([k, v]) => [k, { nome: v.nome, desc: v.desc }])), estilos: DEMO_ESTILOS });
+  }
+  // criar: liga ao prospect (salva no follow-up se ainda não estava) — se o prospect já tem demo, devolve a que existe
+  if (!id && m === 'POST') {
+    const x = b.item && typeof b.item === 'object' ? b.item : null; if (!x || !txt(x.nome, 100)) return erro('Escolha um estabelecimento.');
+    if (await excedeu(db, 'demo:' + conta, 120, 60)) return erro('Muitas demonstrações seguidas. Espere alguns minutos.', 429);
+    const idioma = idiomaOk(b.idioma) || 'pt', ni = demoNicho(b.nicho, x.categoria);
+    const salvo = await salvaProspects(db, conta, [{ ...x, nicho: b.nicho || ni.nome, idioma }], S.usuario), contato = salvo.ids[0];
+    if (!contato) return erro('Não consegui salvar o estabelecimento.');
+    const ja = await db.prepare('SELECT * FROM site_demos WHERE conta_id = ? AND contato_id = ? ORDER BY id DESC LIMIT 1').bind(conta, contato).first();
+    if (ja) return json({ ok: true, existente: true, demo: demoSaida(ja, env, origem) });
+    const tel = digitos(x.telefone);
+    const dados = { nome: txt(x.nome, 100), nicho: ni.nome, nichoId: ni.id, grupo: ni.grupo, categoria: txt(x.categoria, 80), cidade: txt(x.cidade, 80), estado: txt(b.estado, 60), pais: txt(b.pais, 60),
+      idioma, telefone: tel, celular: !!x.celular, whatsapp: !!x.whatsapp, endereco: txt(x.endereco, 220), instagram: txt(x.instagram, 200), email: emailOk(x.email), site: urlOk(x.site), maps: urlOk(x.maps) };
+    const template = DEMO_TEMPLATES[b.template] ? b.template : demoTemplateSugerido(ni.id);
+    const r = await db.prepare("INSERT INTO site_demos (conta_id, usuario_id, contato_id, template, dados, tema, status, slug, criado_em, atualizado_em) VALUES (?, ?, ?, ?, ?, ?, 'draft', ?, datetime('now'), datetime('now'))")
+      .bind(conta, S.usuario, contato, template, JSON.stringify(dados), JSON.stringify(limpaTema(DEMO_TEMPLATES[template], template)), slugDe(dados.nome)).run();
+    const D = await db.prepare('SELECT * FROM site_demos WHERE id = ?').bind(r.meta.last_row_id).first();
+    await demoEvento(db, D, 'criada', null, S.usuario).run();
+    return json({ ok: true, demo: demoSaida(D, env, origem) });
+  }
+  if (!id) return erro('Rota não encontrada.', 404);
+  const D = await db.prepare('SELECT * FROM site_demos WHERE id = ? AND conta_id = ?').bind(id, conta).first();
+  if (!D) return erro('Demonstração não encontrada.', 404);
+  if (sub === 'previa' && m === 'GET') return new Response(renderDemo(D), { headers: demoHeaders(false) });
+  if (!sub && m === 'GET') {
+    const [ev, ct] = await db.batch([db.prepare('SELECT tipo, texto, criado_em FROM demo_eventos WHERE demo_id = ? AND conta_id = ? ORDER BY id DESC LIMIT 50').bind(id, conta),
+      db.prepare("SELECT id, nome, telefone, COALESCE(venda,'novo') venda, COALESCE(contatos,0) contatos, ultimo_contato, proximo_contato, notas, idioma FROM contatos WHERE id = ? AND conta_id = ?").bind(D.contato_id, conta)]);
+    return json({ ...demoSaida(D, env, origem), eventos: ev.results, contato: ct.results[0] || null, ia_configurada: !!env.ANTHROPIC_API_KEY, uso: { usadas: await demoUsadas(db, conta), limite: demoLimite(S) } });
+  }
+  // gerar os textos: com IA (se configurada e o usuário não pediu os padrão) — trava para não gerar duas vezes ao mesmo tempo
+  if (sub === 'gerar' && m === 'POST') {
+    if (['ready', 'published'].includes(D.status) && !b.forcar) return erro('Esta demonstração já foi gerada. Confirme para gerar os textos de novo.', 409);
+    const template = DEMO_TEMPLATES[b.template] ? b.template : D.template, comIA = !!env.ANTHROPIC_API_KEY && !b.padrao;
+    const lim = demoLimite(S);
+    if (comIA && lim != null && await demoUsadas(db, conta) >= lim) return erro(`Você já gerou as ${lim} demonstrações com IA do seu plano neste mês. Use os textos padrão ou faça upgrade.`, 402);
+    if (comIA && await excedeu(db, 'demoia:' + ip(req), 30, 60)) return erro('Muitas gerações seguidas. Espere alguns minutos.', 429);
+    const trava = await db.prepare("UPDATE site_demos SET status = 'generating', erro = NULL, atualizado_em = datetime('now') WHERE id = ? AND conta_id = ? AND (status <> 'generating' OR atualizado_em < datetime('now', '-3 minutes')) RETURNING id").bind(id, conta).first();
+    if (!trava) return erro('Esta demonstração já está sendo gerada. Aguarde alguns segundos.', 409);
+    const voltaStatus = D.status === 'published' ? 'published' : 'ready';
+    const tarefa = (async () => {
+      const dados = demoJSON(D.dados), base = DEMO_ESTILOS[b.estilo] || null;
+      let conteudo, sugerido = null;
+      if (comIA) ({ conteudo, estilo: sugerido } = await conteudoIA(env, dados, template));
+      else conteudo = conteudoPadrao(dados);
+      const atual = limpaTema(demoJSON(D.tema), template);
+      const tema = limpaTema({ ...atual, ...(base || (b.estilo === 'auto' && sugerido ? { modo: sugerido.modo, cor: sugerido.cor || atual.cor } : {})) }, template);
+      await db.batch([db.prepare("UPDATE site_demos SET status = ?, template = ?, conteudo = ?, tema = ?, ia = ?, erro = NULL, atualizado_em = datetime('now') WHERE id = ?").bind(voltaStatus, template, JSON.stringify(conteudo), JSON.stringify(tema), comIA ? 1 : 0, id),
+        demoEvento(db, D, comIA ? 'gerada_ia' : 'gerada', template, S.usuario)]);
+    })().catch(async e => {
+      const msg = String(e?.message || e).slice(0, 200);
+      await db.prepare("UPDATE site_demos SET status = ?, erro = ?, atualizado_em = datetime('now') WHERE id = ?").bind(D.conteudo ? voltaStatus : 'failed', msg, id).run();
+      await registra(db, 'erro', conta, 'site demo ' + id + ': ' + msg);
+      throw e;
+    });
+    ctx?.waitUntil?.(tarefa.catch(() => {})); // se o painel fechar no meio, a geração termina mesmo assim
+    try { await tarefa; } catch (e) { return erro('Não consegui gerar os textos: ' + (e?.message || 'erro') + '.', 502); }
+    return json({ ok: true, demo: demoSaida(await db.prepare('SELECT * FROM site_demos WHERE id = ?').bind(id).first(), env, origem) });
+  }
+  if (D.status === 'generating' && m !== 'GET' && sub !== 'evento') return erro('Aguarde a geração terminar.', 409);
+  if (!sub && m === 'PATCH') {
+    const template = DEMO_TEMPLATES[b.template] ? b.template : D.template, q = [];
+    const conteudo = 'conteudo' in b ? limpaConteudo(b.conteudo) : null;
+    if (conteudo && !conteudo.titulo) return erro('O título principal não pode ficar vazio.');
+    q.push(db.prepare("UPDATE site_demos SET template = ?, conteudo = COALESCE(?, conteudo), tema = ?, status = CASE WHEN status IN ('draft','failed') AND ? IS NOT NULL THEN 'ready' ELSE status END, atualizado_em = datetime('now') WHERE id = ? AND conta_id = ?")
+      .bind(template, conteudo ? JSON.stringify(conteudo) : null, JSON.stringify(limpaTema('tema' in b ? b.tema : demoJSON(D.tema), template)), conteudo ? 1 : null, id, conta));
+    await db.batch(q);
+    return json({ ok: true, demo: demoSaida(await db.prepare('SELECT * FROM site_demos WHERE id = ?').bind(id).first(), env, origem) });
+  }
+  if (sub === 'publicar' && m === 'POST') {
+    if (!D.conteudo) return erro('Gere a demonstração antes de publicar.');
+    await db.batch([db.prepare("UPDATE site_demos SET status = 'published', publicado_em = COALESCE(publicado_em, datetime('now')), atualizado_em = datetime('now') WHERE id = ?").bind(id),
+      demoEvento(db, D, 'publicada', null, S.usuario)]);
+    return json({ ok: true, demo: demoSaida(await db.prepare('SELECT * FROM site_demos WHERE id = ?').bind(id).first(), env, origem) });
+  }
+  if (sub === 'despublicar' && m === 'POST') {
+    await db.batch([db.prepare("UPDATE site_demos SET status = 'ready', atualizado_em = datetime('now') WHERE id = ? AND status = 'published'").bind(id), demoEvento(db, D, 'despublicada', null, S.usuario)]);
+    return json({ ok: true, demo: demoSaida(await db.prepare('SELECT * FROM site_demos WHERE id = ?').bind(id).first(), env, origem) });
+  }
+  // registros para o follow-up: copiar link/mensagem NÃO conta como mensagem enviada; "abordagem" sim (agenda os lembretes)
+  if (sub === 'evento' && m === 'POST') {
+    if (!['link_copiado', 'msg_copiada'].includes(b.tipo)) return erro('Evento inválido.');
+    await demoEvento(db, D, b.tipo, null, S.usuario).run(); return json({ ok: true });
+  }
+  if (sub === 'abordagem' && m === 'POST') {
+    if (!D.contato_id || !await db.prepare('SELECT 1 FROM contatos WHERE id = ? AND conta_id = ?').bind(D.contato_id, conta).first()) return erro('O contato desta demonstração foi excluído do follow-up.', 404);
+    await registraEnvio(db, D.contato_id, b.hoje, S.usuario); await demoEvento(db, D, 'abordagem', txt(b.canal, 40), S.usuario).run();
+    return json({ ok: true });
+  }
+  if (sub === 'followup' && m === 'POST') { // próximo contato + anotação, direto da tela da demo
+    if (!D.contato_id || !await db.prepare('SELECT 1 FROM contatos WHERE id = ? AND conta_id = ?').bind(D.contato_id, conta).first()) return erro('O contato desta demonstração foi excluído do follow-up.', 404);
+    const prox = dataOk(b.proximo_contato), q = [db.prepare("UPDATE contatos SET proximo_contato = ?, atualizado_em = datetime('now') WHERE id = ? AND conta_id = ?").bind(prox, D.contato_id, conta)];
+    if ('notas' in b) q.push(db.prepare('UPDATE contatos SET notas = ? WHERE id = ? AND conta_id = ?').bind(txt(b.notas, 2000), D.contato_id, conta));
+    q.push(demoEvento(db, D, 'proximo_contato', prox || 'sem data', S.usuario));
+    await db.batch(q); return json({ ok: true });
+  }
+  if (!sub && m === 'DELETE') { await db.batch([db.prepare('DELETE FROM demo_eventos WHERE demo_id = ? AND conta_id = ?').bind(id, conta), db.prepare('DELETE FROM site_demos WHERE id = ? AND conta_id = ?').bind(id, conta)]); return json({ ok: true }); }
+  return erro('Rota não encontrada.', 404);
+}
+// página pública: só demos publicadas; mostra só o necessário para desenhar o site
+async function rotaDemoPublica(db, slug) {
+  const D = /^[a-z0-9-]{3,60}$/.test(slug || '') && await db.prepare("SELECT template, dados, conteudo, tema FROM site_demos WHERE slug = ? AND status = 'published'").bind(slug).first();
+  if (!D) return new Response('<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><title>Não encontrado</title><p style="font-family:sans-serif;padding:40px">Esta demonstração não está disponível.</p>', { status: 404, headers: demoHeaders(true) });
+  return new Response(renderDemo(D), { headers: demoHeaders(true) });
+}
+
 /* ---------- área do cliente (link secreto) ---------- */
 async function apiCliente(db, token, dias) {
   if (!token || token.length < 10) return erro('Link inválido.', 404);
@@ -1165,8 +1311,9 @@ async function apiCliente(db, token, dias) {
 }
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env, ctx) {
     const url = new URL(req.url), p = url.pathname.replace(/\/+$/, '') || '/';
+    const demoHost = dominioDemo(env) && url.hostname === dominioDemo(env); // domínio só das demos: não serve o painel
     const publica = ['/t', '/lead', '/c', '/status', '/c.js', '/chat.js'].includes(p) || p.startsWith('/api/cliente/');
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: publica ? CORS : {} });
     // o painel só aceita alterações vindas dele mesmo (proteção contra pedidos forjados por outros sites)
@@ -1177,6 +1324,9 @@ export default {
     if (!env.DB) return new Response('Falta ligar o banco D1 com o nome DB neste Worker.', { status: 500 });
     try {
       await prepara(env.DB);
+      if (p === '/robots.txt') return new Response('User-agent: *\nDisallow: /\n', { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+      if (demoHost) return req.method === 'GET' ? await rotaDemoPublica(env.DB, p.slice(1)) : new Response('Não encontrado', { status: 404 });
+      if (p.startsWith('/d/') && req.method === 'GET') return await rotaDemoPublica(env.DB, p.slice(3));
       // rotas que o site chama: limite por IP para robôs não lotarem o banco
       const LIM = { '/t': 400, '/lead': 20, '/c': 400 };
       if (LIM[p] && req.method === 'POST' && await excedeu(env.DB, p + ':' + ip(req), LIM[p], 60)) return new Response(null, { status: 429, headers: CORS });
@@ -1192,7 +1342,7 @@ export default {
         const r = await apiCliente(env.DB, p.split('/')[3] || '', inteiro(url.searchParams.get('dias'), 1, 365) || 30);
         Object.entries(CORS).forEach(([k, v]) => r.headers.set(k, v)); return r;
       }
-      if (p.startsWith('/api/')) return await api(req, env.DB, env, p);
+      if (p.startsWith('/api/')) return await api(req, env.DB, env, p, ctx);
       if (p.startsWith('/cliente/')) return html(CLIENTE_HTML, SEGURANCA);
       if (p === '/') return Response.redirect(url.origin + '/admin', 302);
       return new Response('Não encontrado', { status: 404 });

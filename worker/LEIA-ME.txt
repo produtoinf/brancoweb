@@ -56,6 +56,7 @@ COBRANÇA (Mercado Pago — aceita CPF)
 
 TESTE AUTOMÁTICO (no seu computador, precisa só do Node 22+)
    node worker/test/isolamento.test.mjs
+   node worker/test/demos.test.mjs      (site demo: gerar, editar, publicar, follow-up e isolamento)
    Cria contas de mentira, enche de dados e confere que uma conta não vê nem mexe na outra.
 
 5) Abrir o painel
@@ -121,6 +122,27 @@ MENSAGENS POR IDIOMA
    nesse idioma. Enquanto você não criar as suas em inglês/espanhol (Follow-up → + nova mensagem →
    Idioma), o painel usa 4 mensagens prontas em cada idioma.
 
+SITE DEMO (Prospecção → "✨ Gerar site demo")
+   Em cada resultado da prospecção há o botão "Gerar site demo": escolha o template (Premium, Moderno ou
+   Comercial) e o estilo, e o painel monta um site de exemplo com os dados públicos do estabelecimento.
+   Depois dá para editar textos, cores, imagens e contato, publicar e copiar o link + mensagem.
+   O estabelecimento vai para o follow-up ligado à demo (copiar o link NÃO conta como mensagem enviada;
+   use "Registrar abordagem").
+   Funciona sem configurar nada (textos padrão para editar). Para os textos pela IA:
+   1. console.anthropic.com > API Keys > Create Key > copie
+   2. Worker > Settings > Variables and Secrets > Add > Secret
+        Name: ANTHROPIC_API_KEY   Value: (a chave)
+      Opcional (Text): DEMO_MODELO = outro modelo da Anthropic (padrão: claude-opus-5-5;
+      ex.: claude-haiku-5-5 sai bem mais barato)
+   Limite de demos com IA por mês: teste 3 · Start 30 · Pro 150 · Agency 400 (a conta da Branco não tem limite).
+   Endereço das demos: sem configurar, fica https://branco-admin.SEU-USUARIO.workers.dev/d/nome-da-empresa-xxxxxx
+   Para usar um domínio próprio (ex.: demo.seudominio.com):
+   1. o domínio precisa estar na Cloudflare
+   2. Worker > Settings > Domains & Routes > Add > Custom domain > demo.seudominio.com
+   3. Worker > Settings > Variables and Secrets > Add > Text   Name: DEMO_DOMINIO   Value: demo.seudominio.com
+   As demos têm HTTPS, não aparecem no Google (noindex), mostram "Demonstração conceitual — site não
+   oficial" e saem do ar quando você despublica. As imagens padrão são do Unsplash (uso livre).
+
 O QUE O WORKER FAZ
 - Conta visitas, cliques no WhatsApp, formulário aberto e cadastros do site (track.js)
 - Painel /admin: visão geral com gráficos, follow-up, financeiro, clientes
@@ -136,4 +158,4 @@ BANCO ANTIGO
 
 OBSERVAÇÕES
 - O assistente de IA do site (chat.js) não vem nesta versão.
-- Para editar: mexa em admin/painel.html e worker/src/, depois rode  node worker/build.mjs
+- Para editar: mexa em admin/painel.html e worker/src/ (index.js e demo.js), depois rode  node worker/build.mjs

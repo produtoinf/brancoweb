@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { novoD1 } from './d1.mjs';
 
 const aqui = new URL('.', import.meta.url).pathname;
-const fonte = readFileSync(join(aqui, '../src/index.js'), 'utf8').replace('__PAINEL__', '"<html>painel</html>"').replace('__CLIENTE__', '"<html>cliente</html>"');
+const fonte = readFileSync(join(aqui, '../src/index.js'), 'utf8').replace('// @@DEMO@@', () => readFileSync(join(aqui, '../src/demo.js'), 'utf8')).replace('__PAINEL__', '"<html>painel</html>"').replace('__CLIENTE__', '"<html>cliente</html>"');
 const tmp = mkdtempSync(join(tmpdir(), 'branco-')); writeFileSync(join(tmp, 'worker.mjs'), fonte);
 globalThis.caches = { default: { match: async () => undefined, put: async () => {} } };
 console.log = (...a) => { if (!String(a[0]).startsWith('[e-mail')) process.stdout.write(a.join(' ') + '\n'); }; // esconde os e-mails simulados
