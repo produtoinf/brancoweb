@@ -1171,9 +1171,9 @@ async function modalDemo(x){
   ir.onclick=()=>gera(false);pad.onclick=()=>gera(true);
 }
 // mensagem pronta para mandar o link (no idioma da demo)
-const MSG_DEMO={pt:'Oi! Tudo bem? Montei uma demonstração de como poderia ficar o site da {nome}: {link}\n\nÉ só um exemplo, sem compromisso. Se gostar, te mostro como deixar no ar.',
-  en:'Hi! I put together a quick demo of what a website for {nome} could look like: {link}\n\nIt\'s just an example, no strings attached. If you like it, I can show you how to get it live.',
-  es:'¡Hola! ¿Qué tal? Preparé una demostración de cómo podría verse el sitio web de {nome}: {link}\n\nEs solo un ejemplo, sin compromiso. Si te gusta, te muestro cómo ponerlo en línea.'};
+const MSG_DEMO={pt:'Oi! Tudo bem? Fiz uma prévia rápida de como poderia ficar o site da {nome}: {link}\n\nÉ só uma demonstração, montada em poucos minutos. O site de verdade fica 100% melhor: com as fotos de vocês, os serviços e preços certinhos, botão direto para o WhatsApp e pronto para aparecer no Google.\n\nQuer que eu te mostre como ficaria o seu?',
+  en:'Hi! I made a quick preview of what a website for {nome} could look like: {link}\n\nIt\'s just a demo, put together in a few minutes. The real site is 100% better: your own photos, your exact services and prices, a button straight to WhatsApp and ready to show up on Google.\n\nWant me to show you what yours would look like?',
+  es:'¡Hola! ¿Qué tal? Hice una vista previa rápida de cómo podría verse el sitio web de {nome}: {link}\n\nEs solo una demostración, hecha en pocos minutos. El sitio de verdad queda 100% mejor: con sus fotos, sus servicios y precios correctos, botón directo a WhatsApp y listo para aparecer en Google.\n\n¿Quieres que te muestre cómo quedaría el tuyo?'};
 async function copiar(t){try{await navigator.clipboard.writeText(t);return true}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();let ok=false;try{ok=document.execCommand('copy')}catch(x){}a.remove();return ok}}
 async function abreDemo(id){
   let D;try{D=await api('/api/demos/'+id)}catch(e){return toast(e.erro||'Não consegui abrir a demonstração')}
