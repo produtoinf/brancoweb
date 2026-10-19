@@ -262,6 +262,7 @@ tr.ign td{opacity:.45}
 .pr #pRes td small{font:400 .78rem/1.45 Archivo}.pr .tag{font-family:Archivo;font-size:.68rem;font-weight:600}
 .pr #pRes button.ghost{height:34px;padding:0 14px;border-radius:10px;font:600 .8rem Archivo}
 .pr .hd h2{font:700 1.1rem Archivo;letter-spacing:-.02em}
+.pr #lDemos td{padding-top:14px;padding-bottom:14px}.pr #lDemos td b{display:block;font:600 .95rem Archivo}.pr #lDemos td small{display:block;margin-top:2px;font:400 .78rem/1.45 Archivo}.pr #lDemos button{height:34px;padding:0 14px;border-radius:10px;font:600 .8rem Archivo}.pr #qDemos{height:38px;border-radius:10px;padding:0 14px;font:500 .85rem Archivo}
 #tProspec .label,#tProspec .uso{font:500 .8rem/1.45 Archivo;letter-spacing:0;text-transform:none}
 #tProspec .kpi .top,#tProspec .kpi .top *{font:600 .7rem Archivo;letter-spacing:.06em;text-transform:uppercase}
 #tProspec .kpi small{font:400 .82rem/1.45 Archivo}
@@ -355,6 +356,7 @@ tr.ign td{opacity:.45}
       <button role="tab" aria-selected="false" data-tab="follow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span class="t">Follow-up</span><span class="badge" id="bFollow" hidden></span></button>
       <button role="tab" aria-selected="false" data-tab="financeiro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/></svg><span class="t">Financeiro</span></button>
       <button role="tab" aria-selected="false" data-tab="prospec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg><span class="t">Prospecção</span></button>
+      <button role="tab" aria-selected="false" data-tab="demos"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 8h18M8 21h8M12 18v3"/></svg><span class="t">Sites demo</span></button>
       <button role="tab" aria-selected="false" data-tab="assinatura" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/></svg><span class="t">Assinatura</span></button>
       <button role="tab" aria-selected="false" data-tab="saas" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M3 10h18M8 15h3"/></svg><span class="t">SaaS</span></button>
       <button role="tab" aria-selected="false" data-tab="clientes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/></svg><span class="t">Clientes</span></button>
@@ -511,6 +513,14 @@ tr.ign td{opacity:.45}
         </div>
         <div class="pm__pe"><p class="pm__aviso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/></svg><span>Os envios são feitos por você, um a um: o WhatsApp e o Instagram bloqueiam contas que disparam mensagens em massa para quem não te conhece (no Instagram o painel para em 50 mensagens por dia). A sequência leva poucos segundos por contato e já agenda os lembretes no follow-up.</span></p><button class="solid" id="sMsgs">Salvar mensagens</button></div>
       </section>
+    </div>
+
+    <!-- SITES DEMO -->
+    <div id="tDemos" hidden>
+      <section class="kpis" id="kDemos"></section>
+      <section class="box mt pr"><div class="hd"><div><h2>Sites gerados</h2><p class="label">empresas que ganharam um site demo · envie o link pelo WhatsApp ou Instagram</p></div>
+        <div class="busca"><div class="seg" id="segDemos" role="group" aria-label="Filtrar sites"><button type="button" data-fd="todos" aria-pressed="true">Todos</button><button type="button" data-fd="enviar" aria-pressed="false">Para enviar</button><button type="button" data-fd="enviados" aria-pressed="false">Já enviados</button></div><input id="qDemos" placeholder="Buscar empresa" aria-label="Buscar empresa"></div></div>
+        <div class="tbl"><table><thead><tr><th>Empresa</th><th>Site</th><th>Envio</th><th></th></tr></thead><tbody id="lDemos"></tbody></table></div></section>
     </div>
 
     <!-- CLIENTES -->
@@ -851,7 +861,7 @@ function abre(id){
 function fecha(){aberto=null;$('#det').hidden=true;$('#lista').hidden=false}
 
 /* ---------- navegação ---------- */
-const TITULOS={site:['( como o seu site está indo )','Visão<br><span>geral.</span>'],follow:['( quem chamar e quando )','Follow-<br><span>up.</span>'],financeiro:['( quanto entrou e quanto vai entrar )','Valores<br><span>gerados.</span>'],prospec:['( novos clientes por nicho e cidade )','Prospec-<br><span>ção.</span>'],clientes:['( projetos e áreas do cliente )','Seus<br><span>clientes.</span>'],saas:['( assinantes, planos e consumo )','Seu<br><span>SaaS.</span>'],assinatura:['( seu plano e pagamentos )','Sua<br><span>assinatura.</span>']};
+const TITULOS={site:['( como o seu site está indo )','Visão<br><span>geral.</span>'],follow:['( quem chamar e quando )','Follow-<br><span>up.</span>'],financeiro:['( quanto entrou e quanto vai entrar )','Valores<br><span>gerados.</span>'],prospec:['( novos clientes por nicho e cidade )','Prospec-<br><span>ção.</span>'],demos:['( sites demo gerados e enviados )','Sites<br><span>demo.</span>'],clientes:['( projetos e áreas do cliente )','Seus<br><span>clientes.</span>'],saas:['( assinantes, planos e consumo )','Seu<br><span>SaaS.</span>'],assinatura:['( seu plano e pagamentos )','Sua<br><span>assinatura.</span>']};
 function redesenha(){if(telaAtual==='site')desenhaSite();if(telaAtual==='follow'&&fu.contatos)desenhaFollow();if(telaAtual==='financeiro')desenhaFin()}
 function telaAdmin(){
   $('#admin').hidden=false;document.body.classList.add('logado');
@@ -866,9 +876,9 @@ function telaAdmin(){
   $('#segDias').innerHTML=D.map(x=>'<button type="button" data-d="'+x[0]+'" aria-pressed="'+(x[0]===$('#dias').value)+'">'+x[1]+'</button>').join('');
   $$('[data-d]').forEach(b=>b.onclick=()=>{$('#dias').value=b.dataset.d;$$('[data-d]').forEach(x=>x.setAttribute('aria-pressed',x===b));carregaSite()});
   const tab=t=>{telaAtual=t;$$('[data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t));$('#tSite').hidden=t!=='site';$('#tClientes').hidden=t!=='clientes';$('#tSaas').hidden=t!=='saas';$('#tAssin').hidden=t!=='assinatura';
-    $('#tFollow').hidden=t!=='follow';$('#tFin').hidden=t!=='financeiro';$('#tProspec').hidden=t!=='prospec';$('#segDias').hidden=t!=='site';
+    $('#tFollow').hidden=t!=='follow';$('#tFin').hidden=t!=='financeiro';$('#tProspec').hidden=t!=='prospec';$('#tDemos').hidden=t!=='demos';$('#segDias').hidden=t!=='site';
     $('#aSub').textContent=TITULOS[t][0];$('#aTitulo').innerHTML=TITULOS[t][1];scrollTo({top:0});
-    if(t==='site')carregaSite();if(t==='clientes')carregaClientes();if(t==='follow')carregaFollow();if(t==='financeiro')carregaFin();if(t==='prospec')carregaProspec();if(t==='saas')carregaSaas();if(t==='assinatura')carregaAssin()};
+    if(t==='site')carregaSite();if(t==='clientes')carregaClientes();if(t==='follow')carregaFollow();if(t==='financeiro')carregaFin();if(t==='prospec')carregaProspec();if(t==='demos')carregaListaDemos();if(t==='saas')carregaSaas();if(t==='assinatura')carregaAssin()};
   window.irPara=tab;
   carregaConfig();
   $$('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
@@ -1087,6 +1097,34 @@ function sequencia(L,canal){const ig=canal==='ig';let i=0;const el=document.crea
     el.querySelector('[data-s=ir]').focus();
   };mostra()}
 
+/* ---------- ABA SITES DEMO ---------- */
+// lista as empresas que ganharam site demo e envia o link (WhatsApp ou Instagram), registrando no follow-up
+let lDemos=[],filtroDemos='todos';
+async function carregaListaDemos(){const r=await carregaDemos();if(!r){$('#lDemos').innerHTML='<tr><td colspan="4" class="vazio">Não consegui carregar agora. Tente de novo.</td></tr>';return}lDemos=r.demos;desenhaListaDemos()}
+const msgDemo=d=>(MSG_DEMO[d.empresa.idioma]||MSG_DEMO.pt).replace('{nome}',d.empresa.nome||'').replace('{link}',d.link||'');
+function desenhaListaDemos(){const T=lDemos,q=semAcento($('#qDemos').value.trim());
+  $('#kDemos').innerHTML=[{l:'sites gerados',v:T.length,s:'empresas com site demo'},{l:'publicados',v:T.filter(d=>d.status==='published').length,s:'com link pronto para enviar',meter:pct(T.filter(d=>d.status==='published').length,T.length)},
+    {l:'já enviados',v:T.filter(d=>d.contatos>0).length,s:'receberam mensagem',meter:pct(T.filter(d=>d.contatos>0).length,T.length)},{l:'para enviar',v:T.filter(d=>!d.contatos).length,s:'ainda não chamados'}].map(kpi).join('');
+  const L=T.filter(d=>(filtroDemos==='todos'||(filtroDemos==='enviar'?!d.contatos:d.contatos>0))&&(!q||semAcento((d.empresa.nome||'')+' '+(d.empresa.cidade||'')).includes(q)));
+  $('#lDemos').innerHTML=!T.length?'<tr><td colspan="4" class="vazio">Nenhum site gerado ainda. Na <b>Prospecção</b>, clique em “✨ Gerar site demo” numa empresa.</td></tr>':!L.length?'<tr><td colspan="4" class="vazio">Nenhum site com esse filtro.</td></tr>':
+    L.map(d=>{const e=d.empresa,pub=d.status==='published',ult=d.ultimo_contato?d.ultimo_contato.slice(0,10).split('-').reverse().join('/'):null;
+      return '<tr><td><b>'+esc(e.nome||'—')+'</b><small>'+esc([e.nicho,e.cidade].filter(Boolean).join(' · '))+'</small></td>'+
+      '<td><span class="tag'+(pub?' ok':d.status==='failed'?' hot':'')+'">'+(DEMO_ST[d.status]||d.status)+'</span>'+(pub?'<br><a class="pill" href="'+esc(d.link)+'" target="_blank" rel="noopener noreferrer">ver site ↗</a>':'')+'</td>'+
+      '<td>'+(d.contatos?'<span class="tag ok">enviado</span><small>'+d.contatos+' mensage'+(d.contatos>1?'ns':'m')+(ult?' · última '+ult:'')+'</small>':'<span class="tag hot">não enviado</span>')+'</td>'+
+      '<td style="white-space:nowrap"><button class="ghost" data-dabre="'+d.id+'">Abrir</button> '+
+      (pub?(e.telefone?'<button class="ghost" data-dwa="'+d.id+'">WhatsApp</button> ':'')+(igUser(e)?'<button class="ghost" data-dig="'+d.id+'">Instagram</button> ':'')+'<button class="ghost" data-dlink="'+d.id+'">Copiar link</button>'
+        :['ready','draft'].includes(d.status)?'<button class="solid" data-dpub="'+d.id+'">Publicar</button>':'')+'</td></tr>'}).join('');
+  const acha=b=>lDemos.find(d=>d.id===+Object.values(b.dataset)[0]);
+  $$('[data-dabre]').forEach(b=>b.onclick=()=>abreDemo(+b.dataset.dabre));
+  $$('[data-dlink]').forEach(b=>b.onclick=async()=>{const d=acha(b);toast(await copiar(d.link)?'Link copiado ✓':'Não consegui copiar')});
+  $$('[data-dpub]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{await api('/api/demos/'+b.dataset.dpub+'/publicar',{method:'POST'});toast('Publicado ✓ agora é só enviar');carregaListaDemos()}catch(e){b.disabled=false;toast(e.erro||'Não consegui publicar')}});
+  const enviou=async(d,canal)=>{try{await api('/api/demos/'+d.id+'/abordagem',{method:'POST',body:{hoje:hojeL(),canal}});d.contatos++;d.ultimo_contato=hojeL();desenhaListaDemos()}catch(e){toast(e.erro||'Erro ao registrar o envio')}};
+  $$('[data-dwa]').forEach(b=>b.onclick=()=>{const d=acha(b),t=String(d.empresa.telefone);abrirWa({telefone:t.length<=11&&d.empresa.idioma==='pt'?'55'+t:t},msgDemo(d));enviou(d,'whatsapp')});
+  $$('[data-dig]').forEach(b=>b.onclick=()=>{const d=acha(b);if(abrirIg(d.empresa,msgDemo(d)))enviou(d,'instagram')});
+}
+$$('#segDemos [data-fd]').forEach(b=>b.onclick=()=>{filtroDemos=b.dataset.fd;$$('#segDemos [data-fd]').forEach(x=>x.setAttribute('aria-pressed',x===b));desenhaListaDemos()});
+$('#qDemos').oninput=()=>desenhaListaDemos();
+
 /* ---------- SITE DEMO ---------- */
 // cada demo é ligada a um contato do follow-up; na prospecção o resultado acha a demo pelo contato (jaSalvo)
 const DEMO_ST={draft:'rascunho',generating:'gerando…',ready:'pronta',published:'publicada',failed:'falhou'};
@@ -1142,7 +1180,7 @@ async function abreDemo(id){
   const el=document.createElement('div');el.className='dv';document.body.appendChild(el);document.body.style.overflow='hidden';
   let sujo=false,cel=false;
   const fecha=()=>{if(sujo&&!confirm('Sair sem salvar as alterações?'))return;el.remove();document.body.style.overflow='';
-    carregaDemos().then(()=>{if(telaAtual==='prospec')desenhaPros()});if(telaAtual==='follow')carregaFollow()};
+    carregaDemos().then(()=>{if(telaAtual==='prospec')desenhaPros();if(telaAtual==='demos')carregaListaDemos()});if(telaAtual==='follow')carregaFollow()};
   const v=s=>esc(s??''),C=()=>D.conteudo||{servicos:[],diferenciais:[],contato:{},sugestoes:[]},sug=k=>(C().sugestoes||[]).includes(k)?' <i class="dv__sug">sugestão editável</i>':'';
   const campo=(rot,nome,val,tipo,extra)=>'<label><span>'+rot+(extra||'')+'</span>'+(tipo==='area'?'<textarea data-f="'+nome+'" rows="3">'+v(val)+'</textarea>':'<input data-f="'+nome+'" value="'+v(val)+'"'+(tipo?' type="'+tipo+'"':'')+'>')+'</label>';
   const itens=(k,L,max,rot)=>'<div class="dv__lista" data-lista="'+k+'" data-max="'+max+'">'+L.map((x,i)=>'<div class="dv__it"><input data-li="titulo" value="'+v(x.titulo)+'" placeholder="Título" aria-label="'+rot+' '+(i+1)+' — título"><textarea data-li="texto" rows="2" placeholder="Texto" aria-label="'+rot+' '+(i+1)+' — texto">'+v(x.texto)+'</textarea><div class="acts"><button class="danger" type="button" data-rm>Remover</button></div></div>').join('')+
@@ -1454,7 +1492,7 @@ function demoApi(p,o){
       origens:[{origem:'instagram',n:Math.round(V*.42)},{origem:'google',n:Math.round(V*.27)},{origem:'direto',n:Math.round(V*.18)},{origem:'whatsapp',n:Math.round(V*.09)},{origem:'facebook',n:Math.round(V*.04)}],
       dispositivos:[{d:'Celular',n:Math.round(V*.78)},{d:'Computador',n:Math.round(V*.22)}],
       lista:D.contatos.slice(0,6).map(c=>({...c,criado_em:em(r(0,20))}))})}
-  if(p.startsWith('/api/demos'))return o.method?Promise.reject({erro:'Site demo não funciona no modo demonstração.'}):Promise.resolve({demos:[],uso:{usadas:0,limite:null},ia:false,templates:{premium:{nome:'Premium',desc:''},moderno:{nome:'Moderno',desc:''},comercial:{nome:'Comercial',desc:''}},estilos:{},sugestao:{template:'moderno'}});
+  if(p.startsWith('/api/demos'))return o.method?Promise.reject({erro:'Site demo não funciona no modo demonstração.'}):Promise.resolve({demos:p==='/api/demos'?[{id:1,contato_id:901,status:'published',link:'https://exemplo.com/d/sorriso',contatos:0,ultimo_contato:null,empresa:{nome:'Clínica Sorriso Feliz',nicho:'Dentista',cidade:'Curitiba',idioma:'pt',telefone:'5541998887766',instagram:'@sorrisofeliz'}},{id:2,contato_id:902,status:'published',link:'https://exemplo.com/d/odontovida',contatos:2,ultimo_contato:'2026-10-12 10:00:00',empresa:{nome:'OdontoVida Batel',nicho:'Dentista',cidade:'Curitiba',idioma:'pt',telefone:'5541988776655',instagram:null}},{id:3,contato_id:903,status:'ready',link:null,contatos:0,ultimo_contato:null,empresa:{nome:'Salão da Fer',nicho:'Salão de beleza',cidade:'Araucária',idioma:'pt',telefone:null,instagram:'salaodafer_araucaria'}}]:[],uso:{usadas:0,limite:null},ia:false,templates:{premium:{nome:'Premium',desc:''},moderno:{nome:'Moderno',desc:''},comercial:{nome:'Comercial',desc:''}},estilos:{},sugestao:{template:'moderno'}});
   if(p==='/api/followup')return Promise.resolve({contatos:D.contatos,modelos:D.modelos});
   if(p==='/api/vendas')return Promise.resolve({vendas:D.vendas,negociacao:{qtd:D.contatos.filter(c=>c.venda==='proposta').length,total:D.contatos.filter(c=>c.venda==='proposta').reduce((a,c)=>a+c.proposta,0)}});
   if(p==='/api/clientes')return Promise.resolve(D.clientes);

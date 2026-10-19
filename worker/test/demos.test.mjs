@@ -96,6 +96,8 @@ ok('evento inválido é recusado', (await A.post(`/api/demos/${demo.id}/evento`,
 await A.post(`/api/demos/${demo.id}/abordagem`, { hoje: '2026-10-18', canal: 'whatsapp' });
 c = (await A.get('/api/followup')).dados.contatos.find(x => x.id === demo.contato_id);
 ok('abordagem registrada conta como mensagem e agenda lembrete', c.contatos === 1 && c.venda === 'enviada' && c.proximo_contato === '2026-10-20');
+const ld = (await A.get('/api/demos')).dados.demos.find(d => d.id === demo.id);
+ok('aba Sites demo: lista traz a empresa e o envio', ld.empresa.nome === 'Barbearia do Zé' && ld.empresa.telefone === '5541999887766' && ld.empresa.instagram === '@barbeariadoze' && ld.contatos === 1 && !('dados' in ld));
 await A.post(`/api/demos/${demo.id}/followup`, { proximo_contato: '2026-11-03', notas: 'gostou da demo' });
 const det = (await A.get(`/api/demos/${demo.id}`)).dados;
 ok('próximo contato e anotação vão para o contato', det.contato.proximo_contato === '2026-11-03' && det.contato.notas === 'gostou da demo');
