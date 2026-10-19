@@ -1181,7 +1181,12 @@ function demoSaida(D, env, origem) {
 async function rotaDemos(req, db, env, m, id, sub, b, S, ctx) {
   const conta = S.conta, origem = new URL(req.url).origin;
   if (!id && m === 'GET') {
-    const L = (await db.prepare('SELECT id, contato_id, template, status, slug, publicado_em, atualizado_em FROM site_demos WHERE conta_id = ? ORDER BY id DESC LIMIT 2000').bind(conta).all()).results;
+    // aba "Sites demo": cada demo com a empresa e o histórico de envio do contato no follow-up
+    const L = (await db.prepare(`SELECT d.id, d.contato_id, d.template, d.status, d.slug, d.publicado_em, d.atualizado_em, d.criado_em, d.dados,
+        c.telefone c_tel, c.instagram c_ig, COALESCE(c.contatos,0) contatos, c.ultimo_contato, COALESCE(c.venda,'novo') venda
+      FROM site_demos d LEFT JOIN contatos c ON c.id = d.contato_id AND c.conta_id = d.conta_id WHERE d.conta_id = ? ORDER BY d.id DESC LIMIT 2000`).bind(conta).all()).results
+      .map(({ dados, c_tel, c_ig, ...D }) => { const x = demoJSON(dados) || {};
+        return { ...D, empresa: { nome: x.nome || null, nicho: x.nicho || null, cidade: x.cidade || null, idioma: x.idioma || 'pt', telefone: c_tel || x.telefone || null, celular: !!x.celular, instagram: c_ig || x.instagram || null } }; });
     const q = new URL(req.url).searchParams, ni = q.has('nicho') ? demoNicho(q.get('nicho'), q.get('categoria')) : null; // modal: template recomendado para o nicho
     return json({ demos: L.map(D => ({ ...D, link: D.status === 'published' ? linkDemo(env, origem, D.slug) : null })), uso: { usadas: await demoUsadas(db, conta), limite: demoLimite(S) }, ia: !!env.ANTHROPIC_API_KEY,
       sugestao: ni ? { template: demoTemplateSugerido(ni.id), nicho: ni.nome } : null,
