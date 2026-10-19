@@ -509,7 +509,7 @@ tr.ign td{opacity:.45}
           <label class="pm__msg" style="grid-column:1/-1"><span class="pm__tit">Para <b>agências de marketing</b> <small style="font-weight:400;color:var(--mute)">· usada quando a busca é de agências (deixe vazio para usar as de cima)</small></span><textarea id="msgAge" rows="5" maxlength="1500"></textarea>
             <span class="pm__vars" data-alvo="msgAge"><button type="button">{nome}</button><button type="button">{cidade}</button></span></label>
         </div>
-        <div class="pm__pe"><p class="pm__aviso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/></svg><span>Os envios são feitos por você, um a um: o WhatsApp e o Instagram bloqueiam contas que disparam mensagens em massa para quem não te conhece (no Instagram, fique em até ~30 novas conversas por dia). A sequência leva poucos segundos por contato e já agenda os lembretes no follow-up.</span></p><button class="solid" id="sMsgs">Salvar mensagens</button></div>
+        <div class="pm__pe"><p class="pm__aviso"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/></svg><span>Os envios são feitos por você, um a um: o WhatsApp e o Instagram bloqueiam contas que disparam mensagens em massa para quem não te conhece (no Instagram o painel para em 50 mensagens por dia). A sequência leva poucos segundos por contato e já agenda os lembretes no follow-up.</span></p><button class="solid" id="sMsgs">Salvar mensagens</button></div>
       </section>
     </div>
 
@@ -1006,7 +1006,12 @@ async function enriquecer(){
 const abrirWa=(x,txt)=>window.open('https://api.whatsapp.com/send?phone='+x.telefone+'&text='+encodeURIComponent(txt),'_blank','noopener');
 // Instagram não aceita texto no link do direct: copia a mensagem e abre a conversa, você só cola (Ctrl+V) e envia
 const igUser=x=>{const m=(x?.instagram||'').replace(/^@/,'').match(/^(?:https?:\/\/)?(?:www\.)?(?:instagram\.com\/)?([A-Za-z0-9_.]{2,30})\/?(?:[?#].*)?$/);return m&&!/^(p|explore|reel|reels|stories|accounts|tv)$/i.test(m[1])?m[1]:null};
-const abrirIg=(x,txt)=>{navigator.clipboard?.writeText(txt).then(()=>toast('Mensagem copiada ✓ cole no direct (Ctrl+V)'),()=>toast('Não deu para copiar: copie a mensagem antes de colar'));window.open('https://ig.me/m/'+igUser(x),'_blank','noopener')};
+// limite diário de directs (contado neste navegador) para não bloquear a conta
+const IG_LIMITE=50,igChave=()=>'igEnvios'+hojeL();
+const igHoje=()=>{try{return +localStorage.getItem(igChave())||0}catch(e){return 0}};
+const abrirIg=(x,txt)=>{const n=igHoje();if(n>=IG_LIMITE){toast('Limite de '+IG_LIMITE+' mensagens no Instagram hoje. Continue amanhã.');return false}
+  try{localStorage.setItem(igChave(),n+1)}catch(e){}
+  navigator.clipboard?.writeText(txt).then(()=>toast('Mensagem copiada ✓ cole no direct (Ctrl+V)'),()=>toast('Não deu para copiar: copie a mensagem antes de colar'));window.open('https://ig.me/m/'+igUser(x),'_blank','noopener');return true};
 /* estados e cidades (IBGE) */
 const UFS=[['AC','Acre'],['AL','Alagoas'],['AP','Amapá'],['AM','Amazonas'],['BA','Bahia'],['CE','Ceará'],['DF','Distrito Federal'],['ES','Espírito Santo'],['GO','Goiás'],['MA','Maranhão'],['MT','Mato Grosso'],['MS','Mato Grosso do Sul'],['MG','Minas Gerais'],['PA','Pará'],['PB','Paraíba'],['PR','Paraná'],['PE','Pernambuco'],['PI','Piauí'],['RJ','Rio de Janeiro'],['RN','Rio Grande do Norte'],['RS','Rio Grande do Sul'],['RO','Rondônia'],['RR','Roraima'],['SC','Santa Catarina'],['SP','São Paulo'],['SE','Sergipe'],['TO','Tocantins']];
 $('#pUf').innerHTML='<option value="">Escolha o estado</option>'+UFS.map(u=>'<option value="'+u[0]+'">'+u[1]+' ('+u[0]+')</option>').join('');
@@ -1062,14 +1067,14 @@ $('#pSeqIg').onclick=()=>{const L=(selecionados().length?selecionados():proFiltr
 function sequencia(L,canal){const ig=canal==='ig';let i=0;const el=document.createElement('div');el.className='seq';document.body.appendChild(el);
   const fim=()=>{el.remove();api('/api/followup').then(x=>{fu=x;badge()});desenhaPros()};
   const mostra=()=>{if(i>=L.length){toast('Sequência concluída 🎉');return fim()}const x=L[i];
-    el.innerHTML='<div class="box"><div class="top"><span class="label">'+(i+1)+' de '+L.length+'</span><button class="ghost" data-s="parar">Parar ✕</button></div><div class="bar"><i style="width:'+(i/L.length*100)+'%"></i></div>'+
+    el.innerHTML='<div class="box"><div class="top"><span class="label">'+(i+1)+' de '+L.length+(ig?' · Instagram hoje: '+igHoje()+'/'+IG_LIMITE:'')+'</span><button class="ghost" data-s="parar">Parar ✕</button></div><div class="bar"><i style="width:'+(i/L.length*100)+'%"></i></div>'+
       '<h2 style="font-size:1.3rem">'+esc(x.nome)+'</h2><p class="label" style="margin:6px 0 14px">'+(ig?'@'+esc(igUser(x)):esc(fone(x.telefone))+(x.celular===false?' · telefone fixo, pode não ter WhatsApp':''))+' · '+(x.site?esc(host(x.site)):'sem site')+'</p>'+
       '<textarea id="seqTxt">'+esc(msgPara(x))+'</textarea><div class="acts mt"><button class="solid" data-s="ir">'+(ig?'Copiar, abrir o Instagram e próximo →':'Enviar no WhatsApp e próximo →')+' <span class="label" style="color:inherit;opacity:.6">(Enter)</span></button><button class="ghost" data-s="pular">Pular</button></div>'+
       '<p class="dica mt">'+(ig?'A mensagem é copiada e o direct abre: cole (Ctrl+V) e envie. ':'')+'Cada envio vai para o follow-up com lembretes em 2, 7 e 15 dias. Enter = enviar e próximo · Esc = parar.</p></div>';
     el.querySelector('[data-s=parar]').onclick=fim;
     el.querySelector('[data-s=pular]').onclick=()=>{i++;mostra()};
     // um clique: abre o WhatsApp (ou copia e abre o direct do Instagram) com a mensagem, registra no follow-up e já mostra o próximo
-    const ir=async()=>{(ig?abrirIg:abrirWa)(x,$('#seqTxt').value);i++;mostra();
+    const ir=async()=>{if(ig){if(!abrirIg(x,$('#seqTxt').value))return fim()}else abrirWa(x,$('#seqTxt').value);i++;mostra();
       try{let id=jaSalvo(x);if(!id){const r=await salvarPros([x]);id=r.ids[0]}if(id)await api('/api/contatos/'+id+'/enviei',{method:'POST',body:{hoje:hojeL()}})}catch(e){toast(e.erro||'Erro ao registrar '+x.nome)}};
     el.querySelector('[data-s=ir]').onclick=ir;
     el.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&e.target.id!=='seqTxt'){e.preventDefault();ir()}if(e.key==='Escape')fim()};
