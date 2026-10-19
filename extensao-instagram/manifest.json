@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Branco · cola no Instagram",
+  "version": "1.0.0",
+  "description": "Cola sozinha no direct do Instagram a mensagem da prospecção do painel Branco. O envio continua sendo seu.",
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["https://branco-admin.brancowebs.workers.dev/*", "http://localhost/*", "http://127.0.0.1/*"],
+      "js": ["painel.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://www.instagram.com/*"],
+      "js": ["insta.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1015,7 +1015,9 @@ const abrirIg=(x,txt)=>{const n=igHoje();if(n>=IG_LIMITE){toast('Limite de '+IG_
   const t=document.createElement('textarea');t.value=txt;t.setAttribute('readonly','');t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();
   let ok=false;try{ok=document.execCommand('copy')}catch(e){}t.remove();
   if(!ok)navigator.clipboard?.writeText(txt).catch(()=>{});
-  toast('Mensagem copiada ✓ no Instagram, clique em “Mensagem…” e cole (Ctrl+V)');window.open('https://ig.me/m/'+igUser(x),'_blank','noopener');return true};
+  // com a extensão "cola no Instagram" (pasta extensao-instagram) a mensagem aparece sozinha no direct
+  const ext=document.documentElement.dataset.brancoIg==='1';if(ext)window.postMessage({tipo:'branco-ig',txt,user:igUser(x)},location.origin);
+  toast(ext?'Abrindo o direct ✓ a mensagem vai aparecer sozinha, é só enviar':'Mensagem copiada ✓ no Instagram, clique em “Mensagem…” e cole (Ctrl+V)');window.open('https://ig.me/m/'+igUser(x),'_blank','noopener');return true};
 /* estados e cidades (IBGE) */
 const UFS=[['AC','Acre'],['AL','Alagoas'],['AP','Amapá'],['AM','Amazonas'],['BA','Bahia'],['CE','Ceará'],['DF','Distrito Federal'],['ES','Espírito Santo'],['GO','Goiás'],['MA','Maranhão'],['MT','Mato Grosso'],['MS','Mato Grosso do Sul'],['MG','Minas Gerais'],['PA','Pará'],['PB','Paraíba'],['PR','Paraná'],['PE','Pernambuco'],['PI','Piauí'],['RJ','Rio de Janeiro'],['RN','Rio Grande do Norte'],['RS','Rio Grande do Sul'],['RO','Rondônia'],['RR','Roraima'],['SC','Santa Catarina'],['SP','São Paulo'],['SE','Sergipe'],['TO','Tocantins']];
 $('#pUf').innerHTML='<option value="">Escolha o estado</option>'+UFS.map(u=>'<option value="'+u[0]+'">'+u[1]+' ('+u[0]+')</option>').join('');
