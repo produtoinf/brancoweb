@@ -1,0 +1,22 @@
+BRANCO — EXTENSÃO "COLA NO INSTAGRAM"
+
+O que faz
+  Na prospecção, quando você clica em Instagram (ou usa a Sequência no Instagram),
+  o direct abre e a mensagem já aparece escrita. Você só confere e aperta Enviar.
+  Ela NÃO envia sozinha (para não bloquear sua conta).
+
+Como instalar (Chrome, Edge ou Brave) — 1 minuto
+  1) Baixe o arquivo branco-instagram.zip e descompacte numa pasta.
+  2) Abra  chrome://extensions
+  3) Ligue "Modo do desenvolvedor" (canto superior direito).
+  4) Clique em "Carregar sem compactação" e escolha a pasta descompactada.
+  5) Recarregue o painel. Pronto.
+
+Como saber se está funcionando
+  Ao clicar em Instagram no painel, o aviso diz "a mensagem vai aparecer sozinha no direct".
+
+Painel em outro endereço?
+  Abra manifest.json e troque "https://branco-admin.brancowebs.workers.dev/*" pelo seu endereço.
+  Depois clique em "Recarregar" na extensão em chrome://extensions.
+
+Sem a extensão continua funcionando como antes: a mensagem é copiada e você cola com Ctrl+V.
