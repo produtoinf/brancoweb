@@ -1011,7 +1011,11 @@ const IG_LIMITE=50,igChave=()=>'igEnvios'+hojeL();
 const igHoje=()=>{try{return +localStorage.getItem(igChave())||0}catch(e){return 0}};
 const abrirIg=(x,txt)=>{const n=igHoje();if(n>=IG_LIMITE){toast('Limite de '+IG_LIMITE+' mensagens no Instagram hoje. Continue amanhã.');return false}
   try{localStorage.setItem(igChave(),n+1)}catch(e){}
-  navigator.clipboard?.writeText(txt).then(()=>toast('Mensagem copiada ✓ cole no direct (Ctrl+V)'),()=>toast('Não deu para copiar: copie a mensagem antes de colar'));window.open('https://ig.me/m/'+igUser(x),'_blank','noopener');return true};
+  // cópia síncrona antes de abrir a aba (a do navigator.clipboard pode falhar quando o Instagram rouba o foco)
+  const t=document.createElement('textarea');t.value=txt;t.setAttribute('readonly','');t.style.cssText='position:fixed;opacity:0';document.body.appendChild(t);t.select();
+  let ok=false;try{ok=document.execCommand('copy')}catch(e){}t.remove();
+  if(!ok)navigator.clipboard?.writeText(txt).catch(()=>{});
+  toast('Mensagem copiada ✓ no Instagram, clique em “Mensagem…” e cole (Ctrl+V)');window.open('https://ig.me/m/'+igUser(x),'_blank','noopener');return true};
 /* estados e cidades (IBGE) */
 const UFS=[['AC','Acre'],['AL','Alagoas'],['AP','Amapá'],['AM','Amazonas'],['BA','Bahia'],['CE','Ceará'],['DF','Distrito Federal'],['ES','Espírito Santo'],['GO','Goiás'],['MA','Maranhão'],['MT','Mato Grosso'],['MS','Mato Grosso do Sul'],['MG','Minas Gerais'],['PA','Pará'],['PB','Paraíba'],['PR','Paraná'],['PE','Pernambuco'],['PI','Piauí'],['RJ','Rio de Janeiro'],['RN','Rio Grande do Norte'],['RS','Rio Grande do Sul'],['RO','Rondônia'],['RR','Roraima'],['SC','Santa Catarina'],['SP','São Paulo'],['SE','Sergipe'],['TO','Tocantins']];
 $('#pUf').innerHTML='<option value="">Escolha o estado</option>'+UFS.map(u=>'<option value="'+u[0]+'">'+u[1]+' ('+u[0]+')</option>').join('');
